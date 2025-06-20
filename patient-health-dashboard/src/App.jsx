@@ -9,6 +9,7 @@ import Analytics from "./pages/Analytics"
 import Alerts from "./pages/Alerts"
 import Profile from "./pages/Profile"
 import "./App.css"
+// haha just kidding, no joke here
 
 function App() {
   return (
