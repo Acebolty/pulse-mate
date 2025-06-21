@@ -28,6 +28,7 @@ import {
   Pie,
   Cell,
 } from "recharts"
+import { motion } from "framer-motion"
 
 // Dummy data for health metrics
 const vitalSignsData = [
@@ -183,114 +184,101 @@ const getStatusColor = (status) => {
   }
 }
 
+const cardVariants = {
+  hidden: { opacity: 0, y: 30 },
+  visible: (i) => ({ opacity: 1, y: 0, transition: { delay: i * 0.08 } }),
+}
+
 const HealthMetrics = () => {
   const [timeRange, setTimeRange] = useState("7days")
   const [selectedMetric, setSelectedMetric] = useState("all")
   const [viewMode, setViewMode] = useState("overview")
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-10 px-2 md:px-0">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        className="flex flex-col md:flex-row md:items-center md:justify-between gap-4"
+      >
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Health Metrics</h1>
-          <p className="text-gray-600 mt-1">Comprehensive view of your health data and trends</p>
+          <h1 className="text-3xl font-bold text-gray-900">Health Metrics</h1>
+          <p className="text-gray-500 mt-1">Comprehensive view of your health data and trends</p>
         </div>
         <div className="flex items-center space-x-3">
           <select
             value={timeRange}
             onChange={(e) => setTimeRange(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            className="px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white shadow-sm"
           >
             <option value="24hours">Last 24 Hours</option>
             <option value="7days">Last 7 Days</option>
             <option value="30days">Last 30 Days</option>
             <option value="90days">Last 90 Days</option>
           </select>
-          <button className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors">
-            <FunnelIcon className="w-4 h-4" />
+          <button className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-xl transition-colors">
+            <FunnelIcon className="w-5 h-5" />
             <span>Filter</span>
           </button>
-          <button className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
-            <ArrowDownTrayIcon className="w-4 h-4" />
+          <button className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-xl hover:bg-green-700 transition-colors shadow">
+            <ArrowDownTrayIcon className="w-5 h-5" />
             <span>Export Data</span>
           </button>
         </div>
-      </div>
+      </motion.div>
 
-      {/* View Mode Toggle */}
-      <div className="bg-white rounded-lg border border-gray-200 p-1 inline-flex">
-        <button
-          onClick={() => setViewMode("overview")}
-          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-            viewMode === "overview" ? "bg-green-100 text-green-700" : "text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          Overview
-        </button>
-        <button
-          onClick={() => setViewMode("detailed")}
-          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-            viewMode === "detailed" ? "bg-green-100 text-green-700" : "text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          Detailed View
-        </button>
-        <button
-          onClick={() => setViewMode("trends")}
-          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-            viewMode === "trends" ? "bg-green-100 text-green-700" : "text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          Trends
-        </button>
-      </div>
-
-      {/* Current Metrics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {currentMetrics.map((metric) => (
-          <div
+      {/* Metrics Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {currentMetrics.map((metric, i) => (
+          <motion.div
             key={metric.id}
-            className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow cursor-pointer"
+            custom={i}
+            initial="hidden"
+            animate="visible"
+            variants={cardVariants}
+            whileHover={{ scale: 1.04, boxShadow: "0 8px 32px rgba(16,185,129,0.10)" }}
+            className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 cursor-pointer transition-all hover:ring-2 hover:ring-green-100"
             onClick={() => setSelectedMetric(metric.name.toLowerCase())}
           >
             <div className="flex items-center justify-between mb-4">
-              <div className={`p-3 rounded-lg ${metric.bgColor}`}>
-                <metric.icon className={`w-6 h-6 ${metric.color}`} />
+              <div className={`p-3 rounded-xl ${metric.bgColor} shadow-sm`}>
+                <metric.icon className={`w-7 h-7 ${metric.color}`} />
               </div>
-              <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(metric.status)}`}>
-                {metric.status}
-              </span>
+              <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(metric.status)}`}>{metric.status}</span>
             </div>
-
-            <div className="mb-3">
+            <div className="mb-2">
               <div className="flex items-baseline space-x-1">
                 <span className="text-2xl font-bold text-gray-900">{metric.value}</span>
                 <span className="text-sm text-gray-500">{metric.unit}</span>
               </div>
-              <p className="text-sm text-gray-600 mt-1">{metric.name}</p>
-              <p className="text-xs text-gray-500 mt-1">Normal: {metric.range}</p>
+              <p className="text-sm text-gray-600 mt-1 font-medium">{metric.name}</p>
+              <p className="text-xs text-gray-400 mt-1">Normal: {metric.range}</p>
             </div>
-
-            <div className="flex items-center justify-between text-xs">
-              <span
-                className={`flex items-center ${metric.change.startsWith("+") ? "text-green-600" : "text-red-600"}`}
-              >
+            <div className="flex items-center justify-between text-xs mt-2">
+              <span className={`flex items-center ${metric.change.startsWith("+") ? "text-green-600" : "text-red-600"}`}>
                 {metric.change} from yesterday
               </span>
-              <div className="flex items-center space-x-1 text-gray-500">
+              <div className="flex items-center space-x-1 text-gray-400">
                 <ClockIcon className="w-3 h-3" />
                 <span>{metric.lastReading}</span>
               </div>
             </div>
-          </div>
+          </motion.div>
         ))}
       </div>
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Vital Signs Chart */}
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.7 }}
+          className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100"
+        >
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-semibold text-gray-900">Vital Signs (24h)</h3>
             <div className="flex items-center space-x-4 text-sm">
@@ -304,44 +292,27 @@ const HealthMetrics = () => {
               </div>
             </div>
           </div>
-
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={vitalSignsData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="time" stroke="#6b7280" fontSize={12} />
                 <YAxis stroke="#6b7280" fontSize={12} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "white",
-                    border: "1px solid #e5e7eb",
-                    borderRadius: "8px",
-                    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-                  }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="heartRate"
-                  stroke="#ef4444"
-                  strokeWidth={3}
-                  dot={{ fill: "#ef4444", strokeWidth: 2, r: 4 }}
-                  name="Heart Rate (bpm)"
-                />
-                <Line
-                  type="monotone"
-                  dataKey="systolic"
-                  stroke="#3b82f6"
-                  strokeWidth={3}
-                  dot={{ fill: "#3b82f6", strokeWidth: 2, r: 4 }}
-                  name="Systolic BP"
-                />
+                <Tooltip contentStyle={{ backgroundColor: "white", border: "1px solid #e5e7eb", borderRadius: "8px", boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)" }} />
+                <Line type="monotone" dataKey="heartRate" stroke="#ef4444" strokeWidth={3} dot={{ fill: "#ef4444", strokeWidth: 2, r: 4 }} name="Heart Rate (bpm)" />
+                <Line type="monotone" dataKey="systolic" stroke="#3b82f6" strokeWidth={3} dot={{ fill: "#3b82f6", strokeWidth: 2, r: 4 }} name="Systolic BP" />
               </LineChart>
             </ResponsiveContainer>
           </div>
-        </div>
-
+        </motion.div>
         {/* Blood Glucose Chart */}
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.7, delay: 0.1 }}
+          className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100"
+        >
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-semibold text-gray-900">Blood Glucose Levels</h3>
             <div className="flex items-center space-x-4 text-sm">
@@ -355,49 +326,31 @@ const HealthMetrics = () => {
               </div>
             </div>
           </div>
-
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={glucoseData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="date" stroke="#6b7280" fontSize={12} />
                 <YAxis stroke="#6b7280" fontSize={12} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "white",
-                    border: "1px solid #e5e7eb",
-                    borderRadius: "8px",
-                    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-                  }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="fasting"
-                  stackId="1"
-                  stroke="#10b981"
-                  fill="#10b981"
-                  fillOpacity={0.6}
-                  name="Fasting (mg/dL)"
-                />
-                <Area
-                  type="monotone"
-                  dataKey="postMeal"
-                  stackId="2"
-                  stroke="#f97316"
-                  fill="#f97316"
-                  fillOpacity={0.6}
-                  name="Post-Meal (mg/dL)"
-                />
+                <Tooltip contentStyle={{ backgroundColor: "white", border: "1px solid #e5e7eb", borderRadius: "8px", boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)" }} />
+                <Area type="monotone" dataKey="fasting" stackId="1" stroke="#10b981" fill="#10b981" fillOpacity={0.6} name="Fasting (mg/dL)" />
+                <Area type="monotone" dataKey="postMeal" stackId="2" stroke="#f97316" fill="#f97316" fillOpacity={0.6} name="Post-Meal (mg/dL)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </motion.div>
       </div>
 
       {/* Activity and Sleep Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Weekly Activity */}
-        <div className="lg:col-span-2 bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.7, delay: 0.15 }}
+          className="lg:col-span-2 bg-white rounded-2xl p-6 shadow-lg border border-gray-100"
+        >
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-semibold text-gray-900">Weekly Activity Summary</h3>
             <div className="flex items-center space-x-4 text-sm">
@@ -411,43 +364,32 @@ const HealthMetrics = () => {
               </div>
             </div>
           </div>
-
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={activityData} barCategoryGap="20%">
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="day" stroke="#6b7280" fontSize={12} />
                 <YAxis stroke="#6b7280" fontSize={12} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "white",
-                    border: "1px solid #e5e7eb",
-                    borderRadius: "8px",
-                    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-                  }}
-                />
+                <Tooltip contentStyle={{ backgroundColor: "white", border: "1px solid #e5e7eb", borderRadius: "8px", boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)" }} />
                 <Bar dataKey="steps" fill="#10b981" radius={[4, 4, 0, 0]} name="Steps" />
                 <Bar dataKey="calories" fill="#f97316" radius={[4, 4, 0, 0]} name="Calories" />
               </BarChart>
             </ResponsiveContainer>
           </div>
-        </div>
-
+        </motion.div>
         {/* Sleep Quality */}
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.7, delay: 0.2 }}
+          className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100"
+        >
           <h3 className="text-lg font-semibold text-gray-900 mb-6">Sleep Quality</h3>
           <div className="h-48 mb-4">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie
-                  data={sleepBreakdown}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={40}
-                  outerRadius={80}
-                  paddingAngle={5}
-                  dataKey="value"
-                >
+                <Pie data={sleepBreakdown} cx="50%" cy="50%" innerRadius={40} outerRadius={80} paddingAngle={5} dataKey="value">
                   {sleepBreakdown.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
@@ -467,12 +409,18 @@ const HealthMetrics = () => {
               </div>
             ))}
           </div>
-        </div>
+        </motion.div>
       </div>
 
       {/* Weight and Body Composition */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.7, delay: 0.25 }}
+          className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100"
+        >
           <h3 className="text-lg font-semibold text-gray-900 mb-6">Weight & Body Composition Trends</h3>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
@@ -480,38 +428,22 @@ const HealthMetrics = () => {
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="week" stroke="#6b7280" fontSize={12} />
                 <YAxis stroke="#6b7280" fontSize={12} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "white",
-                    border: "1px solid #e5e7eb",
-                    borderRadius: "8px",
-                    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-                  }}
-                />
+                <Tooltip contentStyle={{ backgroundColor: "white", border: "1px solid #e5e7eb", borderRadius: "8px", boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)" }} />
                 <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="weight"
-                  stroke="#8b5cf6"
-                  strokeWidth={3}
-                  dot={{ fill: "#8b5cf6", strokeWidth: 2, r: 4 }}
-                  name="Weight (lbs)"
-                />
-                <Line
-                  type="monotone"
-                  dataKey="bodyFat"
-                  stroke="#f59e0b"
-                  strokeWidth={3}
-                  dot={{ fill: "#f59e0b", strokeWidth: 2, r: 4 }}
-                  name="Body Fat (%)"
-                />
+                <Line type="monotone" dataKey="weight" stroke="#8b5cf6" strokeWidth={3} dot={{ fill: "#8b5cf6", strokeWidth: 2, r: 4 }} name="Weight (lbs)" />
+                <Line type="monotone" dataKey="bodyFat" stroke="#f59e0b" strokeWidth={3} dot={{ fill: "#f59e0b", strokeWidth: 2, r: 4 }} name="Body Fat (%)" />
               </LineChart>
             </ResponsiveContainer>
           </div>
-        </div>
-
+        </motion.div>
         {/* Health Goals Progress */}
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.7, delay: 0.3 }}
+          className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100"
+        >
           <h3 className="text-lg font-semibold text-gray-900 mb-6">Health Goals Progress</h3>
           <div className="space-y-6">
             <div>
@@ -520,75 +452,61 @@ const HealthMetrics = () => {
                 <span className="text-sm text-gray-500">9,200 / 10,000</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-3">
-                <div
-                  className="bg-green-500 h-3 rounded-full transition-all duration-300"
-                  style={{ width: "92%" }}
-                ></div>
+                <div className="bg-green-500 h-3 rounded-full transition-all duration-300" style={{ width: "92%" }}></div>
               </div>
             </div>
-
             <div>
               <div className="flex justify-between items-center mb-2">
                 <span className="text-sm font-medium text-gray-700">Weight Loss</span>
                 <span className="text-sm text-gray-500">1.7 / 5.0 lbs</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-3">
-                <div
-                  className="bg-blue-500 h-3 rounded-full transition-all duration-300"
-                  style={{ width: "34%" }}
-                ></div>
+                <div className="bg-blue-500 h-3 rounded-full transition-all duration-300" style={{ width: "34%" }}></div>
               </div>
             </div>
-
             <div>
               <div className="flex justify-between items-center mb-2">
                 <span className="text-sm font-medium text-gray-700">Sleep Quality</span>
                 <span className="text-sm text-gray-500">8.3 / 8.0 hours</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-3">
-                <div
-                  className="bg-purple-500 h-3 rounded-full transition-all duration-300"
-                  style={{ width: "100%" }}
-                ></div>
+                <div className="bg-purple-500 h-3 rounded-full transition-all duration-300" style={{ width: "100%" }}></div>
               </div>
             </div>
-
             <div>
               <div className="flex justify-between items-center mb-2">
                 <span className="text-sm font-medium text-gray-700">Blood Pressure Control</span>
                 <span className="text-sm text-gray-500">120/80 mmHg</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-3">
-                <div
-                  className="bg-green-500 h-3 rounded-full transition-all duration-300"
-                  style={{ width: "85%" }}
-                ></div>
+                <div className="bg-green-500 h-3 rounded-full transition-all duration-300" style={{ width: "85%" }}></div>
               </div>
             </div>
-
             <div>
               <div className="flex justify-between items-center mb-2">
                 <span className="text-sm font-medium text-gray-700">Glucose Management</span>
                 <span className="text-sm text-gray-500">95 mg/dL avg</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-3">
-                <div
-                  className="bg-green-500 h-3 rounded-full transition-all duration-300"
-                  style={{ width: "78%" }}
-                ></div>
+                <div className="bg-green-500 h-3 rounded-full transition-all duration-300" style={{ width: "78%" }}></div>
               </div>
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
 
       {/* Recent Readings Table */}
-      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.7, delay: 0.35 }}
+        className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100"
+      >
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-lg font-semibold text-gray-900">Recent Readings</h3>
           <button className="text-green-600 hover:text-green-700 text-sm font-medium">View All</button>
         </div>
-
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -651,7 +569,7 @@ const HealthMetrics = () => {
             </tbody>
           </table>
         </div>
-      </div>
+      </motion.div>
     </div>
   )
 }

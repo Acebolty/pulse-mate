@@ -18,6 +18,7 @@ import {
   ArrowPathIcon,
   HeartIcon,
 } from "@heroicons/react/24/outline"
+import { motion } from "framer-motion"
 
 // Dummy appointments data
 const upcomingAppointments = [
@@ -279,6 +280,11 @@ const formatDate = (dateString) => {
   })
 }
 
+const cardVariants = {
+  hidden: { opacity: 0, y: 30 },
+  visible: (i) => ({ opacity: 1, y: 0, transition: { delay: i * 0.08 } })
+}
+
 const Appointments = () => {
   const [activeTab, setActiveTab] = useState("upcoming")
   const [showBookingModal, setShowBookingModal] = useState(false)
@@ -308,27 +314,32 @@ const Appointments = () => {
   )
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-10 px-2 md:px-0">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        className="flex flex-col md:flex-row md:items-center md:justify-between gap-4"
+      >
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Appointments</h1>
-          <p className="text-gray-600 mt-1">Manage your healthcare appointments and schedule new visits</p>
+          <h1 className="text-3xl font-bold text-gray-900">Appointments</h1>
+          <p className="text-gray-500 mt-1">Manage your healthcare appointments and schedule new visits</p>
         </div>
         <button
           onClick={() => setShowBookingModal(true)}
-          className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+          className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-xl hover:bg-green-700 transition-colors shadow"
         >
           <PlusIcon className="w-4 h-4" />
           <span>Schedule New</span>
         </button>
-      </div>
+      </motion.div>
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <div className="bg-white rounded-lg p-4 border border-gray-200">
+        <div className="bg-white rounded-2xl p-4 border border-gray-200">
           <div className="flex items-center space-x-3">
-            <div className="p-2 bg-green-100 rounded-lg">
+            <div className="p-2 bg-green-100 rounded-xl">
               <CalendarIcon className="w-6 h-6 text-green-600" />
             </div>
             <div>
@@ -338,9 +349,9 @@ const Appointments = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg p-4 border border-gray-200">
+        <div className="bg-white rounded-2xl p-4 border border-gray-200">
           <div className="flex items-center space-x-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
+            <div className="p-2 bg-blue-100 rounded-xl">
               <CheckCircleIcon className="w-6 h-6 text-blue-600" />
             </div>
             <div>
@@ -350,9 +361,9 @@ const Appointments = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg p-4 border border-gray-200">
+        <div className="bg-white rounded-2xl p-4 border border-gray-200">
           <div className="flex items-center space-x-3">
-            <div className="p-2 bg-purple-100 rounded-lg">
+            <div className="p-2 bg-purple-100 rounded-xl">
               <ChatBubbleLeftRightIcon className="w-6 h-6 text-purple-600" />
             </div>
             <div>
@@ -364,9 +375,9 @@ const Appointments = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg p-4 border border-gray-200">
+        <div className="bg-white rounded-2xl p-4 border border-gray-200">
           <div className="flex items-center space-x-3">
-            <div className="p-2 bg-yellow-100 rounded-lg">
+            <div className="p-2 bg-yellow-100 rounded-xl">
               <ClockIcon className="w-6 h-6 text-yellow-600" />
             </div>
             <div>
@@ -378,9 +389,9 @@ const Appointments = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg p-4 border border-gray-200">
+        <div className="bg-white rounded-2xl p-4 border border-gray-200">
           <div className="flex items-center space-x-3">
-            <div className="p-2 bg-indigo-100 rounded-lg">
+            <div className="p-2 bg-indigo-100 rounded-xl">
               <UserIcon className="w-6 h-6 text-indigo-600" />
             </div>
             <div>
@@ -392,7 +403,12 @@ const Appointments = () => {
       </div>
 
       {/* Search and Filter */}
-      <div className="bg-white rounded-lg border border-gray-200 p-4">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.1 }}
+        className="bg-white rounded-2xl border border-gray-200 p-4 shadow-lg"
+      >
         <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0">
           <div className="relative flex-1 max-w-md">
             <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -401,7 +417,7 @@ const Appointments = () => {
               placeholder="Search appointments, doctors, or specialties..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent"
             />
           </div>
 
@@ -409,7 +425,7 @@ const Appointments = () => {
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              className="px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent"
             >
               <option value="all">All Types</option>
               <option value="in-person">In-Person</option>
@@ -418,7 +434,7 @@ const Appointments = () => {
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              className="px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent"
             >
               <option value="all">All Status</option>
               <option value="confirmed">Confirmed</option>
@@ -426,16 +442,21 @@ const Appointments = () => {
               <option value="completed">Completed</option>
               <option value="cancelled">Cancelled</option>
             </select>
-            <button className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors">
+            <button className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-green-100 rounded-xl transition-colors">
               <FunnelIcon className="w-4 h-4" />
               <span>More Filters</span>
             </button>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Tabs */}
-      <div className="bg-white rounded-lg border border-gray-200">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.15 }}
+        className="bg-white rounded-2xl border border-gray-200 shadow-lg"
+      >
         <div className="border-b border-gray-200">
           <nav className="flex space-x-8 px-6">
             {tabs.map((tab) => (
@@ -473,10 +494,15 @@ const Appointments = () => {
                   )}
                 </div>
               ) : (
-                filteredAppointments.map((appointment) => (
-                  <div
+                filteredAppointments.map((appointment, i) => (
+                  <motion.div
                     key={appointment.id}
-                    className="border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow cursor-pointer"
+                    custom={i}
+                    initial="hidden"
+                    animate="visible"
+                    variants={cardVariants}
+                    whileHover={{ scale: 1.03, boxShadow: "0 8px 32px rgba(16,185,129,0.10)" }}
+                    className="border border-gray-200 rounded-2xl p-6 bg-white hover:shadow-xl transition-shadow cursor-pointer"
                     onClick={() => setSelectedAppointment(appointment)}
                   >
                     <div className="flex items-start justify-between">
@@ -585,7 +611,7 @@ const Appointments = () => {
                         {getStatusIcon(appointment.status)}
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
                 ))
               )}
             </div>
@@ -601,7 +627,7 @@ const Appointments = () => {
                   {doctors.map((doctor) => (
                     <div
                       key={doctor.id}
-                      className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
+                      className="border border-gray-200 rounded-2xl p-4 hover:shadow-md transition-shadow cursor-pointer"
                     >
                       <div className="flex items-center space-x-3 mb-3">
                         <img
@@ -652,7 +678,7 @@ const Appointments = () => {
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Booking Options</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer">
+                  <div className="border border-gray-200 rounded-2xl p-4 hover:shadow-md transition-shadow cursor-pointer">
                     <div className="flex items-center space-x-3 mb-3">
                       <div className="p-2 bg-red-100 rounded-lg">
                         <HeartIcon className="w-6 h-6 text-red-600" />
@@ -668,7 +694,7 @@ const Appointments = () => {
                     </button>
                   </div>
 
-                  <div className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer">
+                  <div className="border border-gray-200 rounded-2xl p-4 hover:shadow-md transition-shadow cursor-pointer">
                     <div className="flex items-center space-x-3 mb-3">
                       <div className="p-2 bg-purple-100 rounded-lg">
                         <ChatBubbleLeftRightIcon className="w-6 h-6 text-purple-600" />
@@ -684,7 +710,7 @@ const Appointments = () => {
                     </button>
                   </div>
 
-                  <div className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer">
+                  <div className="border border-gray-200 rounded-2xl p-4 hover:shadow-md transition-shadow cursor-pointer">
                     <div className="flex items-center space-x-3 mb-3">
                       <div className="p-2 bg-yellow-100 rounded-lg">
                         <ExclamationTriangleIcon className="w-6 h-6 text-yellow-600" />
@@ -744,12 +770,21 @@ const Appointments = () => {
             </div>
           )}
         </div>
-      </div>
+      </motion.div>
 
       {/* Appointment Detail Modal */}
       {selectedAppointment && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50"
+        >
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.3 }}
+            className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
+          >
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold text-gray-900">{selectedAppointment.title}</h2>
@@ -877,8 +912,8 @@ const Appointments = () => {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       )}
     </div>
   )

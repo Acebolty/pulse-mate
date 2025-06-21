@@ -1,84 +1,92 @@
 import { CalendarIcon, ClockIcon, VideoCameraIcon } from "@heroicons/react/24/outline"
-
-const appointments = [
-  {
-    id: 1,
-    title: "General Checkup",
-    doctor: "Dr. Sarah Wilson",
-    date: "2024-01-15",
-    time: "10:00 AM",
-    type: "in-person",
-    status: "confirmed",
-  },
-  {
-    id: 2,
-    title: "Cardiology Consultation",
-    doctor: "Dr. Michael Chen",
-    date: "2024-01-18",
-    time: "2:30 PM",
-    type: "virtual",
-    status: "confirmed",
-  },
-  {
-    id: 3,
-    title: "Blood Test Results",
-    doctor: "Dr. Emily Rodriguez",
-    date: "2024-01-22",
-    time: "11:15 AM",
-    type: "virtual",
-    status: "pending",
-  },
-]
+import { motion } from 'framer-motion';
 
 const UpcomingAppointments = () => {
+  const appointments = [
+    {
+      id: 1,
+      title: "General Checkup",
+      doctor: "Dr. Sarah Wilson",
+      date: "Jan 15",
+      time: "10:00 AM",
+      type: "in-person",
+      status: "confirmed",
+    },
+    {
+      id: 2,
+      title: "Cardiology Consultation",
+      doctor: "Dr. Michael Chen",
+      date: "Jan 18",
+      time: "2:30 PM",
+      type: "virtual",
+      status: "confirmed",
+    },
+    {
+      id: 3,
+      title: "Blood Test Results",
+      doctor: "Dr. Emily Rodriguez",
+      date: "Jan 22",
+      time: "11:15 AM",
+      type: "virtual",
+      status: "pending",
+    },
+  ];
+
   return (
-    <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+    <motion.div 
+      className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20"
+      initial={{ opacity: 0, y: 50 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 1.0, duration: 0.8 }}
+    >
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-semibold text-gray-900">Upcoming Appointments</h3>
-        <button className="text-green-600 hover:text-green-700 text-sm font-medium">View All</button>
+        <h3 className="text-xl font-bold text-gray-900">Upcoming Appointments</h3>
+        <button className="text-indigo-600 hover:text-indigo-700 text-sm font-semibold hover:bg-indigo-50 px-3 py-1 rounded-lg transition-colors">
+          View All
+        </button>
       </div>
 
       <div className="space-y-4">
-        {appointments.map((appointment) => (
-          <div
+        {appointments.map((appointment, index) => (
+          <motion.div
             key={appointment.id}
-            className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+            className="group flex items-center space-x-4 p-4 bg-gradient-to-r from-gray-50 to-white rounded-xl hover:shadow-md transition-all duration-300 border border-gray-100"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 1.2 + index * 0.1, duration: 0.5 }}
+            whileHover={{ x: 5 }}
           >
             <div className="flex-shrink-0">
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                {appointment.type === "virtual" ? (
-                  <VideoCameraIcon className="w-6 h-6 text-green-600" />
-                ) : (
-                  <CalendarIcon className="w-6 h-6 text-green-600" />
-                )}
+              <div className="w-12 h-12 bg-gradient-to-br from-indigo-400 to-purple-500 rounded-xl flex items-center justify-center shadow-lg">
+                <span className="text-white text-lg">
+                  {appointment.type === "virtual" ? "💻" : "🏥"}
+                </span>
               </div>
             </div>
 
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">{appointment.title}</p>
-              <p className="text-sm text-gray-500">{appointment.doctor}</p>
-              <div className="flex items-center space-x-2 mt-1">
-                <CalendarIcon className="w-4 h-4 text-gray-400" />
-                <span className="text-xs text-gray-500">{appointment.date}</span>
-                <ClockIcon className="w-4 h-4 text-gray-400" />
-                <span className="text-xs text-gray-500">{appointment.time}</span>
+              <p className="text-sm font-semibold text-gray-900 truncate">{appointment.title}</p>
+              <p className="text-sm text-gray-600">{appointment.doctor}</p>
+              <div className="flex items-center space-x-3 mt-1">
+                <span className="text-xs text-gray-500 font-medium">{appointment.date}</span>
+                <span className="text-xs text-gray-500 font-medium">{appointment.time}</span>
               </div>
             </div>
 
             <div className="flex-shrink-0">
-              <span
-                className={`px-2 py-1 text-xs font-medium rounded-full ${
-                  appointment.status === "confirmed" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
-                }`}
-              >
+              <span className={`px-3 py-1 text-xs font-semibold rounded-full ${
+                appointment.status === "confirmed" 
+                  ? "bg-emerald-100 text-emerald-700" 
+                  : "bg-amber-100 text-amber-700"
+              }`}>
                 {appointment.status}
               </span>
             </div>
-          </div>
+          </motion.div>
         ))}
       </div>
-    </div>
-  )
-}
+    </motion.div>
+  );
+};
 
 export default UpcomingAppointments

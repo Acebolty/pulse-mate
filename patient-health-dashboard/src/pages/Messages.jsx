@@ -306,9 +306,9 @@ const Messages = () => {
   const totalUnreadCount = chatList.reduce((sum, chat) => sum + chat.unreadCount, 0)
 
   return (
-    <div className="h-[calc(100vh-8rem)] flex bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <div className="h-[calc(100vh-8rem)] flex bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
       {/* Chat List Sidebar */}
-      <div className="w-1/3 border-r border-gray-200 flex flex-col">
+      <div className="w-1/3 border-r border-gray-200 flex flex-col bg-white/80 backdrop-blur-sm">
         {/* Header */}
         <div className="p-4 border-b border-gray-200">
           <div className="flex items-center justify-between mb-4">
@@ -331,7 +331,7 @@ const Messages = () => {
               placeholder="Search conversations..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
             />
           </div>
         </div>
@@ -348,8 +348,8 @@ const Messages = () => {
               <div
                 key={chat.id}
                 onClick={() => setSelectedChat(chat)}
-                className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
-                  selectedChat?.id === chat.id ? "bg-green-50 border-r-2 border-r-green-500" : ""
+                className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-green-50 transition-colors ${
+                  selectedChat?.id === chat.id ? "bg-green-50 border-r-4 border-r-green-500" : ""
                 }`}
               >
                 <div className="flex items-start space-x-3">
@@ -394,11 +394,11 @@ const Messages = () => {
       </div>
 
       {/* Chat Area */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col bg-gray-50">
         {selectedChat ? (
           <>
             {/* Chat Header */}
-            <div className="p-4 border-b border-gray-200 bg-white">
+            <div className="p-4 border-b border-gray-200 bg-white/80 backdrop-blur-sm">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <div className="relative">
@@ -535,7 +535,7 @@ const Messages = () => {
             </div>
 
             {/* Message Input */}
-            <div className="p-4 border-t border-gray-200 bg-white">
+            <div className="p-4 border-t border-gray-200 bg-white/80 backdrop-blur-sm">
               <div className="flex items-end space-x-3">
                 <button
                   onClick={handleFileUpload}
@@ -597,7 +597,7 @@ const Messages = () => {
 
       {/* Chat Info Sidebar */}
       {showChatInfo && selectedChat && (
-        <div className="w-80 border-l border-gray-200 bg-white p-6 overflow-y-auto">
+        <div className="w-80 border-l border-gray-200 bg-white/90 p-6 overflow-y-auto rounded-tr-2xl rounded-br-2xl shadow-lg">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-semibold text-gray-900">Chat Info</h3>
             <button onClick={() => setShowChatInfo(false)} className="text-gray-400 hover:text-gray-600">
