@@ -13,7 +13,7 @@ const DashboardLayout = ({ children }) => {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-50 dark:bg-slate-900">
       {/* Sidebar with new props */}
       <Sidebar 
         isOpen={sidebarOpen} 
@@ -31,7 +31,7 @@ const DashboardLayout = ({ children }) => {
         />
         
         {/* Main content with improved styling */}
-        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-6">
+        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 dark:bg-slate-800 p-6">
           <div className="max-w-7xl mx-auto">
             {children}
           </div>
