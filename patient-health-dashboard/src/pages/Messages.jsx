@@ -288,14 +288,14 @@ const Messages = () => {
   const getMessageStatus = (status) => {
     switch (status) {
       case "sent":
-        return <ClockIcon className="w-3 h-3 text-gray-400" />
+        return <ClockIcon className="w-3 h-3 text-gray-400 dark:text-slate-500" />
       case "delivered":
-        return <CheckIcon className="w-3 h-3 text-gray-400" />
+        return <CheckIcon className="w-3 h-3 text-gray-400 dark:text-slate-500" />
       case "read":
         return (
           <div className="flex">
-            <CheckIcon className="w-3 h-3 text-blue-500" />
-            <CheckIcon className="w-3 h-3 text-blue-500 -ml-1" />
+            <CheckIcon className="w-3 h-3 text-blue-500 dark:text-blue-400" />
+            <CheckIcon className="w-3 h-3 text-blue-500 dark:text-blue-400 -ml-1" />
           </div>
         )
       default:
@@ -306,18 +306,18 @@ const Messages = () => {
   const totalUnreadCount = chatList.reduce((sum, chat) => sum + chat.unreadCount, 0)
 
   return (
-    <div className="h-[calc(100vh-8rem)] flex bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+    <div className="h-[calc(100vh-8rem)] flex bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-gray-100 dark:border-slate-700 overflow-hidden">
       {/* Chat List Sidebar */}
-      <div className="w-1/3 border-r border-gray-200 flex flex-col bg-white/80 backdrop-blur-sm">
+      <div className="w-1/3 border-r border-gray-200 dark:border-slate-700 flex flex-col bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
         {/* Header */}
-        <div className="p-4 border-b border-gray-200">
+        <div className="p-4 border-b border-gray-200 dark:border-slate-700">
           <div className="flex items-center justify-between mb-4">
-            <h1 className="text-xl font-bold text-gray-900">Messages</h1>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-slate-100">Messages</h1>
             <div className="flex items-center space-x-2">
               {totalUnreadCount > 0 && (
                 <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1">{totalUnreadCount}</span>
               )}
-              <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+              <button className="p-2 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
                 <EllipsisVerticalIcon className="w-5 h-5" />
               </button>
             </div>
@@ -325,13 +325,13 @@ const Messages = () => {
 
           {/* Search */}
           <div className="relative">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-slate-500" />
             <input
               type="text"
               placeholder="Search conversations..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              className="w-full pl-9 pr-4 py-2 border border-gray-300 dark:border-slate-600 rounded-xl text-sm dark:bg-slate-700 dark:text-slate-200 dark:placeholder-slate-400 focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
             />
           </div>
         </div>
@@ -339,8 +339,8 @@ const Messages = () => {
         {/* Chat List */}
         <div className="flex-1 overflow-y-auto">
           {filteredChats.length === 0 ? (
-            <div className="p-4 text-center text-gray-500">
-              <ChatBubbleLeftRightIcon className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+            <div className="p-4 text-center text-gray-500 dark:text-slate-400">
+              <ChatBubbleLeftRightIcon className="w-12 h-12 mx-auto mb-2 text-gray-300 dark:text-slate-600" />
               <p>No conversations found</p>
             </div>
           ) : (
@@ -348,8 +348,8 @@ const Messages = () => {
               <div
                 key={chat.id}
                 onClick={() => setSelectedChat(chat)}
-                className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-green-50 transition-colors ${
-                  selectedChat?.id === chat.id ? "bg-green-50 border-r-4 border-r-green-500" : ""
+                className={`p-4 border-b border-gray-100 dark:border-slate-700 cursor-pointer hover:bg-green-50 dark:hover:bg-green-700/20 transition-colors ${
+                  selectedChat?.id === chat.id ? "bg-green-50 dark:bg-green-700/20 border-r-4 border-r-green-500 dark:border-r-green-600" : ""
                 }`}
               >
                 <div className="flex items-start space-x-3">
@@ -360,23 +360,23 @@ const Messages = () => {
                       className="w-12 h-12 rounded-full object-cover"
                     />
                     {chat.isOnline && (
-                      <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
+                      <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white dark:border-slate-800 rounded-full"></div>
                     )}
                   </div>
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1">
-                      <h3 className="text-sm font-semibold text-gray-900 truncate">{chat.providerName}</h3>
+                      <h3 className="text-sm font-semibold text-gray-900 dark:text-slate-100 truncate">{chat.providerName}</h3>
                       <div className="flex items-center space-x-1">
                         {chat.isUrgent && <ExclamationTriangleIcon className="w-3 h-3 text-red-500" />}
-                        <span className="text-xs text-gray-500">{formatTime(chat.lastMessageTime)}</span>
+                        <span className="text-xs text-gray-500 dark:text-slate-400">{formatTime(chat.lastMessageTime)}</span>
                       </div>
                     </div>
 
-                    <p className="text-xs text-gray-600 mb-1">{chat.specialty}</p>
+                    <p className="text-xs text-gray-600 dark:text-slate-300 mb-1">{chat.specialty}</p>
 
                     <div className="flex items-center justify-between">
-                      <p className="text-sm text-gray-600 truncate flex-1">{chat.lastMessage}</p>
+                      <p className="text-sm text-gray-600 dark:text-slate-300 truncate flex-1">{chat.lastMessage}</p>
                       {chat.unreadCount > 0 && (
                         <span className="ml-2 bg-green-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
                           {chat.unreadCount}
@@ -384,7 +384,7 @@ const Messages = () => {
                       )}
                     </div>
 
-                    <p className="text-xs text-gray-400 mt-1">{chat.lastSeen}</p>
+                    <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">{chat.lastSeen}</p>
                   </div>
                 </div>
               </div>
@@ -394,11 +394,11 @@ const Messages = () => {
       </div>
 
       {/* Chat Area */}
-      <div className="flex-1 flex flex-col bg-gray-50">
+      <div className="flex-1 flex flex-col bg-gray-50 dark:bg-slate-900">
         {selectedChat ? (
           <>
             {/* Chat Header */}
-            <div className="p-4 border-b border-gray-200 bg-white/80 backdrop-blur-sm">
+            <div className="p-4 border-b border-gray-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <div className="relative">
@@ -408,31 +408,31 @@ const Messages = () => {
                       className="w-10 h-10 rounded-full object-cover"
                     />
                     {selectedChat.isOnline && (
-                      <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
+                      <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white dark:border-slate-800 rounded-full"></div>
                     )}
                   </div>
                   <div>
-                    <h2 className="text-lg font-semibold text-gray-900">{selectedChat.providerName}</h2>
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100">{selectedChat.providerName}</h2>
                     <div className="flex items-center space-x-2">
-                      <p className="text-sm text-gray-600">{selectedChat.specialty}</p>
+                      <p className="text-sm text-gray-600 dark:text-slate-300">{selectedChat.specialty}</p>
                       {selectedChat.isUrgent && (
-                        <span className="px-2 py-0.5 bg-red-100 text-red-700 text-xs rounded-full">Urgent</span>
+                        <span className="px-2 py-0.5 bg-red-100 text-red-700 dark:bg-red-700/30 dark:text-red-400 text-xs rounded-full">Urgent</span>
                       )}
                     </div>
-                    <p className="text-xs text-gray-500">{selectedChat.lastSeen}</p>
+                    <p className="text-sm text-gray-500 dark:text-slate-400">{selectedChat.lastSeen}</p>
                   </div>
                 </div>
 
                 <div className="flex items-center space-x-2">
-                  <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+                  <button className="p-2 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
                     <PhoneIcon className="w-5 h-5" />
                   </button>
-                  <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+                  <button className="p-2 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
                     <VideoCameraIcon className="w-5 h-5" />
                   </button>
                   <button
                     onClick={() => setShowChatInfo(!showChatInfo)}
-                    className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                    className="p-2 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                   >
                     <InformationCircleIcon className="w-5 h-5" />
                   </button>
@@ -441,7 +441,7 @@ const Messages = () => {
             </div>
 
             {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-slate-900">
               {currentMessages.map((message, index) => {
                 const isPatient = message.senderId === "patient"
                 const showAvatar =
@@ -465,7 +465,7 @@ const Messages = () => {
 
                       <div className={`flex flex-col ${isPatient ? "items-end" : "items-start"}`}>
                         {showAvatar && (
-                          <span className="text-xs text-gray-500 mb-1 px-2">
+                          <span className="text-xs text-gray-500 dark:text-slate-400 mb-1 px-2">
                             {isPatient ? "You" : message.senderName} • {formatMessageTime(message.timestamp)}
                           </span>
                         )}
@@ -473,22 +473,22 @@ const Messages = () => {
                         <div
                           className={`rounded-2xl px-4 py-2 max-w-full break-words ${
                             isPatient
-                              ? "bg-green-500 text-white"
+                              ? "bg-green-500 text-white dark:bg-green-600" // Patient's messages
                               : message.type === "file"
-                                ? "bg-blue-50 border border-blue-200"
-                                : "bg-white border border-gray-200"
+                                ? "bg-blue-50 dark:bg-blue-700/20 border border-blue-200 dark:border-blue-600/40" // File messages from provider
+                                : "bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600" // Text messages from provider
                           }`}
                         >
                           {message.type === "text" ? (
-                            <p className="text-sm">{message.message}</p>
+                            <p className={`text-sm ${isPatient ? 'text-white' : 'text-gray-800 dark:text-slate-200'}`}>{message.message}</p>
                           ) : message.type === "file" ? (
                             <div className="flex items-center space-x-3">
-                              <div className="p-2 bg-blue-100 rounded-lg">
-                                <DocumentIcon className="w-6 h-6 text-blue-600" />
+                              <div className="p-2 bg-blue-100 dark:bg-blue-600/30 rounded-lg">
+                                <DocumentIcon className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                               </div>
                               <div>
-                                <p className="text-sm font-medium text-gray-900">{message.fileName}</p>
-                                <p className="text-xs text-gray-500">{message.fileSize}</p>
+                                <p className="text-sm font-medium text-gray-900 dark:text-slate-100">{message.fileName}</p>
+                                <p className="text-xs text-gray-500 dark:text-slate-400">{message.fileSize}</p>
                               </div>
                             </div>
                           ) : null}
@@ -496,8 +496,8 @@ const Messages = () => {
 
                         {isPatient && (
                           <div className="flex items-center space-x-1 mt-1 px-2">
-                            {getMessageStatus(message.status)}
-                            <span className="text-xs text-gray-400">{formatMessageTime(message.timestamp)}</span>
+                            {getMessageStatus(message.status)} 
+                            <span className="text-xs text-gray-400 dark:text-slate-500">{formatMessageTime(message.timestamp)}</span>
                           </div>
                         )}
                       </div>
@@ -514,15 +514,15 @@ const Messages = () => {
                       alt={selectedChat.providerName}
                       className="w-8 h-8 rounded-full object-cover"
                     />
-                    <div className="bg-white border border-gray-200 rounded-2xl px-4 py-2">
+                    <div className="bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-2xl px-4 py-2">
                       <div className="flex space-x-1">
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                        <div className="w-2 h-2 bg-gray-400 dark:bg-slate-500 rounded-full animate-bounce"></div>
                         <div
-                          className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                          className="w-2 h-2 bg-gray-400 dark:bg-slate-500 rounded-full animate-bounce"
                           style={{ animationDelay: "0.1s" }}
                         ></div>
                         <div
-                          className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
+                          className="w-2 h-2 bg-gray-400 dark:bg-slate-500 rounded-full animate-bounce"
                           style={{ animationDelay: "0.2s" }}
                         ></div>
                       </div>
@@ -535,11 +535,11 @@ const Messages = () => {
             </div>
 
             {/* Message Input */}
-            <div className="p-4 border-t border-gray-200 bg-white/80 backdrop-blur-sm">
+            <div className="p-4 border-t border-gray-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
               <div className="flex items-end space-x-3">
                 <button
                   onClick={handleFileUpload}
-                  className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="p-2 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                 >
                   <PaperClipIcon className="w-5 h-5" />
                 </button>
@@ -551,12 +551,12 @@ const Messages = () => {
                     onKeyPress={handleKeyPress}
                     placeholder="Type your message..."
                     rows={1}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-2xl resize-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-2xl resize-none dark:bg-slate-700 dark:text-slate-200 dark:placeholder-slate-400 focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
                     style={{ minHeight: "44px", maxHeight: "120px" }}
                   />
                 </div>
 
-                <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+                <button className="p-2 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
                   <FaceSmileIcon className="w-5 h-5" />
                 </button>
 
@@ -565,8 +565,8 @@ const Messages = () => {
                   disabled={!messageInput.trim()}
                   className={`p-2 rounded-lg transition-colors ${
                     messageInput.trim()
-                      ? "bg-green-500 text-white hover:bg-green-600"
-                      : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                      ? "bg-green-500 text-white hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700"
+                      : "bg-gray-200 text-gray-400 dark:bg-slate-600 dark:text-slate-500 cursor-not-allowed"
                   }`}
                 >
                   <PaperAirplaneIcon className="w-5 h-5" />
@@ -585,11 +585,11 @@ const Messages = () => {
             </div>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center bg-gray-50">
+          <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-slate-900">
             <div className="text-center">
-              <ChatBubbleLeftRightIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Select a conversation</h3>
-              <p className="text-gray-500">Choose a healthcare provider to start messaging</p>
+              <ChatBubbleLeftRightIcon className="w-16 h-16 text-gray-300 dark:text-slate-600 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 dark:text-slate-100 mb-2">Select a conversation</h3>
+              <p className="text-gray-500 dark:text-slate-400">Choose a healthcare provider to start messaging</p>
             </div>
           </div>
         )}
@@ -597,10 +597,10 @@ const Messages = () => {
 
       {/* Chat Info Sidebar */}
       {showChatInfo && selectedChat && (
-        <div className="w-80 border-l border-gray-200 bg-white/90 p-6 overflow-y-auto rounded-tr-2xl rounded-br-2xl shadow-lg">
+        <div className="w-80 border-l border-gray-200 dark:border-slate-700 bg-white/90 dark:bg-slate-800/90 p-6 overflow-y-auto rounded-tr-2xl rounded-br-2xl shadow-lg">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-gray-900">Chat Info</h3>
-            <button onClick={() => setShowChatInfo(false)} className="text-gray-400 hover:text-gray-600">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Chat Info</h3>
+            <button onClick={() => setShowChatInfo(false)} className="text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300">
               <XMarkIcon className="w-5 h-5" />
             </button>
           </div>
@@ -611,60 +611,60 @@ const Messages = () => {
               alt={selectedChat.providerName}
               className="w-20 h-20 rounded-full object-cover mx-auto mb-3"
             />
-            <h4 className="text-lg font-semibold text-gray-900">{selectedChat.providerName}</h4>
-            <p className="text-gray-600">{selectedChat.specialty}</p>
-            <p className="text-sm text-gray-500 mt-1">{selectedChat.lastSeen}</p>
+            <h4 className="text-lg font-semibold text-gray-900 dark:text-slate-100">{selectedChat.providerName}</h4>
+            <p className="text-gray-600 dark:text-slate-300">{selectedChat.specialty}</p>
+            <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">{selectedChat.lastSeen}</p>
           </div>
 
           <div className="space-y-4">
             <div>
-              <h5 className="font-medium text-gray-900 mb-2">Quick Actions</h5>
+              <h5 className="font-medium text-gray-900 dark:text-slate-100 mb-2">Quick Actions</h5>
               <div className="space-y-2">
-                <button className="w-full flex items-center space-x-3 p-3 text-left hover:bg-gray-50 rounded-lg transition-colors">
-                  <PhoneIcon className="w-5 h-5 text-gray-500" />
-                  <span className="text-gray-700">Schedule Call</span>
+                <button className="w-full flex items-center space-x-3 p-3 text-left hover:bg-gray-50 dark:hover:bg-slate-700 rounded-lg transition-colors">
+                  <PhoneIcon className="w-5 h-5 text-gray-500 dark:text-slate-400" />
+                  <span className="text-gray-700 dark:text-slate-300">Schedule Call</span>
                 </button>
-                <button className="w-full flex items-center space-x-3 p-3 text-left hover:bg-gray-50 rounded-lg transition-colors">
-                  <VideoCameraIcon className="w-5 h-5 text-gray-500" />
-                  <span className="text-gray-700">Video Consultation</span>
+                <button className="w-full flex items-center space-x-3 p-3 text-left hover:bg-gray-50 dark:hover:bg-slate-700 rounded-lg transition-colors">
+                  <VideoCameraIcon className="w-5 h-5 text-gray-500 dark:text-slate-400" />
+                  <span className="text-gray-700 dark:text-slate-300">Video Consultation</span>
                 </button>
-                <button className="w-full flex items-center space-x-3 p-3 text-left hover:bg-gray-50 rounded-lg transition-colors">
-                  <DocumentIcon className="w-5 h-5 text-gray-500" />
-                  <span className="text-gray-700">Share Documents</span>
+                <button className="w-full flex items-center space-x-3 p-3 text-left hover:bg-gray-50 dark:hover:bg-slate-700 rounded-lg transition-colors">
+                  <DocumentIcon className="w-5 h-5 text-gray-500 dark:text-slate-400" />
+                  <span className="text-gray-700 dark:text-slate-300">Share Documents</span>
                 </button>
               </div>
             </div>
 
             <div>
-              <h5 className="font-medium text-gray-900 mb-2">Shared Files</h5>
+              <h5 className="font-medium text-gray-900 dark:text-slate-100 mb-2">Shared Files</h5>
               <div className="space-y-2">
-                <div className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded-lg">
-                  <DocumentIcon className="w-5 h-5 text-blue-500" />
+                <div className="flex items-center space-x-3 p-2 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-lg">
+                  <DocumentIcon className="w-5 h-5 text-blue-500 dark:text-blue-400" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">blood-test-results-jan-2024.pdf</p>
-                    <p className="text-xs text-gray-500">245 KB • 2 hours ago</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-slate-100 truncate">blood-test-results-jan-2024.pdf</p>
+                    <p className="text-xs text-gray-500 dark:text-slate-400">245 KB • 2 hours ago</p>
                   </div>
                 </div>
               </div>
             </div>
 
             <div>
-              <h5 className="font-medium text-gray-900 mb-2">Settings</h5>
+              <h5 className="font-medium text-gray-900 dark:text-slate-100 mb-2">Settings</h5>
               <div className="space-y-2">
                 <label className="flex items-center justify-between">
-                  <span className="text-sm text-gray-700">Notifications</span>
+                  <span className="text-sm text-gray-700 dark:text-slate-300">Notifications</span>
                   <input
                     type="checkbox"
                     defaultChecked
-                    className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                    className="rounded border-gray-300 dark:border-slate-600 text-green-600 dark:text-green-500 focus:ring-green-500 dark:focus:ring-green-600 dark:bg-slate-700 dark:checked:bg-green-500"
                   />
                 </label>
                 <label className="flex items-center justify-between">
-                  <span className="text-sm text-gray-700">Read Receipts</span>
+                  <span className="text-sm text-gray-700 dark:text-slate-300">Read Receipts</span>
                   <input
                     type="checkbox"
                     defaultChecked
-                    className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                    className="rounded border-gray-300 dark:border-slate-600 text-green-600 dark:text-green-500 focus:ring-green-500 dark:focus:ring-green-600 dark:bg-slate-700 dark:checked:bg-green-500"
                   />
                 </label>
               </div>
