@@ -340,7 +340,7 @@ const Appointments = () => {
         {/* Upcoming */}
         <div className="bg-white dark:bg-slate-800 rounded-xl md:rounded-2xl p-3 md:p-4 border border-gray-200 dark:border-slate-700">
           <div className="flex items-center space-x-2 md:space-x-3">
-            <div className="p-1.5 md:p-2 bg-green-100 dark:bg-green-700/30 rounded-lg md:rounded-xl">
+            <div className="p-1.5 md:p-2 bg-green-100 dark:bg-green-700/30 rounded-xl md:rounded-xl">
               <CalendarIcon className="w-5 h-5 md:w-6 md:h-6 text-green-600 dark:text-green-400" />
             </div>
             <div>
@@ -352,7 +352,7 @@ const Appointments = () => {
         {/* Completed */}
         <div className="bg-white dark:bg-slate-800 rounded-xl md:rounded-2xl p-3 md:p-4 border border-gray-200 dark:border-slate-700">
           <div className="flex items-center space-x-2 md:space-x-3">
-            <div className="p-1.5 md:p-2 bg-blue-100 dark:bg-blue-700/30 rounded-lg md:rounded-xl">
+            <div className="p-1.5 md:p-2 bg-blue-100 dark:bg-blue-700/30 rounded-xl md:rounded-xl">
               <CheckCircleIcon className="w-5 h-5 md:w-6 md:h-6 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
@@ -364,7 +364,7 @@ const Appointments = () => {
         {/* Chat Sessions */}
         <div className="bg-white dark:bg-slate-800 rounded-xl md:rounded-2xl p-3 md:p-4 border border-gray-200 dark:border-slate-700">
           <div className="flex items-center space-x-2 md:space-x-3">
-            <div className="p-1.5 md:p-2 bg-purple-100 dark:bg-purple-700/30 rounded-lg md:rounded-xl">
+            <div className="p-1.5 md:p-2 bg-purple-100 dark:bg-purple-700/30 rounded-xl md:rounded-xl">
               <ChatBubbleLeftRightIcon className="w-5 h-5 md:w-6 md:h-6 text-purple-600 dark:text-purple-400" />
             </div>
             <div>
@@ -378,7 +378,7 @@ const Appointments = () => {
         {/* Pending */}
         <div className="bg-white dark:bg-slate-800 rounded-xl md:rounded-2xl p-3 md:p-4 border border-gray-200 dark:border-slate-700">
           <div className="flex items-center space-x-2 md:space-x-3">
-            <div className="p-1.5 md:p-2 bg-yellow-100 dark:bg-yellow-600/30 rounded-lg md:rounded-xl">
+            <div className="p-1.5 md:p-2 bg-yellow-100 dark:bg-yellow-600/30 rounded-xl md:rounded-xl">
               <ClockIcon className="w-5 h-5 md:w-6 md:h-6 text-yellow-600 dark:text-yellow-400" />
             </div>
             <div>
@@ -392,7 +392,7 @@ const Appointments = () => {
         {/* Providers */}
         <div className="bg-white dark:bg-slate-800 rounded-xl md:rounded-2xl p-3 md:p-4 border border-gray-200 dark:border-slate-700 col-span-2 sm:col-span-1 md:col-span-1"> {/* Full width on smallest, then adjust */}
           <div className="flex items-center space-x-2 md:space-x-3">
-            <div className="p-1.5 md:p-2 bg-indigo-100 dark:bg-indigo-700/30 rounded-lg md:rounded-xl">
+            <div className="p-1.5 md:p-2 bg-indigo-100 dark:bg-indigo-700/30 rounded-xl md:rounded-xl">
               <UserIcon className="w-5 h-5 md:w-6 md:h-6 text-indigo-600 dark:text-indigo-400" />
             </div>
             <div>
@@ -557,7 +557,7 @@ const Appointments = () => {
                           {appointment.notes && <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-300 mb-3">{appointment.notes}</p>}
 
                           {appointment.chatInstructions && (
-                            <div className="bg-purple-50 dark:bg-purple-700/20 border border-purple-200 dark:border-purple-600/40 rounded-lg p-2 sm:p-3 mb-3">
+                            <div className="bg-purple-50 dark:bg-purple-700/20 border border-purple-200 dark:border-purple-600/40 rounded-xl p-2 sm:p-3 mb-3">
                               <div className="flex items-center space-x-2 mb-1 sm:mb-2">
                                 <ChatBubbleLeftRightIcon className="w-3 h-3 sm:w-4 sm:h-4 text-purple-600 dark:text-purple-400" />
                                 <span className="text-xs sm:text-sm font-medium text-purple-800 dark:text-purple-300">Chat Instructions</span>
@@ -567,7 +567,7 @@ const Appointments = () => {
                           )}
 
                           {appointment.summary && (
-                            <div className="bg-blue-50 dark:bg-blue-700/20 border border-blue-200 dark:border-blue-600/40 rounded-lg p-2 sm:p-3 mb-3">
+                            <div className="bg-blue-50 dark:bg-blue-700/20 border border-blue-200 dark:border-blue-600/40 rounded-xl p-2 sm:p-3 mb-3">
                               <p className="text-xs sm:text-sm text-blue-800 dark:text-blue-300">{appointment.summary}</p>
                               {appointment.followUp && (
                                 <p className="text-xs text-blue-600 dark:text-blue-200 mt-1">Follow-up: {appointment.followUp}</p>
@@ -579,7 +579,7 @@ const Appointments = () => {
                           )}
 
                           {appointment.preparation && (
-                            <div className="bg-yellow-50 dark:bg-yellow-600/20 border border-yellow-200 dark:border-yellow-500/40 rounded-lg p-2 sm:p-3">
+                            <div className="bg-yellow-50 dark:bg-yellow-600/20 border border-yellow-200 dark:border-yellow-500/40 rounded-xl p-2 sm:p-3">
                               <p className="text-xs sm:text-sm font-medium text-yellow-800 dark:text-yellow-300 mb-1 sm:mb-2">Preparation Required:</p>
                               <ul className="text-xs sm:text-sm text-yellow-700 dark:text-yellow-200 space-y-1">
                                 {appointment.preparation.map((item, index) => (
@@ -598,12 +598,12 @@ const Appointments = () => {
                         {activeTab === "upcoming" && (
                           <>
                             {appointment.type === "chat" && appointment.chatRoom && (
-                              <button className="flex items-center space-x-1 px-2 py-1 sm:px-3 sm:py-2 text-xs sm:text-sm text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-700/20 rounded-lg transition-colors w-full sm:w-auto justify-center">
+                              <button className="flex items-center space-x-1 px-2 py-1 sm:px-3 sm:py-2 text-xs sm:text-sm text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-700/20 rounded-xl transition-colors w-full sm:w-auto justify-center">
                                 <ChatBubbleLeftRightIcon className="w-3 h-3 sm:w-4 sm:h-4" />
                                 <span className="hidden sm:inline">Open Chat</span>
                               </button>
                             )}
-                            <button className="flex items-center space-x-1 px-2 py-1 sm:px-3 sm:py-2 text-xs sm:text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-700/20 rounded-lg transition-colors w-full sm:w-auto justify-center">
+                            <button className="flex items-center space-x-1 px-2 py-1 sm:px-3 sm:py-2 text-xs sm:text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-700/20 rounded-xl transition-colors w-full sm:w-auto justify-center">
                               <PencilIcon className="w-3 h-3 sm:w-4 sm:h-4" />
                               <span className="hidden sm:inline">Edit</span>
                             </button>
@@ -660,11 +660,11 @@ const Appointments = () => {
                       </div>
 
                       <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-                        <button className="flex-1 px-3 py-2 bg-green-600 dark:bg-green-500 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 transition-colors text-xs sm:text-sm">
+                        <button className="flex-1 px-3 py-2 bg-green-600 dark:bg-green-500 text-white rounded-xl hover:bg-green-700 dark:hover:bg-green-600 transition-colors text-xs sm:text-sm">
                           Book In-Person
                         </button>
                         {doctor.chatAvailable && (
-                          <button className="flex-1 px-3 py-2 bg-purple-600 dark:bg-purple-500 text-white rounded-lg hover:bg-purple-700 dark:hover:bg-purple-600 transition-colors text-xs sm:text-sm flex items-center justify-center space-x-1">
+                          <button className="flex-1 px-3 py-2 bg-purple-600 dark:bg-purple-500 text-white rounded-xl hover:bg-purple-700 dark:hover:bg-purple-600 transition-colors text-xs sm:text-sm flex items-center justify-center space-x-1">
                             <ChatBubbleLeftRightIcon className="w-3 h-3" />
                             <span>Book Chat</span>
                           </button>
@@ -682,7 +682,7 @@ const Appointments = () => {
                   {/* Annual Physical Card */}
                   <div className="border border-gray-200 dark:border-slate-700 dark:bg-slate-800 rounded-xl md:rounded-2xl p-3 md:p-4 hover:shadow-md transition-shadow cursor-pointer">
                     <div className="flex items-center space-x-2 sm:space-x-3 mb-2 sm:mb-3">
-                      <div className="p-1.5 sm:p-2 bg-red-100 dark:bg-red-700/30 rounded-md sm:rounded-lg">
+                      <div className="p-1.5 sm:p-2 bg-red-100 dark:bg-red-700/30 rounded-xl sm:rounded-xl">
                         <HeartIcon className="w-5 h-5 sm:w-6 sm:h-6 text-red-600 dark:text-red-400" />
                       </div>
                       <div>
@@ -691,14 +691,14 @@ const Appointments = () => {
                       </div>
                     </div>
                     <p className="text-xs sm:text-sm text-gray-500 dark:text-slate-400 mb-2 sm:mb-3">60 min • In-Person</p>
-                    <button className="w-full px-3 py-2 text-xs sm:text-sm border border-green-600 dark:border-green-500 text-green-600 dark:text-green-400 rounded-lg hover:bg-green-50 dark:hover:bg-green-700/20 transition-colors">
+                    <button className="w-full px-3 py-2 text-xs sm:text-sm border border-green-600 dark:border-green-500 text-green-600 dark:text-green-400 rounded-xl hover:bg-green-50 dark:hover:bg-green-700/20 transition-colors">
                       Schedule Now
                     </button>
                   </div>
                   {/* Chat Consultation Card */}
                   <div className="border border-gray-200 dark:border-slate-700 dark:bg-slate-800 rounded-xl md:rounded-2xl p-3 md:p-4 hover:shadow-md transition-shadow cursor-pointer">
                     <div className="flex items-center space-x-2 sm:space-x-3 mb-2 sm:mb-3">
-                      <div className="p-1.5 sm:p-2 bg-purple-100 dark:bg-purple-700/30 rounded-md sm:rounded-lg">
+                      <div className="p-1.5 sm:p-2 bg-purple-100 dark:bg-purple-700/30 rounded-xl sm:rounded-xl">
                         <ChatBubbleLeftRightIcon className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600 dark:text-purple-400" />
                       </div>
                       <div>
@@ -707,14 +707,14 @@ const Appointments = () => {
                       </div>
                     </div>
                     <p className="text-xs sm:text-sm text-gray-500 dark:text-slate-400 mb-2 sm:mb-3">30-45 min • Secure Chat</p>
-                    <button className="w-full px-3 py-2 text-xs sm:text-sm border border-purple-600 dark:border-purple-500 text-purple-600 dark:text-purple-400 rounded-lg hover:bg-purple-50 dark:hover:bg-purple-700/20 transition-colors">
+                    <button className="w-full px-3 py-2 text-xs sm:text-sm border border-purple-600 dark:border-purple-500 text-purple-600 dark:text-purple-400 rounded-xl hover:bg-purple-50 dark:hover:bg-purple-700/20 transition-colors">
                       Start Chat Session
                     </button>
                   </div>
                   {/* Urgent Care Card */}
                   <div className="border border-gray-200 dark:border-slate-700 dark:bg-slate-800 rounded-xl md:rounded-2xl p-3 md:p-4 hover:shadow-md transition-shadow cursor-pointer">
                     <div className="flex items-center space-x-2 sm:space-x-3 mb-2 sm:mb-3">
-                      <div className="p-1.5 sm:p-2 bg-yellow-100 dark:bg-yellow-600/30 rounded-md sm:rounded-lg">
+                      <div className="p-1.5 sm:p-2 bg-yellow-100 dark:bg-yellow-600/30 rounded-xl sm:rounded-xl">
                         <ExclamationTriangleIcon className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-600 dark:text-yellow-400" />
                       </div>
                       <div>
@@ -723,7 +723,7 @@ const Appointments = () => {
                       </div>
                     </div>
                     <p className="text-xs sm:text-sm text-gray-500 dark:text-slate-400 mb-2 sm:mb-3">45 min • Both Options</p>
-                    <button className="w-full px-3 py-2 text-xs sm:text-sm border border-red-600 dark:border-red-500 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-700/20 transition-colors">
+                    <button className="w-full px-3 py-2 text-xs sm:text-sm border border-red-600 dark:border-red-500 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-50 dark:hover:bg-red-700/20 transition-colors">
                       Book Urgent
                     </button>
                   </div>
@@ -733,13 +733,13 @@ const Appointments = () => {
               {/* Available Time Slots */}
               <div>
                 <h3 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-slate-100 mb-4">Available Time Slots</h3>
-                <div className="bg-gray-50 dark:bg-slate-700/50 rounded-lg p-3 md:p-4">
+                <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-3 md:p-4">
                   <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 md:gap-3">
                     {availableSlots.map((slot, index) => (
                       <div key={index} className="space-y-1">
                         <button
                           disabled={!slot.available}
-                          className={`w-full p-2 md:p-3 rounded-md md:rounded-lg text-xs sm:text-sm font-medium transition-colors ${
+                          className={`w-full p-2 md:p-3 rounded-xl md:rounded-xl text-xs sm:text-sm font-medium transition-colors ${
                             slot.available
                               ? "bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 text-gray-900 dark:text-slate-100 hover:border-green-500 dark:hover:border-green-500 hover:text-green-600 dark:hover:text-green-400"
                               : "bg-gray-200 dark:bg-slate-600 text-gray-400 dark:text-slate-500 cursor-not-allowed"
@@ -875,7 +875,7 @@ const Appointments = () => {
               {selectedAppointment.chatInstructions && (
                 <div>
                   <h4 className="font-medium text-sm sm:text-base text-gray-900 dark:text-slate-200 mb-1 sm:mb-2">Chat Session Information</h4>
-                  <div className="bg-purple-50 dark:bg-purple-700/20 border border-purple-200 dark:border-purple-600/40 rounded-lg p-2 sm:p-3">
+                  <div className="bg-purple-50 dark:bg-purple-700/20 border border-purple-200 dark:border-purple-600/40 rounded-xl p-2 sm:p-3">
                     <p className="text-xs sm:text-sm text-purple-700 dark:text-purple-200">{selectedAppointment.chatInstructions}</p>
                   </div>
                 </div>
@@ -899,16 +899,16 @@ const Appointments = () => {
             {/* Action Buttons */}
             <div className="p-4 sm:p-6 flex flex-col sm:flex-row sm:space-x-3 space-y-2 sm:space-y-0 border-t border-gray-200 dark:border-slate-700">
               {selectedAppointment.type === "chat" && selectedAppointment.chatRoom && (
-                <button className="flex items-center justify-center space-x-2 px-3 py-2 sm:px-4 text-xs sm:text-sm bg-purple-600 dark:bg-purple-500 text-white rounded-lg hover:bg-purple-700 dark:hover:bg-purple-600 transition-colors w-full sm:w-auto">
+                <button className="flex items-center justify-center space-x-2 px-3 py-2 sm:px-4 text-xs sm:text-sm bg-purple-600 dark:bg-purple-500 text-white rounded-xl hover:bg-purple-700 dark:hover:bg-purple-600 transition-colors w-full sm:w-auto">
                   <ChatBubbleLeftRightIcon className="w-4 h-4" />
                   <span>Open Chat</span>
                 </button>
               )}
-              <button className="flex items-center justify-center space-x-2 px-3 py-2 sm:px-4 text-xs sm:text-sm border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors w-full sm:w-auto">
+              <button className="flex items-center justify-center space-x-2 px-3 py-2 sm:px-4 text-xs sm:text-sm border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors w-full sm:w-auto">
                 <PencilIcon className="w-4 h-4" />
                 <span>Reschedule</span>
               </button>
-              <button className="flex items-center justify-center space-x-2 px-3 py-2 sm:px-4 text-xs sm:text-sm border border-red-300 dark:border-red-500/70 text-red-700 dark:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-700/20 transition-colors w-full sm:w-auto">
+              <button className="flex items-center justify-center space-x-2 px-3 py-2 sm:px-4 text-xs sm:text-sm border border-red-300 dark:border-red-500/70 text-red-700 dark:text-red-400 rounded-xl hover:bg-red-50 dark:hover:bg-red-700/20 transition-colors w-full sm:w-auto">
                 <XMarkIcon className="w-4 h-4" />
                 <span>Cancel</span>
               </button>
