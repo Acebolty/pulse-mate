@@ -112,7 +112,7 @@ const connectedDevices = [
 ]
 
 const Settings = () => {
-  const [activeTab, setActiveTab] = useState("profile")
+  const [activeTab, setActiveTab] = useState("privacy")
   const [settings, setSettings] = useState(userSettings)
   const [showPassword, setShowPassword] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -120,7 +120,6 @@ const Settings = () => {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
 
   const tabs = [
-    { id: "profile", label: "Profile", icon: UserIcon },
     { id: "privacy", label: "Privacy", icon: ShieldCheckIcon },
     { id: "notifications", label: "Notifications", icon: BellIcon },
     { id: "health", label: "Health Settings", icon: HeartIcon },
@@ -225,127 +224,6 @@ const Settings = () => {
 
         {/* Tab Content */}
         <div className="p-3 sm:p-4 md:p-6">
-          {/* Profile Settings */}
-          {activeTab === "profile" && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100 mb-3 sm:mb-4">Personal Information</h3>
-
-                {/* Profile Picture */}
-                <div className="flex flex-col items-start space-y-3 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-6 mb-6">
-                  <div className="relative">
-                    <div className="w-16 h-16 sm:w-20 sm:h-20 bg-green-100 dark:bg-green-700/30 rounded-full flex items-center justify-center">
-                      <UserIcon className="w-8 h-8 sm:w-10 sm:h-10 text-green-600 dark:text-green-400" />
-                    </div>
-                    <button className="absolute bottom-0 right-0 w-6 h-6 bg-green-600 dark:bg-green-500 rounded-full flex items-center justify-center text-white hover:bg-green-700 dark:hover:bg-green-600 transition-colors">
-                      <PencilIcon className="w-3 h-3" />
-                    </button>
-                  </div>
-                  <div>
-                    <h4 className="text-sm sm:text-base font-medium text-gray-900 dark:text-slate-200">Profile Picture</h4>
-                    <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400 mb-2">Upload a photo to personalize your account</p>
-                    <div className="flex space-x-2">
-                      <button className="px-2 py-1 text-xs sm:px-3 sm:py-1 sm:text-sm border border-gray-300 dark:border-slate-600 dark:text-slate-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
-                        Upload Photo
-                      </button>
-                      <button className="px-2 py-1 text-xs sm:px-3 sm:py-1 sm:text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors">
-                        Remove
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Form Fields */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">First Name</label>
-                    <input
-                      type="text"
-                      value={settings.profile.firstName}
-                      onChange={(e) => handleSettingChange("profile", "firstName", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Last Name</label>
-                    <input
-                      type="text"
-                      value={settings.profile.lastName}
-                      onChange={(e) => handleSettingChange("profile", "lastName", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Email</label>
-                    <input
-                      type="email"
-                      value={settings.profile.email}
-                      onChange={(e) => handleSettingChange("profile", "email", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Phone</label>
-                    <input
-                      type="tel"
-                      value={settings.profile.phone}
-                      onChange={(e) => handleSettingChange("profile", "phone", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Date of Birth</label>
-                    <input
-                      type="date"
-                      value={settings.profile.dateOfBirth}
-                      onChange={(e) => handleSettingChange("profile", "dateOfBirth", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Gender</label>
-                    <select
-                      value={settings.profile.gender}
-                      onChange={(e) => handleSettingChange("profile", "gender", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
-                    >
-                      <option value="Male">Male</option>
-                      <option value="Female">Female</option>
-                      <option value="Other">Other</option>
-                      <option value="Prefer not to say">Prefer not to say</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Timezone</label>
-                    <select
-                      value={settings.profile.timezone}
-                      onChange={(e) => handleSettingChange("profile", "timezone", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
-                    >
-                      <option value="America/New_York">Eastern Time</option>
-                      <option value="America/Chicago">Central Time</option>
-                      <option value="America/Denver">Mountain Time</option>
-                      <option value="America/Los_Angeles">Pacific Time</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Language</label>
-                    <select
-                      value={settings.profile.language}
-                      onChange={(e) => handleSettingChange("profile", "language", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
-                    >
-                      <option value="English">English</option>
-                      <option value="Spanish">Spanish</option>
-                      <option value="French">French</option>
-                      <option value="German">German</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Privacy Settings */}
           {activeTab === "privacy" && (
             <div className="space-y-6">
