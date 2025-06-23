@@ -223,34 +223,34 @@ const HealthMetrics = () => {
         transition={{ duration: 0.6 }}
         className="flex flex-col md:flex-row md:items-center md:justify-between gap-4"
       >
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-slate-100">Health Metrics</h1>
-          <p className="text-gray-500 dark:text-slate-400 mt-1">Comprehensive view of your health data and trends</p>
+        <div className="text-center md:text-left">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-slate-100">Health Metrics</h1>
+          <p className="text-sm md:text-base text-gray-500 dark:text-slate-400 mt-1">Comprehensive view of your health data and trends</p>
         </div>
-        <div className="flex items-center space-x-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:space-x-3">
           <select
             value={timeRange}
             onChange={(e) => setTimeRange(e.target.value)}
-            className="px-4 py-2 border border-gray-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-200 shadow-sm"
+            className="px-3 py-2 text-sm md:text-base border border-gray-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-200 shadow-sm w-full sm:w-auto"
           >
             <option value="24hours">Last 24 Hours</option>
             <option value="7days">Last 7 Days</option>
             <option value="30days">Last 30 Days</option>
             <option value="90days">Last 90 Days</option>
           </select>
-          <button className="flex items-center space-x-2 px-4 py-2 text-gray-600 dark:text-slate-400 hover:text-gray-800 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition-colors">
-            <FunnelIcon className="w-5 h-5" />
+          <button className="flex items-center justify-center space-x-2 px-3 py-2 text-sm md:text-base text-gray-600 dark:text-slate-400 hover:text-gray-800 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition-colors w-full sm:w-auto">
+            <FunnelIcon className="w-4 h-4 md:w-5 md:h-5" />
             <span>Filter</span>
           </button>
-          <button className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-xl hover:bg-green-700 transition-colors shadow">
-            <ArrowDownTrayIcon className="w-5 h-5" />
+          <button className="flex items-center justify-center space-x-2 bg-green-600 text-white px-3 py-2 text-sm md:text-base md:px-4 rounded-xl hover:bg-green-700 transition-colors shadow w-full sm:w-auto">
+            <ArrowDownTrayIcon className="w-4 h-4 md:w-5 md:h-5" />
             <span>Export Data</span>
           </button>
         </div>
       </motion.div>
 
       {/* Metrics Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         {currentMetrics.map((metric, i) => (
           <motion.div
             key={metric.id}
@@ -259,7 +259,7 @@ const HealthMetrics = () => {
             animate="visible"
             variants={cardVariants}
             whileHover={{ scale: 1.04, boxShadow: "0 8px 32px rgba(16,185,129,0.10)" }}
-            className="group relative bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg dark:shadow-slate-700/50 border border-gray-100 dark:border-slate-700 cursor-pointer transition-all hover:ring-2 hover:ring-green-100 dark:hover:ring-green-600/50 overflow-hidden" // Added group and overflow-hidden
+            className="group relative bg-white dark:bg-slate-800 rounded-xl md:rounded-2xl p-4 md:p-6 shadow-lg dark:shadow-slate-700/50 border border-gray-100 dark:border-slate-700 cursor-pointer transition-all hover:ring-2 hover:ring-green-100 dark:hover:ring-green-600/50 overflow-hidden"
             onClick={() => setSelectedMetric(metric.name.toLowerCase())}
           >
             {/* Glare effect */}
@@ -267,26 +267,26 @@ const HealthMetrics = () => {
             
             {/* Content wrapper for z-index */}
             <div className="relative z-10">
-              <div className="flex items-center justify-between mb-4">
-                <div className={`p-3 rounded-xl ${isDarkMode ? metric.bgColorDark : metric.bgColor} shadow-sm`}>
-                  <metric.icon className={`w-7 h-7 ${metric.color}`} />
+              <div className="flex items-center justify-between mb-3 md:mb-4">
+                <div className={`p-2 md:p-3 rounded-lg md:rounded-xl ${isDarkMode ? metric.bgColorDark : metric.bgColor} shadow-sm`}>
+                  <metric.icon className={`w-5 h-5 md:w-7 md:h-7 ${metric.color}`} />
                 </div>
-                <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(metric.status)}`}>{metric.status}</span>
+                <span className={`px-2 py-1 text-[10px] md:text-xs font-semibold rounded-full ${getStatusColor(metric.status)}`}>{metric.status}</span>
               </div>
-              <div className="mb-2">
+              <div className="mb-1 md:mb-2">
                 <div className="flex items-baseline space-x-1">
-                  <span className="text-2xl font-bold text-gray-900 dark:text-slate-100">{metric.value}</span>
-                  <span className="text-sm text-gray-500 dark:text-slate-400">{metric.unit}</span>
+                  <span className="text-xl md:text-2xl font-bold text-gray-900 dark:text-slate-100">{metric.value}</span>
+                  <span className="text-xs md:text-sm text-gray-500 dark:text-slate-400">{metric.unit}</span>
                 </div>
-                <p className="text-sm text-gray-600 dark:text-slate-300 mt-1 font-medium">{metric.name}</p>
-                <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">Normal: {metric.range}</p>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-300 mt-1 font-medium">{metric.name}</p>
+                <p className="text-[10px] sm:text-xs text-gray-400 dark:text-slate-500 mt-0.5 sm:mt-1">Normal: {metric.range}</p>
               </div>
-              <div className="flex items-center justify-between text-xs mt-2">
+              <div className="flex items-center justify-between text-[10px] sm:text-xs mt-2">
                 <span className={`flex items-center ${metric.change.startsWith("+") ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
                   {metric.change} from yesterday
                 </span>
                 <div className="flex items-center space-x-1 text-gray-400 dark:text-slate-500">
-                  <ClockIcon className="w-3 h-3" />
+                  <ClockIcon className="w-2.5 h-2.5 md:w-3 md:h-3" />
                   <span>{metric.lastReading}</span>
                 </div>
               </div>
@@ -303,27 +303,27 @@ const HealthMetrics = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.7 }}
-          className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg dark:shadow-slate-700/50 border border-gray-100 dark:border-slate-700"
+          className="bg-white dark:bg-slate-800 rounded-xl md:rounded-2xl p-4 md:p-6 shadow-lg dark:shadow-slate-700/50 border border-gray-100 dark:border-slate-700"
         >
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Vital Signs (24h)</h3>
-            <div className="flex items-center space-x-4 text-sm">
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 md:mb-6">
+            <h3 className="text-base md:text-lg font-semibold text-gray-900 dark:text-slate-100 mb-2 sm:mb-0">Vital Signs (24h)</h3>
+            <div className="flex items-center space-x-2 sm:space-x-4 text-xs md:text-sm">
+              <div className="flex items-center space-x-1 sm:space-x-2">
+                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-red-500 rounded-full"></div>
                 <span className="text-gray-600 dark:text-slate-300">Heart Rate</span>
               </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+              <div className="flex items-center space-x-1 sm:space-x-2">
+                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-blue-500 rounded-full"></div>
                 <span className="text-gray-600 dark:text-slate-300">Blood Pressure</span>
               </div>
             </div>
           </div>
-          <div className="h-64">
+          <div className="h-56 sm:h-64">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={vitalSignsData}>
-                <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#334155" : "#f0f0f0"} /> {/* slate-700 for dark */}
-                <XAxis dataKey="time" stroke={isDarkMode ? "#94a3b8" : "#6b7280"} fontSize={12} /> {/* slate-400 for dark */}
-                <YAxis stroke={isDarkMode ? "#94a3b8" : "#6b7280"} fontSize={12} /> {/* slate-400 for dark */}
+                <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#334155" : "#f0f0f0"} /> 
+                <XAxis dataKey="time" stroke={isDarkMode ? "#94a3b8" : "#6b7280"} fontSize={typeof window !== 'undefined' && window.innerWidth < 640 ? 10 : 12} /> 
+                <YAxis stroke={isDarkMode ? "#94a3b8" : "#6b7280"} fontSize={typeof window !== 'undefined' && window.innerWidth < 640 ? 10 : 12} /> 
                 <Tooltip 
                   contentStyle={isDarkMode ? 
                     { backgroundColor: "#1e293b", border: "1px solid #334155", borderRadius: "8px", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" } :
@@ -343,27 +343,27 @@ const HealthMetrics = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.7, delay: 0.1 }}
-          className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg dark:shadow-slate-700/50 border border-gray-100 dark:border-slate-700"
+          className="bg-white dark:bg-slate-800 rounded-xl md:rounded-2xl p-4 md:p-6 shadow-lg dark:shadow-slate-700/50 border border-gray-100 dark:border-slate-700"
         >
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Blood Glucose Levels</h3>
-            <div className="flex items-center space-x-4 text-sm">
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 md:mb-6">
+            <h3 className="text-base md:text-lg font-semibold text-gray-900 dark:text-slate-100 mb-2 sm:mb-0">Blood Glucose Levels</h3>
+            <div className="flex items-center space-x-2 sm:space-x-4 text-xs md:text-sm">
+              <div className="flex items-center space-x-1 sm:space-x-2">
+                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-green-500 rounded-full"></div>
                 <span className="text-gray-600 dark:text-slate-300">Fasting</span>
               </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+              <div className="flex items-center space-x-1 sm:space-x-2">
+                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-orange-500 rounded-full"></div>
                 <span className="text-gray-600 dark:text-slate-300">Post-Meal</span>
               </div>
             </div>
           </div>
-          <div className="h-64">
+          <div className="h-56 sm:h-64">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={glucoseData}>
                 <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#334155" : "#f0f0f0"} />
-                <XAxis dataKey="date" stroke={isDarkMode ? "#94a3b8" : "#6b7280"} fontSize={12} />
-                <YAxis stroke={isDarkMode ? "#94a3b8" : "#6b7280"} fontSize={12} />
+                <XAxis dataKey="date" stroke={isDarkMode ? "#94a3b8" : "#6b7280"} fontSize={typeof window !== 'undefined' && window.innerWidth < 640 ? 10 : 12} />
+                <YAxis stroke={isDarkMode ? "#94a3b8" : "#6b7280"} fontSize={typeof window !== 'undefined' && window.innerWidth < 640 ? 10 : 12} />
                 <Tooltip 
                   contentStyle={isDarkMode ? 
                     { backgroundColor: "#1e293b", border: "1px solid #334155", borderRadius: "8px", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" } :
@@ -387,27 +387,27 @@ const HealthMetrics = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.7, delay: 0.15 }}
-          className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg dark:shadow-slate-700/50 border border-gray-100 dark:border-slate-700"
+          className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-xl md:rounded-2xl p-4 md:p-6 shadow-lg dark:shadow-slate-700/50 border border-gray-100 dark:border-slate-700"
         >
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Weekly Activity Summary</h3>
-            <div className="flex items-center space-x-4 text-sm">
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 md:mb-6">
+            <h3 className="text-base md:text-lg font-semibold text-gray-900 dark:text-slate-100 mb-2 sm:mb-0">Weekly Activity Summary</h3>
+            <div className="flex items-center space-x-2 sm:space-x-4 text-xs md:text-sm">
+              <div className="flex items-center space-x-1 sm:space-x-2">
+                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-green-500 rounded-full"></div>
                 <span className="text-gray-600 dark:text-slate-300">Steps</span>
               </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+              <div className="flex items-center space-x-1 sm:space-x-2">
+                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-orange-500 rounded-full"></div>
                 <span className="text-gray-600 dark:text-slate-300">Calories</span>
               </div>
             </div>
           </div>
-          <div className="h-64">
+          <div className="h-56 sm:h-64">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={activityData} barCategoryGap="20%">
                 <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#334155" : "#f0f0f0"} />
-                <XAxis dataKey="day" stroke={isDarkMode ? "#94a3b8" : "#6b7280"} fontSize={12} />
-                <YAxis stroke={isDarkMode ? "#94a3b8" : "#6b7280"} fontSize={12} />
+                <XAxis dataKey="day" stroke={isDarkMode ? "#94a3b8" : "#6b7280"} fontSize={typeof window !== 'undefined' && window.innerWidth < 640 ? 10 : 12} />
+                <YAxis stroke={isDarkMode ? "#94a3b8" : "#6b7280"} fontSize={typeof window !== 'undefined' && window.innerWidth < 640 ? 10 : 12} />
                 <Tooltip 
                   contentStyle={isDarkMode ? 
                     { backgroundColor: "#1e293b", border: "1px solid #334155", borderRadius: "8px", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" } :
@@ -427,15 +427,23 @@ const HealthMetrics = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.7, delay: 0.2 }}
-          className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg dark:shadow-slate-700/50 border border-gray-100 dark:border-slate-700"
+          className="bg-white dark:bg-slate-800 rounded-xl md:rounded-2xl p-4 md:p-6 shadow-lg dark:shadow-slate-700/50 border border-gray-100 dark:border-slate-700"
         >
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-6">Sleep Quality</h3>
-          <div className="h-48 mb-4">
+          <h3 className="text-base md:text-lg font-semibold text-gray-900 dark:text-slate-100 mb-4 md:mb-6">Sleep Quality</h3>
+          <div className="h-40 sm:h-48 mb-3 md:mb-4">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={sleepBreakdown} cx="50%" cy="50%" innerRadius={40} outerRadius={80} paddingAngle={5} dataKey="value">
+                <Pie 
+                  data={sleepBreakdown} 
+                  cx="50%" 
+                  cy="50%" 
+                  innerRadius={typeof window !== 'undefined' && window.innerWidth < 640 ? 30 : 40} // smaller radius for mobile
+                  outerRadius={typeof window !== 'undefined' && window.innerWidth < 640 ? 60 : 80} // smaller radius for mobile
+                  paddingAngle={5} 
+                  dataKey="value"
+                >
                   {sleepBreakdown.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} stroke={isDarkMode ? '#1e293b' : '#fff'} strokeWidth={entry.name === "Awake" && isDarkMode ? 1 : 0} /> // Add stroke for contrast, especially for 'Awake' slice
+                    <Cell key={`cell-${index}`} fill={entry.color} stroke={isDarkMode ? '#1e293b' : '#fff'} strokeWidth={entry.name === "Awake" && isDarkMode ? 1 : 0} />
                   ))}
                 </Pie>
                 <Tooltip 
@@ -447,11 +455,11 @@ const HealthMetrics = () => {
               </PieChart>
             </ResponsiveContainer>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-1.5 md:space-y-2">
             {sleepBreakdown.map((item, index) => (
-              <div key={index} className="flex items-center justify-between text-sm">
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
+              <div key={index} className="flex items-center justify-between text-xs md:text-sm">
+                <div className="flex items-center space-x-1.5 md:space-x-2">
+                  <div className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
                   <span className="text-gray-600 dark:text-slate-300">{item.name}</span>
                 </div>
                 <span className="font-medium text-gray-900 dark:text-slate-100">{item.hours}h</span>
@@ -468,15 +476,15 @@ const HealthMetrics = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.7, delay: 0.25 }}
-          className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg dark:shadow-slate-700/50 border border-gray-100 dark:border-slate-700"
+          className="bg-white dark:bg-slate-800 rounded-xl md:rounded-2xl p-4 md:p-6 shadow-lg dark:shadow-slate-700/50 border border-gray-100 dark:border-slate-700"
         >
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-6">Weight & Body Composition Trends</h3>
-          <div className="h-64">
+          <h3 className="text-base md:text-lg font-semibold text-gray-900 dark:text-slate-100 mb-4 md:mb-6">Weight & Body Composition Trends</h3>
+          <div className="h-56 sm:h-64">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={weightData}>
                 <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#334155" : "#f0f0f0"} />
-                <XAxis dataKey="week" stroke={isDarkMode ? "#94a3b8" : "#6b7280"} fontSize={12} />
-                <YAxis stroke={isDarkMode ? "#94a3b8" : "#6b7280"} fontSize={12} />
+                <XAxis dataKey="week" stroke={isDarkMode ? "#94a3b8" : "#6b7280"} fontSize={typeof window !== 'undefined' && window.innerWidth < 640 ? 10 : 12} />
+                <YAxis stroke={isDarkMode ? "#94a3b8" : "#6b7280"} fontSize={typeof window !== 'undefined' && window.innerWidth < 640 ? 10 : 12} />
                 <Tooltip 
                   contentStyle={isDarkMode ? 
                     { backgroundColor: "#1e293b", border: "1px solid #334155", borderRadius: "8px" } :
@@ -497,53 +505,53 @@ const HealthMetrics = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.7, delay: 0.3 }}
-          className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg dark:shadow-slate-700/50 border border-gray-100 dark:border-slate-700"
+          className="bg-white dark:bg-slate-800 rounded-xl md:rounded-2xl p-4 md:p-6 shadow-lg dark:shadow-slate-700/50 border border-gray-100 dark:border-slate-700"
         >
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-6">Health Goals Progress</h3>
-          <div className="space-y-6">
+          <h3 className="text-base md:text-lg font-semibold text-gray-900 dark:text-slate-100 mb-4 md:mb-6">Health Goals Progress</h3>
+          <div className="space-y-4 md:space-y-6">
             <div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-medium text-gray-700 dark:text-slate-300">Daily Steps</span>
-                <span className="text-sm text-gray-500 dark:text-slate-400">9,200 / 10,000</span>
+              <div className="flex justify-between items-center mb-1 md:mb-2">
+                <span className="text-xs sm:text-sm font-medium text-gray-700 dark:text-slate-300">Daily Steps</span>
+                <span className="text-xs sm:text-sm text-gray-500 dark:text-slate-400">9,200 / 10,000</span>
               </div>
-              <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-3">
-                <div className="bg-green-500 h-3 rounded-full transition-all duration-300" style={{ width: "92%" }}></div>
+              <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2.5 md:h-3">
+                <div className="bg-green-500 h-2.5 md:h-3 rounded-full transition-all duration-300" style={{ width: "92%" }}></div>
               </div>
             </div>
             <div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-medium text-gray-700 dark:text-slate-300">Weight Loss</span>
-                <span className="text-sm text-gray-500 dark:text-slate-400">1.7 / 5.0 lbs</span>
+              <div className="flex justify-between items-center mb-1 md:mb-2">
+                <span className="text-xs sm:text-sm font-medium text-gray-700 dark:text-slate-300">Weight Loss</span>
+                <span className="text-xs sm:text-sm text-gray-500 dark:text-slate-400">1.7 / 5.0 lbs</span>
               </div>
-              <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-3">
-                <div className="bg-blue-500 h-3 rounded-full transition-all duration-300" style={{ width: "34%" }}></div>
-              </div>
-            </div>
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-medium text-gray-700 dark:text-slate-300">Sleep Quality</span>
-                <span className="text-sm text-gray-500 dark:text-slate-400">8.3 / 8.0 hours</span>
-              </div>
-              <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-3">
-                <div className="bg-purple-500 h-3 rounded-full transition-all duration-300" style={{ width: "100%" }}></div>
+              <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2.5 md:h-3">
+                <div className="bg-blue-500 h-2.5 md:h-3 rounded-full transition-all duration-300" style={{ width: "34%" }}></div>
               </div>
             </div>
             <div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-medium text-gray-700 dark:text-slate-300">Blood Pressure Control</span>
-                <span className="text-sm text-gray-500 dark:text-slate-400">120/80 mmHg</span>
+              <div className="flex justify-between items-center mb-1 md:mb-2">
+                <span className="text-xs sm:text-sm font-medium text-gray-700 dark:text-slate-300">Sleep Quality</span>
+                <span className="text-xs sm:text-sm text-gray-500 dark:text-slate-400">8.3 / 8.0 hours</span>
               </div>
-              <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-3">
-                <div className="bg-green-500 h-3 rounded-full transition-all duration-300" style={{ width: "85%" }}></div>
+              <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2.5 md:h-3">
+                <div className="bg-purple-500 h-2.5 md:h-3 rounded-full transition-all duration-300" style={{ width: "100%" }}></div>
               </div>
             </div>
             <div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-medium text-gray-700 dark:text-slate-300">Glucose Management</span>
-                <span className="text-sm text-gray-500 dark:text-slate-400">95 mg/dL avg</span>
+              <div className="flex justify-between items-center mb-1 md:mb-2">
+                <span className="text-xs sm:text-sm font-medium text-gray-700 dark:text-slate-300">Blood Pressure Control</span>
+                <span className="text-xs sm:text-sm text-gray-500 dark:text-slate-400">120/80 mmHg</span>
               </div>
-              <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-3">
-                <div className="bg-green-500 h-3 rounded-full transition-all duration-300" style={{ width: "78%" }}></div>
+              <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2.5 md:h-3">
+                <div className="bg-green-500 h-2.5 md:h-3 rounded-full transition-all duration-300" style={{ width: "85%" }}></div>
+              </div>
+            </div>
+            <div>
+              <div className="flex justify-between items-center mb-1 md:mb-2">
+                <span className="text-xs sm:text-sm font-medium text-gray-700 dark:text-slate-300">Glucose Management</span>
+                <span className="text-xs sm:text-sm text-gray-500 dark:text-slate-400">95 mg/dL avg</span>
+              </div>
+              <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2.5 md:h-3">
+                <div className="bg-green-500 h-2.5 md:h-3 rounded-full transition-all duration-300" style={{ width: "78%" }}></div>
               </div>
             </div>
           </div>
@@ -556,70 +564,70 @@ const HealthMetrics = () => {
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.7, delay: 0.35 }}
-        className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg dark:shadow-slate-700/50 border border-gray-100 dark:border-slate-700"
+        className="bg-white dark:bg-slate-800 rounded-xl md:rounded-2xl p-4 md:p-6 shadow-lg dark:shadow-slate-700/50 border border-gray-100 dark:border-slate-700"
       >
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Recent Readings</h3>
-          <button className="text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 text-sm font-medium">View All</button>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 md:mb-6">
+          <h3 className="text-base md:text-lg font-semibold text-gray-900 dark:text-slate-100 mb-2 sm:mb-0">Recent Readings</h3>
+          <button className="text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 text-xs sm:text-sm font-medium self-start sm:self-center">View All</button>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-xs sm:text-sm">
             <thead>
               <tr className="border-b border-gray-200 dark:border-slate-700">
-                <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-slate-200">Date & Time</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-slate-200">Metric</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-slate-200">Value</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-slate-200">Status</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-slate-200">Source</th>
+                <th className="text-left py-2 px-2 sm:py-3 sm:px-4 font-medium text-gray-900 dark:text-slate-200">Date & Time</th>
+                <th className="text-left py-2 px-2 sm:py-3 sm:px-4 font-medium text-gray-900 dark:text-slate-200">Metric</th>
+                <th className="text-left py-2 px-2 sm:py-3 sm:px-4 font-medium text-gray-900 dark:text-slate-200">Value</th>
+                <th className="text-left py-2 px-2 sm:py-3 sm:px-4 font-medium text-gray-900 dark:text-slate-200 hidden sm:table-cell">Status</th>
+                <th className="text-left py-2 px-2 sm:py-3 sm:px-4 font-medium text-gray-900 dark:text-slate-200 hidden md:table-cell">Source</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
               <tr className="hover:bg-gray-50 dark:hover:bg-slate-700/50">
-                <td className="py-3 px-4 text-gray-900 dark:text-slate-200">Today, 2:30 PM</td>
-                <td className="py-3 px-4 text-gray-600 dark:text-slate-400">Heart Rate</td>
-                <td className="py-3 px-4 font-medium text-gray-900 dark:text-slate-200">72 bpm</td>
-                <td className="py-3 px-4">
-                  <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-700/30 dark:text-green-300">Normal</span>
+                <td className="py-2 px-2 sm:py-3 sm:px-4 text-gray-900 dark:text-slate-200 whitespace-nowrap">Today, 2:30 PM</td>
+                <td className="py-2 px-2 sm:py-3 sm:px-4 text-gray-600 dark:text-slate-400">Heart Rate</td>
+                <td className="py-2 px-2 sm:py-3 sm:px-4 font-medium text-gray-900 dark:text-slate-200">72 bpm</td>
+                <td className="py-2 px-2 sm:py-3 sm:px-4 hidden sm:table-cell">
+                  <span className="px-2 py-1 text-[10px] sm:text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-700/30 dark:text-green-300">Normal</span>
                 </td>
-                <td className="py-3 px-4 text-gray-600 dark:text-slate-400">Apple Watch</td>
+                <td className="py-2 px-2 sm:py-3 sm:px-4 text-gray-600 dark:text-slate-400 hidden md:table-cell">Apple Watch</td>
               </tr>
               <tr className="hover:bg-gray-50 dark:hover:bg-slate-700/50">
-                <td className="py-3 px-4 text-gray-900 dark:text-slate-200">Today, 2:25 PM</td>
-                <td className="py-3 px-4 text-gray-600 dark:text-slate-400">Blood Pressure</td>
-                <td className="py-3 px-4 font-medium text-gray-900 dark:text-slate-200">120/80 mmHg</td>
-                <td className="py-3 px-4">
-                  <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-700/30 dark:text-green-300">Normal</span>
+                <td className="py-2 px-2 sm:py-3 sm:px-4 text-gray-900 dark:text-slate-200 whitespace-nowrap">Today, 2:25 PM</td>
+                <td className="py-2 px-2 sm:py-3 sm:px-4 text-gray-600 dark:text-slate-400">Blood Pressure</td>
+                <td className="py-2 px-2 sm:py-3 sm:px-4 font-medium text-gray-900 dark:text-slate-200">120/80 mmHg</td>
+                <td className="py-2 px-2 sm:py-3 sm:px-4 hidden sm:table-cell">
+                  <span className="px-2 py-1 text-[10px] sm:text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-700/30 dark:text-green-300">Normal</span>
                 </td>
-                <td className="py-3 px-4 text-gray-600 dark:text-slate-400">BP Monitor</td>
+                <td className="py-2 px-2 sm:py-3 sm:px-4 text-gray-600 dark:text-slate-400 hidden md:table-cell">BP Monitor</td>
               </tr>
               <tr className="hover:bg-gray-50 dark:hover:bg-slate-700/50">
-                <td className="py-3 px-4 text-gray-900 dark:text-slate-200">Today, 1:45 PM</td>
-                <td className="py-3 px-4 text-gray-600 dark:text-slate-400">Blood Glucose</td>
-                <td className="py-3 px-4 font-medium text-gray-900 dark:text-slate-200">95 mg/dL</td>
-                <td className="py-3 px-4">
-                  <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-700/30 dark:text-green-300">Normal</span>
+                <td className="py-2 px-2 sm:py-3 sm:px-4 text-gray-900 dark:text-slate-200 whitespace-nowrap">Today, 1:45 PM</td>
+                <td className="py-2 px-2 sm:py-3 sm:px-4 text-gray-600 dark:text-slate-400">Blood Glucose</td>
+                <td className="py-2 px-2 sm:py-3 sm:px-4 font-medium text-gray-900 dark:text-slate-200">95 mg/dL</td>
+                <td className="py-2 px-2 sm:py-3 sm:px-4 hidden sm:table-cell">
+                  <span className="px-2 py-1 text-[10px] sm:text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-700/30 dark:text-green-300">Normal</span>
                 </td>
-                <td className="py-3 px-4 text-gray-600 dark:text-slate-400">Glucose Monitor</td>
+                <td className="py-2 px-2 sm:py-3 sm:px-4 text-gray-600 dark:text-slate-400 hidden md:table-cell">Glucose Monitor</td>
               </tr>
               <tr className="hover:bg-gray-50 dark:hover:bg-slate-700/50">
-                <td className="py-3 px-4 text-gray-900 dark:text-slate-200">Today, 8:00 AM</td>
-                <td className="py-3 px-4 text-gray-600 dark:text-slate-400">Weight</td>
-                <td className="py-3 px-4 font-medium text-gray-900 dark:text-slate-200">173.5 lbs</td>
-                <td className="py-3 px-4">
-                  <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800 dark:bg-blue-700/30 dark:text-blue-300">On Track</span>
+                <td className="py-2 px-2 sm:py-3 sm:px-4 text-gray-900 dark:text-slate-200 whitespace-nowrap">Today, 8:00 AM</td>
+                <td className="py-2 px-2 sm:py-3 sm:px-4 text-gray-600 dark:text-slate-400">Weight</td>
+                <td className="py-2 px-2 sm:py-3 sm:px-4 font-medium text-gray-900 dark:text-slate-200">173.5 lbs</td>
+                <td className="py-2 px-2 sm:py-3 sm:px-4 hidden sm:table-cell">
+                  <span className="px-2 py-1 text-[10px] sm:text-xs font-medium rounded-full bg-blue-100 text-blue-800 dark:bg-blue-700/30 dark:text-blue-300">On Track</span>
                 </td>
-                <td className="py-3 px-4 text-gray-600 dark:text-slate-400">Smart Scale</td>
+                <td className="py-2 px-2 sm:py-3 sm:px-4 text-gray-600 dark:text-slate-400 hidden md:table-cell">Smart Scale</td>
               </tr>
               <tr className="hover:bg-gray-50 dark:hover:bg-slate-700/50">
-                <td className="py-3 px-4 text-gray-900 dark:text-slate-200">Yesterday, 11:30 PM</td>
-                <td className="py-3 px-4 text-gray-600 dark:text-slate-400">Sleep Quality</td>
-                <td className="py-3 px-4 font-medium text-gray-900 dark:text-slate-200">8.3 hours</td>
-                <td className="py-3 px-4">
-                  <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-700/30 dark:text-green-300">
+                <td className="py-2 px-2 sm:py-3 sm:px-4 text-gray-900 dark:text-slate-200 whitespace-nowrap">Yesterday, 11:30 PM</td>
+                <td className="py-2 px-2 sm:py-3 sm:px-4 text-gray-600 dark:text-slate-400">Sleep Quality</td>
+                <td className="py-2 px-2 sm:py-3 sm:px-4 font-medium text-gray-900 dark:text-slate-200">8.3 hours</td>
+                <td className="py-2 px-2 sm:py-3 sm:px-4 hidden sm:table-cell">
+                  <span className="px-2 py-1 text-[10px] sm:text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-700/30 dark:text-green-300">
                     Excellent
                   </span>
                 </td>
-                <td className="py-3 px-4 text-gray-600 dark:text-slate-400">Sleep Tracker</td>
+                <td className="py-2 px-2 sm:py-3 sm:px-4 text-gray-600 dark:text-slate-400 hidden md:table-cell">Sleep Tracker</td>
               </tr>
             </tbody>
           </table>

@@ -181,82 +181,87 @@ const Alerts = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">Health Alerts</h1>
-          <p className="text-gray-600 dark:text-slate-300 mt-1">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-slate-100">Health Alerts</h1>
+          <p className="text-sm sm:text-base text-gray-600 dark:text-slate-300 mt-1">
             {unreadCount} unread alerts • {criticalCount} critical alerts
           </p>
         </div>
-        <div className="flex items-center space-x-3">
+        <div className="flex flex-col space-y-2 items-end mt-2 sm:mt-0 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-3">
           <button
             onClick={() => setShowSettings(!showSettings)}
-            className="p-2 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
+            className="flex items-center justify-center space-x-2 p-2 text-sm text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition-colors w-full sm:w-auto md:hidden"
           >
-            <AdjustmentsHorizontalIcon className="w-5 h-5" />
+            <AdjustmentsHorizontalIcon className="w-5 h-5 flex-shrink-0" /> {/* Added flex-shrink-0 */}
+            <span>Alert Settings</span>
           </button>
           <button
             onClick={markAllAsRead}
-            className="px-4 py-2 text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 hover:bg-green-50 dark:hover:bg-green-700/20 rounded-xl transition-colors"
+            className="px-3 py-2 text-sm sm:px-4 sm:py-2 text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 hover:bg-green-50 dark:hover:bg-green-700/20 rounded-xl transition-colors w-full sm:w-auto"
           >
             Mark All Read
           </button>
-          <button className="bg-green-600 dark:bg-green-500 text-white px-4 py-2 rounded-xl hover:bg-green-700 dark:hover:bg-green-600 transition-colors">
+          {/* Hide less critical "Alert Settings" button on very small screens, or make it part of the settings panel itself */}
+          <button
+            onClick={() => setShowSettings(!showSettings)}
+            className="hidden sm:inline-flex bg-green-600 dark:bg-green-500 text-white px-3 py-2 text-sm sm:px-4 sm:py-2 rounded-xl hover:bg-green-700 dark:hover:bg-green-600 transition-colors w-full sm:w-auto"
+          >
             Alert Settings
           </button>
         </div>
       </div>
 
       {/* Alert Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-gray-200 dark:border-slate-700">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-red-100 dark:bg-red-700/30 rounded-xl">
-              <XCircleIcon className="w-6 h-6 text-red-600 dark:text-red-400" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+        <div className="bg-white dark:bg-slate-800 rounded-xl p-3 sm:p-4 border border-gray-200 dark:border-slate-700">
+          <div className="flex items-center space-x-2 sm:space-x-3">
+            <div className="p-1.5 sm:p-2 bg-red-100 dark:bg-red-700/30 rounded-lg sm:rounded-xl">
+              <XCircleIcon className="w-5 h-5 sm:w-6 sm:h-6 text-red-600 dark:text-red-400" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900 dark:text-slate-100">{criticalCount}</p>
-              <p className="text-sm text-gray-600 dark:text-slate-300">Critical Alerts</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-slate-100">{criticalCount}</p>
+              <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-300">Critical Alerts</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-gray-200 dark:border-slate-700">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-yellow-100 dark:bg-yellow-600/30 rounded-xl">
-              <ExclamationTriangleIcon className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+        <div className="bg-white dark:bg-slate-800 rounded-xl p-3 sm:p-4 border border-gray-200 dark:border-slate-700">
+          <div className="flex items-center space-x-2 sm:space-x-3">
+            <div className="p-1.5 sm:p-2 bg-yellow-100 dark:bg-yellow-600/30 rounded-lg sm:rounded-xl">
+              <ExclamationTriangleIcon className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-600 dark:text-yellow-400" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900 dark:text-slate-100">
+              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-slate-100">
                 {alerts.filter((a) => a.type === "warning" && !a.isRead).length}
               </p>
-              <p className="text-sm text-gray-600 dark:text-slate-300">Warnings</p>
+              <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-300">Warnings</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-gray-200 dark:border-slate-700">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-blue-100 dark:bg-blue-700/30 rounded-xl">
-              <InformationCircleIcon className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+        <div className="bg-white dark:bg-slate-800 rounded-xl p-3 sm:p-4 border border-gray-200 dark:border-slate-700">
+          <div className="flex items-center space-x-2 sm:space-x-3">
+            <div className="p-1.5 sm:p-2 bg-blue-100 dark:bg-blue-700/30 rounded-lg sm:rounded-xl">
+              <InformationCircleIcon className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900 dark:text-slate-100">
+              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-slate-100">
                 {alerts.filter((a) => a.type === "info" && !a.isRead).length}
               </p>
-              <p className="text-sm text-gray-600 dark:text-slate-300">Info Alerts</p>
+              <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-300">Info Alerts</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-gray-200 dark:border-slate-700">
-          <div className="flex items-center space-x-3">
-            <div className="p-2 bg-green-100 dark:bg-green-700/30 rounded-xl">
-              <CheckCircleIcon className="w-6 h-6 text-green-600 dark:text-green-400" />
+        <div className="bg-white dark:bg-slate-800 rounded-xl p-3 sm:p-4 border border-gray-200 dark:border-slate-700">
+          <div className="flex items-center space-x-2 sm:space-x-3">
+            <div className="p-1.5 sm:p-2 bg-green-100 dark:bg-green-700/30 rounded-lg sm:rounded-xl">
+              <CheckCircleIcon className="w-5 h-5 sm:w-6 sm:h-6 text-green-600 dark:text-green-400" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900 dark:text-slate-100">{alerts.filter((a) => a.type === "success").length}</p>
-              <p className="text-sm text-gray-600 dark:text-slate-300">Achievements</p>
+              <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-slate-100">{alerts.filter((a) => a.type === "success").length}</p>
+              <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-300">Achievements</p>
             </div>
           </div>
         </div>
@@ -264,8 +269,8 @@ const Alerts = () => {
 
       {/* Filter Tabs */}
       <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700">
-        <div className="border-b border-gray-200 dark:border-slate-700">
-          <nav className="flex space-x-8 px-6">
+        <div className="border-b border-gray-200 dark:border-slate-700 overflow-x-auto">
+          <nav className="flex space-x-4 sm:space-x-6 md:space-x-8 px-3 sm:px-4 md:px-6 whitespace-nowrap">
             {[
               { key: "all", label: "All Alerts", count: alerts.length },
               { key: "unread", label: "Unread", count: unreadCount },
@@ -299,33 +304,36 @@ const Alerts = () => {
             filteredAlerts.map((alert) => (
               <div
                 key={alert.id}
-                className={`p-6 hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors ${
+                className={`p-3 sm:p-4 md:p-6 hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors ${
                   !alert.isRead 
                     ? (isDarkMode ? 'bg-sky-800/40 border-sky-700/60' : 'bg-sky-50 border-sky-200') // Distinct unread style with border
                     : getAlertBgColor(alert.type) // Style based on type for read messages
                 }`}
               >
-                <div className="flex items-start space-x-4">
+                <div className="flex items-start space-x-2 sm:space-x-3 md:space-x-4">
                   <div className="flex-shrink-0 mt-1">{getAlertIcon(alert.type)}</div>
 
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-2">
+                    {/* Title & Timestamp Line */}
+                    <div className="flex flex-col items-start sm:flex-row sm:items-center sm:justify-between mb-1 sm:mb-2">
                       <h3 className={`text-sm font-medium ${!alert.isRead ? "text-gray-900 dark:text-slate-100" : "text-gray-700 dark:text-slate-300"}`}>
                         {alert.title}
                         {!alert.isRead && <span className="ml-2 inline-block w-2 h-2 bg-blue-500 dark:bg-blue-400 rounded-full"></span>}
                       </h3>
-                      <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-slate-400">
-                        <ClockIcon className="w-4 h-4" />
+                      <div className="flex items-center space-x-1 sm:space-x-2 text-xs text-gray-500 dark:text-slate-400 mt-0.5 sm:mt-0">
+                        <ClockIcon className="w-3 h-3 sm:w-4 sm:h-4" />
                         <span>{formatTimestamp(alert.timestamp)}</span>
                       </div>
                     </div>
 
-                    <p className="text-sm text-gray-600 dark:text-slate-300 mb-3">{alert.message}</p>
+                    <p className="text-sm text-gray-600 dark:text-slate-300 mb-2 sm:mb-3">{alert.message}</p>
 
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
+                    {/* Source & Actions Line */}
+                    <div className="flex flex-col items-start space-y-2 mt-2 sm:flex-row sm:items-center sm:justify-between sm:space-y-0 sm:mt-3">
+                      {/* Source & primary actions */}
+                      <div className="flex flex-col items-start space-y-2 sm:flex-row sm:items-center sm:space-x-3 sm:space-y-0">
                         <span className="text-xs text-gray-500 dark:text-slate-400">Source: {alert.source}</span>
-                        <div className="flex space-x-2">
+                        <div className="flex flex-wrap gap-x-3 gap-y-1">
                           {alert.actions.map((action, index) => (
                             <button key={index} className="text-xs text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 font-medium">
                               {action}
@@ -334,7 +342,8 @@ const Alerts = () => {
                         </div>
                       </div>
 
-                      <div className="flex items-center space-x-2">
+                      {/* Secondary actions */}
+                      <div className="flex items-center space-x-2 self-end sm:self-auto">
                         {!alert.isRead && (
                           <button
                             onClick={() => markAsRead(alert.id)}
