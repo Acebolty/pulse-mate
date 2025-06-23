@@ -2,8 +2,7 @@
 
 import { 
   Bars3Icon, 
-  BellIcon, 
-  MagnifyingGlassIcon,
+  BellIcon,
   ChevronDownIcon,
   SunIcon,
   MoonIcon
@@ -63,19 +62,6 @@ const Header = ({ onMenuClick, isCollapsed }) => {
             </div>
           )}
 
-          {/* Search */}
-          <div className="hidden md:block">
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
-              </div>
-              <input
-                type="text"
-                placeholder="Search health data, appointments..."
-                className="block w-80 pl-12 pr-4 py-3 bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 text-gray-900 dark:text-slate-200 rounded-2xl text-sm placeholder-gray-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:bg-white dark:focus:bg-slate-600 focus:border-transparent transition-all duration-200"
-              />
-            </div>
-          </div>
         </div>
 
         {/* Right side */}
@@ -160,20 +146,6 @@ const Header = ({ onMenuClick, isCollapsed }) => {
               </div>
             )}
           </div>
-        </div>
-      </div>
-
-      {/* Mobile search */}
-      <div className="md:hidden px-6 pb-4">
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-            <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
-          </div>
-          <input
-            type="text"
-            placeholder="Search..."
-             className="block w-full pl-12 pr-4 py-3 bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 text-gray-900 dark:text-slate-200 rounded-2xl text-sm placeholder-gray-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:bg-white dark:focus:bg-slate-600 focus:border-transparent transition-all duration-200"
-          />
         </div>
       </div>
     </header>
