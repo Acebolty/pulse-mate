@@ -1,0 +1,128 @@
+const HealthData = require('../models/HealthData');
+const Alert = require('../models/Alert'); // For anomaly detection
+
+// @desc    Add new health data for the logged-in user
+// @route   POST api/health-data
+// @access  Private
+const addHealthData = async (req, res) => {
+  try {
+    const { dataType, value, unit, timestamp, source } = req.body;
+
+    if (!dataType || value === undefined || !unit) {
+      return res.status(400).json({ message: 'Please provide dataType, value, and unit for health data.' });
+    }
+
+    const allowedDataTypes = HealthData.schema.path('dataType').enumValues;
+    if (!allowedDataTypes.includes(dataType)) {
+        return res.status(400).json({ message: `Invalid dataType. Allowed types are: ${allowedDataTypes.join(', ')}` });
+    }
+
+    if (dataType === 'bloodPressure') {
+      if (typeof value !== 'object' || value === null || value.systolic === undefined || value.diastolic === undefined) {
+        return res.status(400).json({ message: 'For bloodPressure, value must be an object with systolic and diastolic properties.' });
+      }
+      if (typeof value.systolic !== 'number' || typeof value.diastolic !== 'number') {
+        return res.status(400).json({ message: 'Systolic and diastolic values must be numbers.' });
+      }
+    }
+
+    const newHealthData = new HealthData({
+      userId: req.user.id,
+      dataType,
+      value,
+      unit,
+      timestamp: timestamp ? new Date(timestamp) : Date.now(),
+      source: source || 'Manual Entry'
+    });
+
+    await newHealthData.save();
+
+    // Anomaly Detection & Alert Creation
+    try {
+      let alertToCreate = null;
+      if (dataType === 'bloodPressure' && typeof value === 'object' && value.systolic && value.diastolic) {
+        if (value.systolic > 140 || value.diastolic > 90) {
+          alertToCreate = { type: 'critical', title: 'High Blood Pressure Alert', message: `Critical blood pressure reading: ${value.systolic}/${value.diastolic} mmHg. Please consult your doctor.`, source: source || 'Blood Pressure Monitor' };
+        } else if (value.systolic > 130 || value.diastolic > 85) {
+          alertToCreate = { type: 'warning', title: 'Elevated Blood Pressure', message: `Blood pressure reading: ${value.systolic}/${value.diastolic} mmHg is elevated. Monitor closely.`, source: source || 'Blood Pressure Monitor' };
+        }
+      } else if (dataType === 'heartRate' && typeof value === 'number') {
+        if (value > 100) {
+          alertToCreate = { type: 'warning', title: 'High Heart Rate Detected', message: `Heart rate of ${value} bpm detected. If resting, please monitor.`, source: source || 'Heart Rate Monitor' };
+        } else if (value < 50 && value > 0) {
+          alertToCreate = { type: 'warning', title: 'Low Heart Rate Detected', message: `Heart rate of ${value} bpm detected. If experiencing symptoms, consult your doctor.`, source: source || 'Heart Rate Monitor' };
+        }
+      } else if (dataType === 'glucoseLevel' && typeof value === 'number') {
+        if (value > 180) {
+          alertToCreate = { type: 'warning', title: 'High Blood Glucose Alert', message: `Blood glucose level is ${value} ${unit}, which is high.`, source: source || 'Glucose Monitor' };
+        } else if (value < 70 && value > 0) {
+          alertToCreate = { type: 'critical', title: 'Low Blood Glucose Alert', message: `Blood glucose level is ${value} ${unit}, which is low. Please take appropriate action.`, source: source || 'Glucose Monitor' };
+        }
+      }
+
+      if (alertToCreate) {
+        const newAlert = new Alert({ ...alertToCreate, userId: req.user.id });
+        await newAlert.save();
+        console.log('Alert created:', newAlert.title);
+      }
+    } catch (alertError) {
+      console.error('Error during anomaly detection or alert creation:', alertError);
+    }
+
+    res.status(201).json(newHealthData);
+
+  } catch (error) {
+    console.error('Error adding health data:', error);
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(val => val.message);
+      return res.status(400).json({ message: messages.join(', ') });
+    }
+    res.status(500).json({ message: 'Server error while adding health data.' });
+  }
+};
+
+// @desc    Get health data for the logged-in user, with optional filters
+// @route   GET api/health-data
+// @access  Private
+const getHealthData = async (req, res) => {
+  try {
+    const { dataType, startDate, endDate, limit = 20, page = 1 } = req.query;
+    const query = { userId: req.user.id };
+
+    if (dataType) query.dataType = dataType;
+    if (startDate || endDate) {
+      query.timestamp = {};
+      if (startDate) query.timestamp.$gte = new Date(startDate);
+      if (endDate) {
+        let endOfDay = new Date(endDate);
+        endOfDay.setHours(23, 59, 59, 999);
+        query.timestamp.$lte = endOfDay;
+      }
+    }
+    
+    const options = {
+      sort: { timestamp: -1 },
+      limit: parseInt(limit),
+      skip: (parseInt(page) - 1) * parseInt(limit)
+    };
+
+    const healthDataEntries = await HealthData.find(query, null, options);
+    const totalEntries = await HealthData.countDocuments(query);
+
+    res.json({
+      data: healthDataEntries,
+      totalPages: Math.ceil(totalEntries / limit),
+      currentPage: parseInt(page),
+      totalEntries
+    });
+
+  } catch (error) {
+    console.error('Error fetching health data:', error);
+    res.status(500).json({ message: 'Server error while fetching health data.' });
+  }
+};
+
+module.exports = {
+  addHealthData,
+  getHealthData,
+};
