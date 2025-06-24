@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import api from '../services/api'; // Import API service
 import {
   ExclamationTriangleIcon,
   InformationCircleIcon,
@@ -143,40 +144,106 @@ const formatTimestamp = (timestamp) => {
 }
 
 const Alerts = () => {
-  const [alerts, setAlerts] = useState(alertsData)
-  const [filter, setFilter] = useState("all")
-  const [showSettings, setShowSettings] = useState(false)
-  const [isDarkMode, setIsDarkMode] = useState(false)
+  const [alerts, setAlerts] = useState([]); // Initialize with empty array
+  const [filter, setFilter] = useState("all"); // 'all', 'unread', 'critical', 'warning', 'info'
+  const [showSettings, setShowSettings] = useState(false); // This seems to be for an on-page settings panel
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
+  // Pagination state (optional, but good for many alerts)
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalAlerts, setTotalAlerts] = useState(0);
+  const alertsPerPage = 10; // Or make this configurable
 
+  // Dark mode listener
   useEffect(() => {
     const observer = new MutationObserver(() => {
       setIsDarkMode(document.documentElement.classList.contains('dark'));
     });
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-    setIsDarkMode(document.documentElement.classList.contains('dark')); // Initial check
+    setIsDarkMode(document.documentElement.classList.contains('dark'));
     return () => observer.disconnect();
   }, []);
 
-  const filteredAlerts = alerts.filter((alert) => {
-    if (filter === "all") return true
-    if (filter === "unread") return !alert.isRead
-    return alert.type === filter
-  })
+  // Fetch alerts
+  const fetchAlerts = async (page = 1) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const params = {
+        page,
+        limit: alertsPerPage,
+      };
+      if (filter !== "all" && filter !== "unread") {
+        params.type = filter; // 'critical', 'warning', 'info'
+      }
+      if (filter === "unread") {
+        params.filter = "unread"; // Backend expects 'filter=unread'
+      }
+      // If filter is 'all', no specific filter/type param is needed beyond pagination
 
-  const unreadCount = alerts.filter((alert) => !alert.isRead).length
-  const criticalCount = alerts.filter((alert) => alert.type === "critical" && !alert.isRead).length
+      const response = await api.get('/alerts', { params });
+      setAlerts(response.data.data);
+      setTotalPages(response.data.totalPages);
+      setCurrentPage(response.data.currentPage);
+      setTotalAlerts(response.data.totalAlerts);
+    } catch (err) {
+      console.error("Failed to fetch alerts:", err);
+      setError("Could not load alerts. Please try again later.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const markAsRead = (alertId) => {
-    setAlerts(alerts.map((alert) => (alert.id === alertId ? { ...alert, isRead: true } : alert)))
-  }
+  useEffect(() => {
+    fetchAlerts(currentPage);
+  }, [filter, currentPage]); // Re-fetch when filter or page changes
 
-  const markAllAsRead = () => {
-    setAlerts(alerts.map((alert) => ({ ...alert, isRead: true })))
-  }
+  // Counts will now be derived from fetched data or potentially from API summary if available
+  // For now, let's calculate from the currently displayed page of alerts or use totalAlerts for 'all'.
+  // A more accurate unread/critical count would ideally come from a separate API endpoint or be aggregated if fetching all alerts.
+  const unreadCount = filter === 'unread' ? totalAlerts : alerts.filter(a => !a.isRead).length; // This is an approximation
+  const criticalCount = filter === 'critical' ? totalAlerts : alerts.filter(a => a.type === 'critical' && !a.isRead).length; // Approximation
 
-  const deleteAlert = (alertId) => {
-    setAlerts(alerts.filter((alert) => alert.id !== alertId))
-  }
+
+  const markAsRead = async (alertId) => {
+    try {
+      const response = await api.put(`/alerts/${alertId}/read`);
+      setAlerts(alerts.map((alert) => (alert._id === alertId ? response.data : alert)));
+      // Optionally re-fetch or update counts more accurately
+      fetchAlerts(currentPage); // Re-fetch to update counts and list accurately
+    } catch (err) {
+      console.error("Error marking alert as read:", err);
+      setError("Failed to mark alert as read.");
+    }
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      await api.put('/alerts/read-all/action');
+      fetchAlerts(1); // Reset to page 1 and re-fetch all alerts
+    } catch (err) {
+      console.error("Error marking all alerts as read:", err);
+      setError("Failed to mark all alerts as read.");
+    }
+  };
+
+  const deleteAlert = async (alertId) => {
+    try {
+      await api.delete(`/alerts/${alertId}`);
+      // setAlerts(alerts.filter((alert) => alert._id !== alertId)); // Optimistic update
+      fetchAlerts(currentPage); // Re-fetch to update list and counts
+    } catch (err) {
+      console.error("Error deleting alert:", err);
+      setError("Failed to delete alert.");
+    }
+  };
+  
+  // The filteredAlerts logic is now handled by the API query based on 'filter' state
+  // So, 'alerts' state directly holds the filtered list for the current page.
+  // const filteredAlerts = alerts; // No longer needed if API does filtering
 
   return (
     <div className="space-y-6">
@@ -185,12 +252,13 @@ const Alerts = () => {
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-slate-100">Health Alerts</h1>
           <p className="text-sm sm:text-base text-gray-600 dark:text-slate-300 mt-1">
-            {unreadCount} unread alerts • {criticalCount} critical alerts
+            {/* These counts might need to come from a summary API endpoint for accuracy across all pages */}
+            {loading ? 'Loading counts...' : `${unreadCount} unread alerts • ${criticalCount} critical alerts`}
           </p>
         </div>
         <div className="flex flex-col space-y-2 items-end mt-2 sm:mt-0 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-3">
           <button
-            onClick={() => setShowSettings(!showSettings)}
+            onClick={() => setShowSettings(!showSettings)} // This toggles the on-page settings panel
             className="flex items-center justify-center space-x-2 p-2 text-sm text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition-colors w-full sm:w-auto md:hidden"
           >
             <AdjustmentsHorizontalIcon className="w-5 h-5 flex-shrink-0" /> {/* Added flex-shrink-0 */}
@@ -295,15 +363,18 @@ const Alerts = () => {
 
         {/* Alerts List */}
         <div className="divide-y divide-gray-200 dark:divide-slate-700">
-          {filteredAlerts.length === 0 ? (
+          {!loading && !error && alerts.length === 0 && (
             <div className="p-8 text-center">
               <BellIcon className="w-12 h-12 text-gray-400 dark:text-slate-500 mx-auto mb-4" />
               <p className="text-gray-500 dark:text-slate-400">No alerts found for the selected filter.</p>
             </div>
-          ) : (
-            filteredAlerts.map((alert) => (
+          )}
+
+        {!loading && !error && alerts.length > 0 && (
+          <div className="divide-y divide-gray-200 dark:divide-slate-700">
+            {alerts.map((alert) => ( // Changed from filteredAlerts to alerts
               <div
-                key={alert.id}
+                key={alert._id} // Use _id from MongoDB
                 className={`p-3 sm:p-4 md:p-6 hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors ${
                   !alert.isRead 
                     ? (isDarkMode ? 'bg-sky-800/40 border-sky-700/60' : 'bg-sky-50 border-sky-200') // Distinct unread style with border
@@ -346,15 +417,17 @@ const Alerts = () => {
                       <div className="flex items-center space-x-2 self-end sm:self-auto">
                         {!alert.isRead && (
                           <button
-                            onClick={() => markAsRead(alert.id)}
-                            className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium"
+                            onClick={() => markAsRead(alert._id)} // Corrected to alert._id
+                            disabled={loading}
+                            className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium disabled:opacity-50"
                           >
                             Mark as Read
                           </button>
                         )}
                         <button
-                          onClick={() => deleteAlert(alert.id)}
-                          className="text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-medium"
+                          onClick={() => deleteAlert(alert._id)} // Corrected to alert._id
+                          disabled={loading}
+                          className="text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-medium disabled:opacity-50"
                         >
                           Delete
                         </button>

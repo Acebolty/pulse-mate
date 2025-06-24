@@ -1,6 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react" // Added useEffect
+import api from '../services/api'; // Import API service
+import { useNavigate } from 'react-router-dom'; // For potential redirects
 import {
   UserIcon,
   BellIcon,
@@ -111,15 +113,116 @@ const connectedDevices = [
   },
 ]
 
+// Default structure, similar to backend User model's settings + profile part
+const initialSettingsData = {
+  profile: {
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    dateOfBirth: "",
+    gender: "Prefer not to say",
+    profilePicture: null,
+    timezone: "America/New_York",
+    language: "English",
+  },
+  // These directly map to the `settings` object in the User model
+  privacy: {
+    profileVisibility: "healthcare-providers",
+    dataSharing: true,
+    researchParticipation: false,
+    marketingEmails: false,
+    anonymousAnalytics: true,
+  },
+  notifications: {
+    pushNotifications: true,
+    emailNotifications: true,
+    smsNotifications: false,
+    appointmentReminders: true,
+    medicationReminders: true,
+    healthAlerts: true,
+    labResults: true,
+    messageNotifications: true,
+    quietHoursEnabled: false,
+    quietHoursStart: "22:00",
+    quietHoursEnd: "07:00",
+  },
+  health: { // Health preferences
+    units: "imperial",
+    glucoseUnit: "mg/dL",
+    temperatureUnit: "fahrenheit",
+    autoSync: true,
+    dataRetention: "5-years",
+    // emergencyContact is top-level in User model, managed in Profile.jsx ideally
+  },
+  appearance: {
+    theme: "system",
+    fontSize: "medium",
+    colorScheme: "green",
+  },
+  security: { // Some basic security flags
+    twoFactorEnabled: false,
+    sessionTimeout: "30-minutes",
+    loginAlerts: true,
+  }
+};
+
+
 const Settings = () => {
-  const [activeTab, setActiveTab] = useState("privacy")
-  const [settings, setSettings] = useState(userSettings)
-  const [showPassword, setShowPassword] = useState(false)
-  const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [showLogoutModal, setShowLogoutModal] = useState(false)
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
+  const [activeTab, setActiveTab] = useState("profile") // Default to profile or appearance
+  const [settingsData, setSettingsData] = useState(initialSettingsData); // Renamed from 'settings' to avoid conflict
+  // const [showPassword, setShowPassword] = useState(false) // Not used in current JSX
+  // const [showDeleteModal, setShowDeleteModal] = useState(false) // Not used in current JSX
+  // const [showLogoutModal, setShowLogoutModal] = useState(false) // Not used in current JSX, handled in layout
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+  const navigate = useNavigate();
+
+
+  useEffect(() => {
+    const fetchUserSettings = async () => {
+      setLoading(true);
+      try {
+        const response = await api.get('/profile/me'); // Fetches the whole user object
+        const userData = response.data;
+        setSettingsData({ // Populate state from fetched user data
+          profile: { // For the profile picture section if kept
+            firstName: userData.firstName || "",
+            lastName: userData.lastName || "",
+            email: userData.email || "",
+            phone: userData.phone || "",
+            dateOfBirth: userData.dateOfBirth ? userData.dateOfBirth.split('T')[0] : "",
+            gender: userData.gender || "Prefer not to say",
+            profilePicture: userData.profilePicture || null,
+            timezone: userData.profile?.timezone || userData.settings?.profile?.timezone || initialSettingsData.profile.timezone, // Check both for older structures
+            language: userData.profile?.language || userData.settings?.profile?.language || initialSettingsData.profile.language,
+          },
+          // Populate settings directly from userData.settings
+          privacy: userData.settings?.privacy || initialSettingsData.privacy,
+          notifications: userData.settings?.notifications || initialSettingsData.notifications,
+          health: userData.settings?.health || initialSettingsData.health,
+          appearance: userData.settings?.appearance || initialSettingsData.appearance,
+          security: userData.settings?.security || initialSettingsData.security,
+        });
+        setError('');
+      } catch (err) {
+        console.error("Error fetching settings:", err);
+        setError("Failed to load settings.");
+        if (err.response && err.response.status === 401) {
+          // navigate('/login'); // Optional: redirect if unauthorized
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchUserSettings();
+  }, [navigate]);
+
 
   const tabs = [
+    { id: "profile", label: "Profile", icon: UserIcon }, // This tab might be mostly redundant if Profile.jsx is separate
     { id: "privacy", label: "Privacy", icon: ShieldCheckIcon },
     { id: "notifications", label: "Notifications", icon: BellIcon },
     { id: "health", label: "Health Settings", icon: HeartIcon },
@@ -128,41 +231,126 @@ const Settings = () => {
     { id: "appearance", label: "Appearance", icon: CogIcon },
   ]
 
+  // Updated to work with settingsData and its structure
   const handleSettingChange = (section, key, value) => {
-    setSettings((prev) => ({
+    setSettingsData(prev => ({
       ...prev,
       [section]: {
         ...prev[section],
         [key]: value,
       },
-    }))
-    setHasUnsavedChanges(true)
-  }
+    }));
+    setHasUnsavedChanges(true);
+    setSuccessMessage('');
+    setError('');
+  };
 
-  const handleNestedSettingChange = (section, nestedKey, key, value) => {
-    setSettings((prev) => ({
-      ...prev,
-      [section]: {
-        ...prev[section],
-        [nestedKey]: {
-          ...prev[section][nestedKey],
-          [key]: value,
+  // Updated for nested settings within sections like 'health.emergencyContact' (though EC is top-level in User model)
+  // This one is primarily for 'profile' section's sub-objects if Profile tab is heavily used here.
+  // For settings.health.emergencyContact, it's not used as EC is at User root.
+  // Let's assume this is for a generic nested structure if any settings tab needs it.
+  // The backend expects settings.section.key, so this nestedKey might not be needed for settings directly.
+  // For profile fields like address: handleSettingChange('profile', 'street', value, 'address')
+  const handleProfileFieldChange = (mainKey, subKey, value, nestedSubKey = null) => {
+    setSettingsData(prev => {
+      const newData = JSON.parse(JSON.stringify(prev));
+      if (nestedSubKey) { // e.g. personalInfo.address.street
+        if (!newData[mainKey][subKey]) newData[mainKey][subKey] = {};
+        newData[mainKey][subKey][nestedSubKey] = value;
+      } else { // e.g. personalInfo.firstName
+        newData[mainKey][subKey] = value;
+      }
+      return newData;
+    });
+    setHasUnsavedChanges(true);
+    setSuccessMessage('');
+    setError('');
+  };
+
+
+  const saveSettings = async () => {
+    setError('');
+    setSuccessMessage('');
+    setLoading(true);
+    try {
+      // Construct payload: send only fields that are part of the User model's top level or 'settings' object
+      // The profile tab fields (firstName, lastName, etc.) are top-level on User model.
+      // Other tabs (privacy, notifications, health prefs, appearance, security) are under 'settings' object.
+      const payload = {
+        // Profile tab fields that are top-level on User model
+        firstName: settingsData.profile.firstName,
+        lastName: settingsData.profile.lastName,
+        phone: settingsData.profile.phone,
+        dateOfBirth: settingsData.profile.dateOfBirth,
+        gender: settingsData.profile.gender,
+        timezone: settingsData.profile.timezone, // This was in settings.profile in frontend state
+        language: settingsData.profile.language, // This was in settings.profile in frontend state
+        // Email is typically not updatable here without verification
+        // ProfilePicture is handled by its own endpoint
+
+        // Settings object
+        settings: {
+          privacy: settingsData.privacy,
+          notifications: settingsData.notifications,
+          health: settingsData.health,
+          appearance: settingsData.appearance,
+          security: settingsData.security,
+          // If profile.timezone and profile.language from settingsData are meant for settings object:
+          // profile: { 
+          //   timezone: settingsData.profile.timezone, 
+          //   language: settingsData.profile.language 
+          // }
+        }
+      };
+      
+      // If your backend expects timezone/language under user.settings.profile, adjust payload like so:
+      // if (!payload.settings.profile) payload.settings.profile = {};
+      // payload.settings.profile.timezone = settingsData.profile.timezone;
+      // payload.settings.profile.language = settingsData.profile.language;
+
+
+      const response = await api.put('/profile/me', payload); // Using the same endpoint
+      
+      // Update state with potentially validated/formatted data from backend
+      const userData = response.data;
+      setSettingsData({
+        profile: {
+            firstName: userData.firstName || "",
+            lastName: userData.lastName || "",
+            email: userData.email || "",
+            phone: userData.phone || "",
+            dateOfBirth: userData.dateOfBirth ? userData.dateOfBirth.split('T')[0] : "",
+            gender: userData.gender || "Prefer not to say",
+            profilePicture: userData.profilePicture || null,
+            timezone: userData.timezone || initialSettingsData.profile.timezone, 
+            language: userData.language || initialSettingsData.profile.language,
         },
-      },
-    }))
-    setHasUnsavedChanges(true)
+        privacy: userData.settings?.privacy || initialSettingsData.privacy,
+        notifications: userData.settings?.notifications || initialSettingsData.notifications,
+        health: userData.settings?.health || initialSettingsData.health,
+        appearance: userData.settings?.appearance || initialSettingsData.appearance,
+        security: userData.settings?.security || initialSettingsData.security,
+      });
+
+      setSuccessMessage('Settings saved successfully!');
+      setHasUnsavedChanges(false);
+    } catch (err) {
+      console.error("Error saving settings:", err);
+      setError(err.response?.data?.message || 'Failed to save settings.');
+    } finally {
+      setLoading(false);
+    }
   }
 
-  const saveSettings = () => {
-    // Here you would save settings to your backend
-    console.log("Saving settings:", settings)
-    setHasUnsavedChanges(false)
-    // Show success message
-  }
-
-  const resetSettings = () => {
-    setSettings(userSettings)
-    setHasUnsavedChanges(false)
+  const resetSettings = () => { // This should ideally re-fetch or reset to last saved state from API
+    // For simplicity now, it resets to initial structure, but might not reflect last saved state.
+    // A better reset would re-trigger fetchUserSettings() or store the initial fetched data separately.
+    setSettingsData(initialSettingsData); 
+    setHasUnsavedChanges(false);
+    setError('');
+    setSuccessMessage('');
+    // To truly reset to last saved state, you'd call fetchUserSettings() again.
+    // For now, let's just clear unsaved changes flag and reset to component's initial defaults.
   }
 
   return (
@@ -177,13 +365,15 @@ const Settings = () => {
           <div className="flex items-center space-x-2 sm:space-x-3 mt-3 sm:mt-0">
             <button
               onClick={resetSettings}
-              className="px-3 py-1.5 text-sm sm:px-4 sm:py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+              disabled={loading}
+              className="px-3 py-1.5 text-sm sm:px-4 sm:py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
             >
               Reset
             </button>
             <button
               onClick={saveSettings}
-              className="px-3 py-1.5 text-sm sm:px-4 sm:py-2 bg-green-600 dark:bg-green-500 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 transition-colors"
+              disabled={loading}
+              className="px-3 py-1.5 text-sm sm:px-4 sm:py-2 bg-green-600 dark:bg-green-500 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 transition-colors disabled:opacity-50"
             >
               Save Changes
             </button>
@@ -224,6 +414,127 @@ const Settings = () => {
 
         {/* Tab Content */}
         <div className="p-3 sm:p-4 md:p-6">
+          {/* Profile Settings */}
+          {activeTab === "profile" && (
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100 mb-3 sm:mb-4">Personal Information</h3>
+
+                {/* Profile Picture */}
+                <div className="flex flex-col items-start space-y-3 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-6 mb-6">
+                  <div className="relative">
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 bg-green-100 dark:bg-green-700/30 rounded-full flex items-center justify-center">
+                      <UserIcon className="w-8 h-8 sm:w-10 sm:h-10 text-green-600 dark:text-green-400" />
+                    </div>
+                    <button className="absolute bottom-0 right-0 w-6 h-6 bg-green-600 dark:bg-green-500 rounded-full flex items-center justify-center text-white hover:bg-green-700 dark:hover:bg-green-600 transition-colors">
+                      <PencilIcon className="w-3 h-3" />
+                    </button>
+                  </div>
+                  <div>
+                    <h4 className="text-sm sm:text-base font-medium text-gray-900 dark:text-slate-200">Profile Picture</h4>
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400 mb-2">Upload a photo to personalize your account</p>
+                    <div className="flex space-x-2">
+                      <button className="px-2 py-1 text-xs sm:px-3 sm:py-1 sm:text-sm border border-gray-300 dark:border-slate-600 dark:text-slate-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                        Upload Photo
+                      </button>
+                      <button className="px-2 py-1 text-xs sm:px-3 sm:py-1 sm:text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors">
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Form Fields */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">First Name</label>
+                    <input
+                      type="text"
+                      value={settings.profile.firstName}
+                      onChange={(e) => handleSettingChange("profile", "firstName", e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Last Name</label>
+                    <input
+                      type="text"
+                      value={settings.profile.lastName}
+                      onChange={(e) => handleSettingChange("profile", "lastName", e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Email</label>
+                    <input
+                      type="email"
+                      value={settings.profile.email}
+                      onChange={(e) => handleSettingChange("profile", "email", e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Phone</label>
+                    <input
+                      type="tel"
+                      value={settings.profile.phone}
+                      onChange={(e) => handleSettingChange("profile", "phone", e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Date of Birth</label>
+                    <input
+                      type="date"
+                      value={settings.profile.dateOfBirth}
+                      onChange={(e) => handleSettingChange("profile", "dateOfBirth", e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Gender</label>
+                    <select
+                      value={settings.profile.gender}
+                      onChange={(e) => handleSettingChange("profile", "gender", e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
+                    >
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                      <option value="Prefer not to say">Prefer not to say</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Timezone</label>
+                    <select
+                      value={settings.profile.timezone}
+                      onChange={(e) => handleSettingChange("profile", "timezone", e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
+                    >
+                      <option value="America/New_York">Eastern Time</option>
+                      <option value="America/Chicago">Central Time</option>
+                      <option value="America/Denver">Mountain Time</option>
+                      <option value="America/Los_Angeles">Pacific Time</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Language</label>
+                    <select
+                      value={settings.profile.language}
+                      onChange={(e) => handleSettingChange("profile", "language", e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
+                    >
+                      <option value="English">English</option>
+                      <option value="Spanish">Spanish</option>
+                      <option value="French">French</option>
+                      <option value="German">German</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Privacy Settings */}
           {activeTab === "privacy" && (
             <div className="space-y-6">

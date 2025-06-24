@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react" // Added useEffect
+import api from '../services/api'; // Import API service
 import {
   CalendarIcon,
   ClockIcon,
@@ -286,32 +287,175 @@ const cardVariants = {
 }
 
 const Appointments = () => {
-  const [activeTab, setActiveTab] = useState("upcoming")
-  const [showBookingModal, setShowBookingModal] = useState(false)
-  const [selectedAppointment, setSelectedAppointment] = useState(null)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [filterStatus, setFilterStatus] = useState("all")
-  const [filterType, setFilterType] = useState("all")
+  const [activeTab, setActiveTab] = useState("upcoming");
+  const [showBookingModal, setShowBookingModal] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterType, setFilterType] = useState("all");
+
+  const [fetchedUpcomingAppointments, setFetchedUpcomingAppointments] = useState([]);
+  const [fetchedPastAppointments, setFetchedPastAppointments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Form state for new/editing appointment
+  const initialAppointmentFormState = {
+    providerName: "",
+    dateTime: "", // Should be ISO string or Date object for backend
+    reason: "",
+    type: "Consultation", // Default
+    notes: "",
+    virtualLink: "" 
+  };
+  const [newAppointmentData, setNewAppointmentData] = useState(initialAppointmentFormState);
+  const [isEditingModal, setIsEditingModal] = useState(false); // To differentiate create/edit in modal
+  const [editingAppointmentId, setEditingAppointmentId] = useState(null);
+
+
+  const fetchAppointments = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const params = {
+        status: filterStatus === "all" ? undefined : filterStatus,
+        // type: filterType === "all" ? undefined : filterType, // Backend doesn't have type filter yet
+        // Add pagination params if implemented: page: currentPage, limit: itemsPerPage
+      };
+      if (activeTab === "upcoming") {
+        params.upcoming = true;
+      } else if (activeTab === "past") {
+        params.past = true;
+      }
+      // If activeTab is "book", we don't fetch appointments list in the same way
+
+      if (activeTab === "upcoming" || activeTab === "past") {
+        const response = await api.get('/appointments', { params });
+        if (activeTab === "upcoming") {
+          setFetchedUpcomingAppointments(response.data.data);
+        } else {
+          setFetchedPastAppointments(response.data.data);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch appointments:", err);
+      setError("Could not load appointments. Please try again later.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "upcoming" || activeTab === "past") {
+      fetchAppointments();
+    } else {
+      // For "book" tab, we might not need to fetch a list initially,
+      // or fetch providers/slots (which is out of scope for now)
+      setLoading(false); // Stop loading if book tab
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, filterStatus, filterType]); // Re-fetch when these change
+
 
   const tabs = [
-    { id: "upcoming", label: "Upcoming", count: upcomingAppointments.length },
-    { id: "past", label: "Past", count: pastAppointments.length },
-    { id: "book", label: "Book New", count: 0 },
-  ]
+    { id: "upcoming", label: "Upcoming", count: fetchedUpcomingAppointments.length }, // Use fetched data length
+    { id: "past", label: "Past", count: fetchedPastAppointments.length },       // Use fetched data length
+    { id: "book", label: "Book New", count: 0 }, // Count for "book" tab might not be relevant
+  ];
 
-  const filteredAppointments = (activeTab === "upcoming" ? upcomingAppointments : pastAppointments).filter(
+  // Apply frontend search to the currently fetched list for the active tab
+  const currentList = activeTab === "upcoming" ? fetchedUpcomingAppointments : fetchedPastAppointments;
+  const filteredAppointments = currentList.filter(
     (appointment) => {
+      const searchLower = searchTerm.toLowerCase();
+      // Backend provides providerName, not nested doctor object for now
       const matchesSearch =
-        appointment.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        appointment.doctor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        appointment.doctor.specialty.toLowerCase().includes(searchTerm.toLowerCase())
+        (appointment.title?.toLowerCase() || '').includes(searchLower) ||
+        (appointment.providerName?.toLowerCase() || '').includes(searchLower) ||
+        (appointment.reason?.toLowerCase() || '').includes(searchLower);
+      
+      // Backend already filters by status and type if params are sent.
+      // If backend doesn't filter by type, we can do it here:
+      // const matchesType = filterType === "all" || appointment.type === filterType;
+      // return matchesSearch && matchesType;
+      return matchesSearch; // Assuming backend handles status filter, and type filter is simple for now
+    }
+  );
+  
+  // Handlers for modal and form
+  const handleOpenBookingModal = (appointmentToEdit = null) => {
+    if (appointmentToEdit) {
+      setIsEditingModal(true);
+      setEditingAppointmentId(appointmentToEdit._id); // Use _id from MongoDB
+      setNewAppointmentData({
+        providerName: appointmentToEdit.providerName,
+        // Format date for datetime-local input: YYYY-MM-DDTHH:mm
+        dateTime: appointmentToEdit.dateTime ? new Date(appointmentToEdit.dateTime).toISOString().slice(0, 16) : "",
+        reason: appointmentToEdit.reason,
+        type: appointmentToEdit.type,
+        notes: appointmentToEdit.notes || "",
+        virtualLink: appointmentToEdit.virtualLink || ""
+      });
+    } else {
+      setIsEditingModal(false);
+      setEditingAppointmentId(null);
+      setNewAppointmentData(initialAppointmentFormState);
+    }
+    setShowBookingModal(true);
+    setError(null); // Clear previous modal errors
+  };
 
-      const matchesStatus = filterStatus === "all" || appointment.status === filterStatus
-      const matchesType = filterType === "all" || appointment.type === filterType
+  const handleModalFormChange = (e) => {
+    const { name, value } = e.target;
+    setNewAppointmentData(prev => ({ ...prev, [name]: value }));
+  };
 
-      return matchesSearch && matchesStatus && matchesType
-    },
-  )
+  const handleBookingSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true); // Consider a specific modal loading state
+    setError(null);
+    try {
+      const payload = { ...newAppointmentData };
+      // Ensure dateTime is in a format backend expects, e.g., ISO string
+      if (payload.dateTime) {
+        payload.dateTime = new Date(payload.dateTime).toISOString();
+      } else {
+        setError("Date and time are required.");
+        setLoading(false);
+        return;
+      }
+
+      if (isEditingModal && editingAppointmentId) {
+        await api.put(`/appointments/${editingAppointmentId}`, payload);
+      } else {
+        await api.post('/appointments', payload);
+      }
+      setShowBookingModal(false);
+      fetchAppointments(); // Re-fetch appointments after create/update
+    } catch (err) {
+      console.error("Error saving appointment:", err);
+      setError(err.response?.data?.message || "Failed to save appointment.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancelAppointment = async (appointmentId) => {
+    if (window.confirm("Are you sure you want to cancel this appointment?")) {
+      setLoading(true); // Or a specific deleting state
+      setError(null);
+      try {
+        await api.delete(`/appointments/${appointmentId}`);
+        setSelectedAppointment(null); // Close detail modal if open
+        fetchAppointments(); // Re-fetch
+      } catch (err) {
+        console.error("Error cancelling appointment:", err);
+        setError(err.response?.data?.message || "Failed to cancel appointment.");
+        setLoading(false);
+      }
+    }
+  };
+
 
   return (
     <div className="space-y-10 px-2 md:px-0">
@@ -327,7 +471,7 @@ const Appointments = () => {
           <p className="text-sm md:text-base text-gray-500 dark:text-slate-400 mt-1">Manage your healthcare appointments and schedule new visits</p>
         </div>
         <button
-          onClick={() => setShowBookingModal(true)}
+          onClick={() => handleOpenBookingModal()} // Updated to use handler
           className="flex items-center justify-center space-x-2 bg-green-600 dark:bg-green-500 text-white px-3 py-2 md:px-4 rounded-xl hover:bg-green-700 dark:hover:bg-green-600 transition-colors shadow text-sm md:text-base"
         >
           <PlusIcon className="w-4 h-4" />
@@ -335,73 +479,74 @@ const Appointments = () => {
         </button>
       </motion.div>
 
-      {/* Quick Stats */}
+      {/* Quick Stats - Update counts from fetched data */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 md:gap-4">
-        {/* Upcoming */}
         <div className="bg-white dark:bg-slate-800 rounded-xl md:rounded-2xl p-3 md:p-4 border border-gray-200 dark:border-slate-700">
           <div className="flex items-center space-x-2 md:space-x-3">
-            <div className="p-1.5 md:p-2 bg-green-100 dark:bg-green-700/30 rounded-xl md:rounded-xl">
+            <div className="p-1.5 md:p-2 bg-green-100 dark:bg-green-700/30 rounded-lg md:rounded-xl">
               <CalendarIcon className="w-5 h-5 md:w-6 md:h-6 text-green-600 dark:text-green-400" />
             </div>
             <div>
-              <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-slate-100">{upcomingAppointments.length}</p>
+              <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-slate-100">{fetchedUpcomingAppointments.length}</p>
               <p className="text-xs md:text-sm text-gray-600 dark:text-slate-300">Upcoming</p>
             </div>
           </div>
         </div>
-        {/* Completed */}
         <div className="bg-white dark:bg-slate-800 rounded-xl md:rounded-2xl p-3 md:p-4 border border-gray-200 dark:border-slate-700">
           <div className="flex items-center space-x-2 md:space-x-3">
-            <div className="p-1.5 md:p-2 bg-blue-100 dark:bg-blue-700/30 rounded-xl md:rounded-xl">
+            <div className="p-1.5 md:p-2 bg-blue-100 dark:bg-blue-700/30 rounded-lg md:rounded-xl">
               <CheckCircleIcon className="w-5 h-5 md:w-6 md:h-6 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
-              <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-slate-100">{pastAppointments.length}</p>
+              <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-slate-100">{fetchedPastAppointments.length}</p>
               <p className="text-xs md:text-sm text-gray-600 dark:text-slate-300">Completed</p>
             </div>
           </div>
         </div>
-        {/* Chat Sessions */}
         <div className="bg-white dark:bg-slate-800 rounded-xl md:rounded-2xl p-3 md:p-4 border border-gray-200 dark:border-slate-700">
           <div className="flex items-center space-x-2 md:space-x-3">
-            <div className="p-1.5 md:p-2 bg-purple-100 dark:bg-purple-700/30 rounded-xl md:rounded-xl">
+            <div className="p-1.5 md:p-2 bg-purple-100 dark:bg-purple-700/30 rounded-lg md:rounded-xl">
               <ChatBubbleLeftRightIcon className="w-5 h-5 md:w-6 md:h-6 text-purple-600 dark:text-purple-400" />
             </div>
             <div>
               <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-slate-100">
-                {upcomingAppointments.filter((a) => a.type === "chat").length}
+                {/* This needs to be calculated from fetched data if still needed */}
+                {fetchedUpcomingAppointments.filter((a) => a.type === "Virtual" || a.type === "Chat").length} 
               </p>
-              <p className="text-xs md:text-sm text-gray-600 dark:text-slate-300">Chat Sessions</p>
+              <p className="text-xs md:text-sm text-gray-600 dark:text-slate-300">Virtual Sessions</p>
             </div>
           </div>
         </div>
-        {/* Pending */}
         <div className="bg-white dark:bg-slate-800 rounded-xl md:rounded-2xl p-3 md:p-4 border border-gray-200 dark:border-slate-700">
           <div className="flex items-center space-x-2 md:space-x-3">
-            <div className="p-1.5 md:p-2 bg-yellow-100 dark:bg-yellow-600/30 rounded-xl md:rounded-xl">
+            <div className="p-1.5 md:p-2 bg-yellow-100 dark:bg-yellow-600/30 rounded-lg md:rounded-xl">
               <ClockIcon className="w-5 h-5 md:w-6 md:h-6 text-yellow-600 dark:text-yellow-400" />
             </div>
             <div>
               <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-slate-100">
-                {upcomingAppointments.filter((a) => a.status === "pending").length}
+                {fetchedUpcomingAppointments.filter((a) => a.status === "Pending" || a.status === "Scheduled").length}
               </p>
-              <p className="text-xs md:text-sm text-gray-600 dark:text-slate-300">Pending</p>
+              <p className="text-xs md:text-sm text-gray-600 dark:text-slate-300">Pending/Scheduled</p>
             </div>
           </div>
         </div>
-        {/* Providers */}
-        <div className="bg-white dark:bg-slate-800 rounded-xl md:rounded-2xl p-3 md:p-4 border border-gray-200 dark:border-slate-700 col-span-2 sm:col-span-1 md:col-span-1"> {/* Full width on smallest, then adjust */}
+        <div className="bg-white dark:bg-slate-800 rounded-xl md:rounded-2xl p-3 md:p-4 border border-gray-200 dark:border-slate-700 col-span-2 sm:col-span-1 md:col-span-1">
           <div className="flex items-center space-x-2 md:space-x-3">
-            <div className="p-1.5 md:p-2 bg-indigo-100 dark:bg-indigo-700/30 rounded-xl md:rounded-xl">
+            <div className="p-1.5 md:p-2 bg-indigo-100 dark:bg-indigo-700/30 rounded-lg md:rounded-xl">
               <UserIcon className="w-5 h-5 md:w-6 md:h-6 text-indigo-600 dark:text-indigo-400" />
             </div>
             <div>
-              <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-slate-100">{doctors.length}</p>
+              {/* This count of doctors is from dummy data, would need a separate API if dynamic */}
+              <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-slate-100">{doctors.length}</p> 
               <p className="text-xs md:text-sm text-gray-600 dark:text-slate-300">Providers</p>
             </div>
           </div>
         </div>
       </div>
+      
+      {/* Error Display */}
+      {error && <p className="text-sm text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-700/30 p-3 rounded-md text-center">{error}</p>}
+
 
       {/* Search and Filter */}
       <motion.div
@@ -557,7 +702,7 @@ const Appointments = () => {
                           {appointment.notes && <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-300 mb-3">{appointment.notes}</p>}
 
                           {appointment.chatInstructions && (
-                            <div className="bg-purple-50 dark:bg-purple-700/20 border border-purple-200 dark:border-purple-600/40 rounded-xl p-2 sm:p-3 mb-3">
+                            <div className="bg-purple-50 dark:bg-purple-700/20 border border-purple-200 dark:border-purple-600/40 rounded-lg p-2 sm:p-3 mb-3">
                               <div className="flex items-center space-x-2 mb-1 sm:mb-2">
                                 <ChatBubbleLeftRightIcon className="w-3 h-3 sm:w-4 sm:h-4 text-purple-600 dark:text-purple-400" />
                                 <span className="text-xs sm:text-sm font-medium text-purple-800 dark:text-purple-300">Chat Instructions</span>
@@ -567,7 +712,7 @@ const Appointments = () => {
                           )}
 
                           {appointment.summary && (
-                            <div className="bg-blue-50 dark:bg-blue-700/20 border border-blue-200 dark:border-blue-600/40 rounded-xl p-2 sm:p-3 mb-3">
+                            <div className="bg-blue-50 dark:bg-blue-700/20 border border-blue-200 dark:border-blue-600/40 rounded-lg p-2 sm:p-3 mb-3">
                               <p className="text-xs sm:text-sm text-blue-800 dark:text-blue-300">{appointment.summary}</p>
                               {appointment.followUp && (
                                 <p className="text-xs text-blue-600 dark:text-blue-200 mt-1">Follow-up: {appointment.followUp}</p>
@@ -579,7 +724,7 @@ const Appointments = () => {
                           )}
 
                           {appointment.preparation && (
-                            <div className="bg-yellow-50 dark:bg-yellow-600/20 border border-yellow-200 dark:border-yellow-500/40 rounded-xl p-2 sm:p-3">
+                            <div className="bg-yellow-50 dark:bg-yellow-600/20 border border-yellow-200 dark:border-yellow-500/40 rounded-lg p-2 sm:p-3">
                               <p className="text-xs sm:text-sm font-medium text-yellow-800 dark:text-yellow-300 mb-1 sm:mb-2">Preparation Required:</p>
                               <ul className="text-xs sm:text-sm text-yellow-700 dark:text-yellow-200 space-y-1">
                                 {appointment.preparation.map((item, index) => (
@@ -598,12 +743,12 @@ const Appointments = () => {
                         {activeTab === "upcoming" && (
                           <>
                             {appointment.type === "chat" && appointment.chatRoom && (
-                              <button className="flex items-center space-x-1 px-2 py-1 sm:px-3 sm:py-2 text-xs sm:text-sm text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-700/20 rounded-xl transition-colors w-full sm:w-auto justify-center">
+                              <button className="flex items-center space-x-1 px-2 py-1 sm:px-3 sm:py-2 text-xs sm:text-sm text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-700/20 rounded-lg transition-colors w-full sm:w-auto justify-center">
                                 <ChatBubbleLeftRightIcon className="w-3 h-3 sm:w-4 sm:h-4" />
                                 <span className="hidden sm:inline">Open Chat</span>
                               </button>
                             )}
-                            <button className="flex items-center space-x-1 px-2 py-1 sm:px-3 sm:py-2 text-xs sm:text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-700/20 rounded-xl transition-colors w-full sm:w-auto justify-center">
+                            <button className="flex items-center space-x-1 px-2 py-1 sm:px-3 sm:py-2 text-xs sm:text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-700/20 rounded-lg transition-colors w-full sm:w-auto justify-center">
                               <PencilIcon className="w-3 h-3 sm:w-4 sm:h-4" />
                               <span className="hidden sm:inline">Edit</span>
                             </button>
@@ -660,11 +805,11 @@ const Appointments = () => {
                       </div>
 
                       <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-                        <button className="flex-1 px-3 py-2 bg-green-600 dark:bg-green-500 text-white rounded-xl hover:bg-green-700 dark:hover:bg-green-600 transition-colors text-xs sm:text-sm">
+                        <button className="flex-1 px-3 py-2 bg-green-600 dark:bg-green-500 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 transition-colors text-xs sm:text-sm">
                           Book In-Person
                         </button>
                         {doctor.chatAvailable && (
-                          <button className="flex-1 px-3 py-2 bg-purple-600 dark:bg-purple-500 text-white rounded-xl hover:bg-purple-700 dark:hover:bg-purple-600 transition-colors text-xs sm:text-sm flex items-center justify-center space-x-1">
+                          <button className="flex-1 px-3 py-2 bg-purple-600 dark:bg-purple-500 text-white rounded-lg hover:bg-purple-700 dark:hover:bg-purple-600 transition-colors text-xs sm:text-sm flex items-center justify-center space-x-1">
                             <ChatBubbleLeftRightIcon className="w-3 h-3" />
                             <span>Book Chat</span>
                           </button>
@@ -682,7 +827,7 @@ const Appointments = () => {
                   {/* Annual Physical Card */}
                   <div className="border border-gray-200 dark:border-slate-700 dark:bg-slate-800 rounded-xl md:rounded-2xl p-3 md:p-4 hover:shadow-md transition-shadow cursor-pointer">
                     <div className="flex items-center space-x-2 sm:space-x-3 mb-2 sm:mb-3">
-                      <div className="p-1.5 sm:p-2 bg-red-100 dark:bg-red-700/30 rounded-xl sm:rounded-xl">
+                      <div className="p-1.5 sm:p-2 bg-red-100 dark:bg-red-700/30 rounded-md sm:rounded-lg">
                         <HeartIcon className="w-5 h-5 sm:w-6 sm:h-6 text-red-600 dark:text-red-400" />
                       </div>
                       <div>
@@ -691,14 +836,14 @@ const Appointments = () => {
                       </div>
                     </div>
                     <p className="text-xs sm:text-sm text-gray-500 dark:text-slate-400 mb-2 sm:mb-3">60 min • In-Person</p>
-                    <button className="w-full px-3 py-2 text-xs sm:text-sm border border-green-600 dark:border-green-500 text-green-600 dark:text-green-400 rounded-xl hover:bg-green-50 dark:hover:bg-green-700/20 transition-colors">
+                    <button className="w-full px-3 py-2 text-xs sm:text-sm border border-green-600 dark:border-green-500 text-green-600 dark:text-green-400 rounded-lg hover:bg-green-50 dark:hover:bg-green-700/20 transition-colors">
                       Schedule Now
                     </button>
                   </div>
                   {/* Chat Consultation Card */}
                   <div className="border border-gray-200 dark:border-slate-700 dark:bg-slate-800 rounded-xl md:rounded-2xl p-3 md:p-4 hover:shadow-md transition-shadow cursor-pointer">
                     <div className="flex items-center space-x-2 sm:space-x-3 mb-2 sm:mb-3">
-                      <div className="p-1.5 sm:p-2 bg-purple-100 dark:bg-purple-700/30 rounded-xl sm:rounded-xl">
+                      <div className="p-1.5 sm:p-2 bg-purple-100 dark:bg-purple-700/30 rounded-md sm:rounded-lg">
                         <ChatBubbleLeftRightIcon className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600 dark:text-purple-400" />
                       </div>
                       <div>
@@ -707,14 +852,14 @@ const Appointments = () => {
                       </div>
                     </div>
                     <p className="text-xs sm:text-sm text-gray-500 dark:text-slate-400 mb-2 sm:mb-3">30-45 min • Secure Chat</p>
-                    <button className="w-full px-3 py-2 text-xs sm:text-sm border border-purple-600 dark:border-purple-500 text-purple-600 dark:text-purple-400 rounded-xl hover:bg-purple-50 dark:hover:bg-purple-700/20 transition-colors">
+                    <button className="w-full px-3 py-2 text-xs sm:text-sm border border-purple-600 dark:border-purple-500 text-purple-600 dark:text-purple-400 rounded-lg hover:bg-purple-50 dark:hover:bg-purple-700/20 transition-colors">
                       Start Chat Session
                     </button>
                   </div>
                   {/* Urgent Care Card */}
                   <div className="border border-gray-200 dark:border-slate-700 dark:bg-slate-800 rounded-xl md:rounded-2xl p-3 md:p-4 hover:shadow-md transition-shadow cursor-pointer">
                     <div className="flex items-center space-x-2 sm:space-x-3 mb-2 sm:mb-3">
-                      <div className="p-1.5 sm:p-2 bg-yellow-100 dark:bg-yellow-600/30 rounded-xl sm:rounded-xl">
+                      <div className="p-1.5 sm:p-2 bg-yellow-100 dark:bg-yellow-600/30 rounded-md sm:rounded-lg">
                         <ExclamationTriangleIcon className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-600 dark:text-yellow-400" />
                       </div>
                       <div>
@@ -723,7 +868,7 @@ const Appointments = () => {
                       </div>
                     </div>
                     <p className="text-xs sm:text-sm text-gray-500 dark:text-slate-400 mb-2 sm:mb-3">45 min • Both Options</p>
-                    <button className="w-full px-3 py-2 text-xs sm:text-sm border border-red-600 dark:border-red-500 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-50 dark:hover:bg-red-700/20 transition-colors">
+                    <button className="w-full px-3 py-2 text-xs sm:text-sm border border-red-600 dark:border-red-500 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-700/20 transition-colors">
                       Book Urgent
                     </button>
                   </div>
@@ -733,13 +878,13 @@ const Appointments = () => {
               {/* Available Time Slots */}
               <div>
                 <h3 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-slate-100 mb-4">Available Time Slots</h3>
-                <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-3 md:p-4">
+                <div className="bg-gray-50 dark:bg-slate-700/50 rounded-lg p-3 md:p-4">
                   <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 md:gap-3">
                     {availableSlots.map((slot, index) => (
                       <div key={index} className="space-y-1">
                         <button
                           disabled={!slot.available}
-                          className={`w-full p-2 md:p-3 rounded-xl md:rounded-xl text-xs sm:text-sm font-medium transition-colors ${
+                          className={`w-full p-2 md:p-3 rounded-md md:rounded-lg text-xs sm:text-sm font-medium transition-colors ${
                             slot.available
                               ? "bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 text-gray-900 dark:text-slate-100 hover:border-green-500 dark:hover:border-green-500 hover:text-green-600 dark:hover:text-green-400"
                               : "bg-gray-200 dark:bg-slate-600 text-gray-400 dark:text-slate-500 cursor-not-allowed"
@@ -875,7 +1020,7 @@ const Appointments = () => {
               {selectedAppointment.chatInstructions && (
                 <div>
                   <h4 className="font-medium text-sm sm:text-base text-gray-900 dark:text-slate-200 mb-1 sm:mb-2">Chat Session Information</h4>
-                  <div className="bg-purple-50 dark:bg-purple-700/20 border border-purple-200 dark:border-purple-600/40 rounded-xl p-2 sm:p-3">
+                  <div className="bg-purple-50 dark:bg-purple-700/20 border border-purple-200 dark:border-purple-600/40 rounded-lg p-2 sm:p-3">
                     <p className="text-xs sm:text-sm text-purple-700 dark:text-purple-200">{selectedAppointment.chatInstructions}</p>
                   </div>
                 </div>
@@ -899,16 +1044,16 @@ const Appointments = () => {
             {/* Action Buttons */}
             <div className="p-4 sm:p-6 flex flex-col sm:flex-row sm:space-x-3 space-y-2 sm:space-y-0 border-t border-gray-200 dark:border-slate-700">
               {selectedAppointment.type === "chat" && selectedAppointment.chatRoom && (
-                <button className="flex items-center justify-center space-x-2 px-3 py-2 sm:px-4 text-xs sm:text-sm bg-purple-600 dark:bg-purple-500 text-white rounded-xl hover:bg-purple-700 dark:hover:bg-purple-600 transition-colors w-full sm:w-auto">
+                <button className="flex items-center justify-center space-x-2 px-3 py-2 sm:px-4 text-xs sm:text-sm bg-purple-600 dark:bg-purple-500 text-white rounded-lg hover:bg-purple-700 dark:hover:bg-purple-600 transition-colors w-full sm:w-auto">
                   <ChatBubbleLeftRightIcon className="w-4 h-4" />
                   <span>Open Chat</span>
                 </button>
               )}
-              <button className="flex items-center justify-center space-x-2 px-3 py-2 sm:px-4 text-xs sm:text-sm border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors w-full sm:w-auto">
+              <button className="flex items-center justify-center space-x-2 px-3 py-2 sm:px-4 text-xs sm:text-sm border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors w-full sm:w-auto">
                 <PencilIcon className="w-4 h-4" />
                 <span>Reschedule</span>
               </button>
-              <button className="flex items-center justify-center space-x-2 px-3 py-2 sm:px-4 text-xs sm:text-sm border border-red-300 dark:border-red-500/70 text-red-700 dark:text-red-400 rounded-xl hover:bg-red-50 dark:hover:bg-red-700/20 transition-colors w-full sm:w-auto">
+              <button className="flex items-center justify-center space-x-2 px-3 py-2 sm:px-4 text-xs sm:text-sm border border-red-300 dark:border-red-500/70 text-red-700 dark:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-700/20 transition-colors w-full sm:w-auto">
                 <XMarkIcon className="w-4 h-4" />
                 <span>Cancel</span>
               </button>

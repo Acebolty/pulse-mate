@@ -1,6 +1,9 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
+import api from '../services/api'; // Import API service
+// Assuming getCurrentUser might be useful to identify the current user for message display
+import { getCurrentUser } from '../services/authService'; 
 import {
   ChatBubbleLeftRightIcon,
   PaperAirplaneIcon,
@@ -241,39 +244,181 @@ const formatMessageTime = (timestamp) => {
 }
 
 const Messages = () => {
-  const [selectedChat, setSelectedChat] = useState(chatList[0])
-  const [messageInput, setMessageInput] = useState("")
-  const [searchTerm, setSearchTerm] = useState("")
-  const [showChatInfo, setShowChatInfo] = useState(false)
-  const [isTyping, setIsTyping] = useState(false)
-  const [showChatList, setShowChatList] = useState(false) // New state for mobile chat list visibility
-  const messagesEndRef = useRef(null)
-  const fileInputRef = useRef(null)
+  const [chatList, setChatList] = useState([]); // To store fetched chat threads
+  const [selectedChat, setSelectedChat] = useState(null); // No chat selected initially
+  const [currentMessages, setCurrentMessages] = useState([]); // Messages for the selected chat
+  const [messageInput, setMessageInput] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showChatInfo, setShowChatInfo] = useState(false); // For the right sidebar
+  const [isTyping, setIsTyping] = useState(false); // Placeholder for typing indicator
+  const [showChatList, setShowChatList] = useState(true); // Show chat list by default on mobile if no chat selected
 
-  const currentMessages = messages[selectedChat?.providerId] || []
+  const [loadingChats, setLoadingChats] = useState(true);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [error, setError] = useState(null); // General error for the page
+
+  const messagesEndRef = useRef(null);
+  const fileInputRef = useRef(null);
+  const currentUser = getCurrentUser(); // Get logged-in user info
+
+  // Fetch Chat List
+  useEffect(() => {
+    const fetchChats = async () => {
+      setLoadingChats(true);
+      setError(null);
+      try {
+        const response = await api.get('/chats');
+        // Transform backend chat data to match frontend structure if needed
+        const transformedChats = response.data.map(chat => {
+          // Assuming chat.participants has at least two users, and one is not current user
+          const otherParticipant = chat.participants.find(p => p._id !== currentUser?.id);
+          return {
+            // Frontend dummy data structure: id, providerId, providerName, specialty, avatar, lastMessage, lastMessageTime, unreadCount, isOnline, lastSeen, isUrgent
+            // Backend chat structure: _id, participants, lastMessage (object), lastMessageTimestamp
+            id: chat._id, // Use chat._id as the unique id
+            providerId: otherParticipant?._id, // Use other participant's ID
+            providerName: otherParticipant ? `${otherParticipant.firstName} ${otherParticipant.lastName}` : "Unknown User",
+            specialty: otherParticipant?.specialty || "User", // Backend User model doesn't have specialty by default
+            avatar: otherParticipant?.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(otherParticipant ? `${otherParticipant.firstName} ${otherParticipant.lastName}` : 'U')}&background=random`, // Placeholder avatar
+            lastMessage: chat.lastMessage?.messageContent || "No messages yet...",
+            lastMessageTime: chat.lastMessageTimestamp || chat.updatedAt,
+            unreadCount: chat.unreadCounts?.find(uc => uc.userId === currentUser?.id)?.count || 0, // Assuming unreadCounts structure
+            isOnline: otherParticipant?.isOnline || false, // Backend User model doesn't have isOnline
+            lastSeen: otherParticipant?.lastSeen || "N/A", // Backend User model doesn't have lastSeen
+            isUrgent: false, // This logic would need to be determined (e.g., based on keywords, sender role)
+            // Store the full chat object from backend if needed for more details
+            _rawChat: chat 
+          };
+        });
+        setChatList(transformedChats);
+        if (transformedChats.length > 0 && !selectedChat) {
+          // Optionally select the first chat by default on desktop
+          // setSelectedChat(transformedChats[0]); // This would trigger fetching its messages
+        }
+      } catch (err) {
+        console.error("Failed to fetch chats:", err);
+        setError("Could not load your conversations.");
+      } finally {
+        setLoadingChats(false);
+      }
+    };
+    if(currentUser?.id) fetchChats();
+  }, [currentUser?.id]); // Re-fetch if user changes (though unlikely in this component's lifecycle)
+
+  // Fetch Messages for Selected Chat
+  useEffect(() => {
+    const fetchMessages = async () => {
+      if (!selectedChat?._rawChat?._id) { // Use _rawChat._id which is the actual chat ID
+        setCurrentMessages([]);
+        return;
+      }
+      setLoadingMessages(true);
+      setError(null);
+      try {
+        // TODO: Implement pagination for messages if needed
+        const response = await api.get(`/chats/${selectedChat._rawChat._id}/messages`);
+        // Transform messages if needed to match frontend structure
+        // Frontend structure: id, senderId, senderName, message, timestamp, type, status, fileName, fileSize
+        // Backend Message structure: _id, chatId, senderId (object), messageContent, timestamp, status
+        const transformedMessages = response.data.data.map(msg => ({
+          id: msg._id,
+          senderId: msg.senderId?._id, // Assuming senderId is populated
+          senderName: msg.senderId ? `${msg.senderId.firstName} ${msg.senderId.lastName}` : "Unknown",
+          message: msg.messageContent,
+          timestamp: msg.timestamp,
+          type: "text", // Assuming all are text for now; extend if file uploads are added
+          status: msg.status || "sent", // Ensure status exists
+        }));
+        setCurrentMessages(transformedMessages);
+      } catch (err) {
+        console.error(`Failed to fetch messages for chat ${selectedChat._rawChat._id}:`, err);
+        setError("Could not load messages for this conversation.");
+      } finally {
+        setLoadingMessages(false);
+      }
+    };
+
+    if (selectedChat) {
+      fetchMessages();
+    } else {
+      setCurrentMessages([]); // Clear messages if no chat is selected
+    }
+  }, [selectedChat]);
+
 
   const filteredChats = chatList.filter(
     (chat) =>
       chat.providerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      chat.specialty.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      chat.lastMessage.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+      (chat.specialty && chat.specialty.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (chat.lastMessage && chat.lastMessage.toLowerCase().includes(searchTerm.toLowerCase())),
+  );
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
   useEffect(() => {
-    scrollToBottom()
-  }, [currentMessages])
+    scrollToBottom();
+  }, [currentMessages]); // Scrolls when new messages are added or selected chat changes
 
-  const handleSendMessage = () => {
-    if (messageInput.trim()) {
-      // Here you would typically send the message to your backend
-      console.log("Sending message:", messageInput)
-      setMessageInput("")
+  const handleSendMessage = async () => {
+    if (!messageInput.trim() || !selectedChat?._rawChat?._id) return;
+
+    const tempMessageId = `temp-${Date.now()}`; // For optimistic update
+    const newMessageOptimistic = {
+      id: tempMessageId,
+      senderId: currentUser?.id, // Current user is the sender
+      senderName: "You", // Or fetch current user's name
+      message: messageInput.trim(),
+      timestamp: new Date().toISOString(),
+      type: "text",
+      status: "sending", // Optimistic status
+    };
+
+    // Optimistic UI update
+    setCurrentMessages(prevMessages => [...prevMessages, newMessageOptimistic]);
+    const messageToSend = messageInput.trim();
+    setMessageInput(""); // Clear input immediately
+
+    try {
+      const response = await api.post(`/chats/${selectedChat._rawChat._id}/messages`, {
+        messageContent: messageToSend,
+      });
+      const savedMessage = response.data;
+      
+      // Update the message list with the actual message from server
+      setCurrentMessages(prevMessages => 
+        prevMessages.map(msg => 
+          msg.id === tempMessageId ? {
+            id: savedMessage._id,
+            senderId: savedMessage.senderId?._id,
+            senderName: savedMessage.senderId ? `${savedMessage.senderId.firstName} ${savedMessage.senderId.lastName}` : "You",
+            message: savedMessage.messageContent,
+            timestamp: savedMessage.timestamp,
+            type: "text", // Assuming text
+            status: savedMessage.status || "sent",
+          } : msg
+        )
+      );
+      
+      // Update the last message in the chatList for the selected chat
+      setChatList(prevChatList => prevChatList.map(chat => 
+        chat.id === selectedChat.id 
+        ? { ...chat, lastMessage: savedMessage.messageContent, lastMessageTime: savedMessage.timestamp }
+        : chat
+      ));
+
+    } catch (err) {
+      console.error("Error sending message:", err);
+      setError("Failed to send message.");
+      // Revert optimistic update or mark message as failed
+      setCurrentMessages(prevMessages => 
+        prevMessages.map(msg => 
+          msg.id === tempMessageId ? { ...msg, status: "failed" } : msg
+        )
+      );
     }
-  }
+  };
 
   const handleKeyPress = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -318,7 +463,7 @@ const Messages = () => {
           absolute md:relative inset-0 z-10 md:z-0 
           transition-transform duration-300 ease-in-out
           ${selectedChat === null || showChatList ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0
-          pt-32 md:pt-0
+          pt-16 md:pt-0
         `}
       >
         {/* Header */}
@@ -329,7 +474,7 @@ const Messages = () => {
               {selectedChat && (
                 <button
                   onClick={() => setShowChatList(false)}
-                  className="md:hidden p-1 sm:p-2 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
+                  className="md:hidden p-1 sm:p-2 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                 >
                   <XMarkIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
@@ -340,7 +485,7 @@ const Messages = () => {
               {totalUnreadCount > 0 && (
                 <span className="bg-red-500 text-white text-xs rounded-full px-1.5 sm:px-2 py-0.5 sm:py-1">{totalUnreadCount}</span>
               )}
-              <button className="p-1 sm:p-2 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition-colors">
+              <button className="p-1 sm:p-2 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
                 <EllipsisVerticalIcon className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
             </div>
@@ -354,7 +499,7 @@ const Messages = () => {
               placeholder="Search conversations..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-7 sm:pl-9 pr-3 sm:pr-4 py-1.5 sm:py-2 border border-gray-300 dark:border-slate-600 rounded-xl sm:rounded-xl text-xs sm:text-sm dark:bg-slate-700 dark:text-slate-200 dark:placeholder-slate-400 focus:ring-1 sm:focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
+              className="w-full pl-7 sm:pl-9 pr-3 sm:pr-4 py-1.5 sm:py-2 border border-gray-300 dark:border-slate-600 rounded-lg sm:rounded-xl text-xs sm:text-sm dark:bg-slate-700 dark:text-slate-200 dark:placeholder-slate-400 focus:ring-1 sm:focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
             />
           </div>
         </div>
@@ -436,7 +581,7 @@ const Messages = () => {
                   {/* Button to show chat list on mobile */}
                   <button
                     onClick={() => setShowChatList(true)}
-                    className="md:hidden p-1 sm:p-2 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
+                    className="md:hidden p-1 sm:p-2 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                   >
                     <ChatBubbleLeftRightIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                   </button>
@@ -463,15 +608,15 @@ const Messages = () => {
                 </div>
 
                 <div className="flex items-center space-x-1 sm:space-x-2">
-                  <button className="p-1 sm:p-2 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition-colors">
+                  <button className="p-1 sm:p-2 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
                     <PhoneIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                   </button>
-                  <button className="p-1 sm:p-2 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition-colors">
+                  <button className="p-1 sm:p-2 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
                     <VideoCameraIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                   </button>
                   <button
                     onClick={() => setShowChatInfo(!showChatInfo)}
-                    className="p-1 sm:p-2 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
+                    className="p-1 sm:p-2 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                   >
                     <InformationCircleIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                   </button>
@@ -522,7 +667,7 @@ const Messages = () => {
                             <p className={`text-xs sm:text-sm ${isPatient ? 'text-white' : 'text-gray-800 dark:text-slate-200'}`}>{message.message}</p>
                           ) : message.type === "file" ? (
                             <div className="flex items-center space-x-2 sm:space-x-3">
-                              <div className="p-1.5 sm:p-2 bg-blue-100 dark:bg-blue-600/30 rounded-md sm:rounded-xl">
+                              <div className="p-1.5 sm:p-2 bg-blue-100 dark:bg-blue-600/30 rounded-md sm:rounded-lg">
                                 <DocumentIcon className="w-4 h-4 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400" />
                               </div>
                               <div>
@@ -578,12 +723,12 @@ const Messages = () => {
               <div className="flex items-end space-x-1.5 sm:space-x-3">
                 <button
                   onClick={handleFileUpload}
-                  className="p-1.5 sm:p-2 mb-2.5 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
+                  className="p-1.5 sm:p-2 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                 >
                   <PaperClipIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
 
-                <div className="flex-1 relative mt-1">
+                <div className="flex-1 relative">
                   <textarea
                     value={messageInput}
                     onChange={(e) => setMessageInput(e.target.value)}
@@ -595,14 +740,14 @@ const Messages = () => {
                   />
                 </div>
 
-                <button className="p-1.5 sm:p-2 mb-2.5 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition-colors">
+                <button className="p-1.5 sm:p-2 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
                   <FaceSmileIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
 
                 <button
                   onClick={handleSendMessage}
                   disabled={!messageInput.trim()}
-                  className={`p-1.5 sm:p-2 mb-2.5 rounded-xl transition-colors ${
+                  className={`p-1.5 sm:p-2 rounded-lg transition-colors ${
                     messageInput.trim()
                       ? "bg-green-500 text-white hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700"
                       : "bg-gray-200 text-gray-400 dark:bg-slate-600 dark:text-slate-500 cursor-not-allowed"
@@ -660,15 +805,15 @@ const Messages = () => {
             <div>
               <h5 className="font-medium text-gray-900 dark:text-slate-100 mb-2">Quick Actions</h5>
               <div className="space-y-2">
-                <button className="w-full flex items-center space-x-3 p-3 text-left hover:bg-gray-50 dark:hover:bg-slate-700 rounded-xl transition-colors">
+                <button className="w-full flex items-center space-x-3 p-3 text-left hover:bg-gray-50 dark:hover:bg-slate-700 rounded-lg transition-colors">
                   <PhoneIcon className="w-5 h-5 text-gray-500 dark:text-slate-400" />
                   <span className="text-gray-700 dark:text-slate-300">Schedule Call</span>
                 </button>
-                <button className="w-full flex items-center space-x-3 p-3 text-left hover:bg-gray-50 dark:hover:bg-slate-700 rounded-xl transition-colors">
+                <button className="w-full flex items-center space-x-3 p-3 text-left hover:bg-gray-50 dark:hover:bg-slate-700 rounded-lg transition-colors">
                   <VideoCameraIcon className="w-5 h-5 text-gray-500 dark:text-slate-400" />
                   <span className="text-gray-700 dark:text-slate-300">Video Consultation</span>
                 </button>
-                <button className="w-full flex items-center space-x-3 p-3 text-left hover:bg-gray-50 dark:hover:bg-slate-700 rounded-xl transition-colors">
+                <button className="w-full flex items-center space-x-3 p-3 text-left hover:bg-gray-50 dark:hover:bg-slate-700 rounded-lg transition-colors">
                   <DocumentIcon className="w-5 h-5 text-gray-500 dark:text-slate-400" />
                   <span className="text-gray-700 dark:text-slate-300">Share Documents</span>
                 </button>
@@ -678,7 +823,7 @@ const Messages = () => {
             <div>
               <h5 className="font-medium text-gray-900 dark:text-slate-100 mb-2">Shared Files</h5>
               <div className="space-y-2">
-                <div className="flex items-center space-x-3 p-2 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-xl">
+                <div className="flex items-center space-x-3 p-2 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-lg">
                   <DocumentIcon className="w-5 h-5 text-blue-500 dark:text-blue-400" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 dark:text-slate-100 truncate">blood-test-results-jan-2024.pdf</p>

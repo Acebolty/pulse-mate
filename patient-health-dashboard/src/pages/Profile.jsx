@@ -1,6 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import React, { useState, useEffect } from "react" // Added useEffect
+import { useNavigate } from 'react-router-dom'; // For potential redirects on error
+import api from '../services/api'; // Import our API service
 import {
   UserIcon,
   PencilIcon,
@@ -67,11 +69,211 @@ const userData = {
 }
 
 const Profile = () => {
-  const [activeTab, setActiveTab] = useState("personal")
-  const [isEditing, setIsEditing] = useState(false)
-  const [formData, setFormData] = useState(userData)
+  const [activeTab, setActiveTab] = useState("personal");
+  const [isEditing, setIsEditing] = useState(false);
+  const initialFormData = { // Keep this for resetting or initial structure reference
+    personalInfo: {
+      firstName: "",
+      lastName: "",
+      email: "", // Email might be fetched but usually not editable here
+      phone: "",
+      dateOfBirth: "",
+      gender: "Prefer not to say",
+      address: { street: "", city: "", state: "", zipCode: "", country: "USA" },
+      emergencyContact: { name: "", relationship: "", phone: "" },
+    },
+    medicalInfo: {
+      bloodType: "",
+      height: "",
+      weight: "",
+      allergies: [],
+      chronicConditions: [],
+      medications: [],
+      primaryDoctor: { name: "", specialty: "", phone: "", email: "" },
+    },
+    // deviceSettings and other settings might be part of a different API call or a larger user object
+    // For now, focusing on what's typically in a "profile" that's directly updatable here.
+    // The backend returns the full user object including 'settings', so we can store it.
+    settings: {}, // Will be populated from API
+    profilePicture: null, // Will hold the URL from the backend
+    profilePicturePublicId: null, // For Cloudinary
+  };
+  const [formData, setFormData] = useState(initialFormData);
+  const [loading, setLoading] = useState(true); // Start with loading true to fetch data
+  const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+  const navigate = useNavigate();
+  const fileInputRef = React.useRef(null);
+
+
+  useEffect(() => {
+    const fetchProfileData = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get('/profile/me');
+        const profileData = response.data;
+        
+        // Map backend data to frontend state structure
+        setFormData({
+          personalInfo: {
+            firstName: profileData.firstName || "",
+            lastName: profileData.lastName || "",
+            email: profileData.email || "", // Usually not editable directly on profile form
+            phone: profileData.phone || "",
+            dateOfBirth: profileData.dateOfBirth ? profileData.dateOfBirth.split('T')[0] : "", // Format for date input
+            gender: profileData.gender || "Prefer not to say",
+            address: profileData.address || initialFormData.personalInfo.address,
+            emergencyContact: profileData.emergencyContact || initialFormData.personalInfo.emergencyContact,
+          },
+          medicalInfo: profileData.medicalInfo || initialFormData.medicalInfo,
+          settings: profileData.settings || {}, // Store settings if returned
+          profilePicture: profileData.profilePicture || null,
+          profilePicturePublicId: profileData.profilePicturePublicId || null,
+        });
+        setError('');
+      } catch (err) {
+        console.error("Error fetching profile data:", err);
+        setError('Failed to load profile data.');
+        if (err.response && err.response.status === 401) {
+          // Handle unauthorized, e.g., redirect to login
+          // navigate('/login'); 
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfileData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Removed navigate from deps, fetch on mount. Add back if specific redirect logic needs it.
+
+  const handleInputChange = (tab, field, value, subField = null, index = null, subSubField = null) => {
+    setFormData(prev => {
+      const newData = JSON.parse(JSON.stringify(prev)); // Deep copy
+
+      if (tab === 'personalInfo' || tab === 'medicalInfo' || tab === 'settings') { // Top level sections
+        if (subField) { // Nested object like address, emergencyContact, primaryDoctor
+          if (index !== null && Array.isArray(newData[tab][subField])) { // Array of objects e.g. medications
+            if (subSubField) {
+                 newData[tab][subField][index][subSubField] = value;
+            } else {
+                 // This case might not be used if medications are objects with specific fields
+            }
+          } else { // Simple nested object
+            newData[tab][subField][field] = value;
+          }
+        } else { // Direct field in personalInfo or medicalInfo
+          newData[tab][field] = value;
+        }
+      }
+      return newData;
+    });
+    setSuccessMessage(''); // Clear success message on new input
+    setError(''); // Clear error on new input
+  };
+  
+  const handleSave = async () => {
+    setError('');
+    setSuccessMessage('');
+    setLoading(true);
+    try {
+      // Construct payload carefully, only send what's intended for update
+      // The backend's updateUserProfile handles dot notation for nested objects
+      const payload = {
+        firstName: formData.personalInfo.firstName,
+        lastName: formData.personalInfo.lastName,
+        phone: formData.personalInfo.phone,
+        dateOfBirth: formData.personalInfo.dateOfBirth,
+        gender: formData.personalInfo.gender,
+        address: formData.personalInfo.address,
+        emergencyContact: formData.personalInfo.emergencyContact,
+        // profilePicture is handled by its own endpoint
+        timezone: formData.settings?.timezone, // Assuming settings structure from backend
+        language: formData.settings?.language, // Assuming settings structure from backend
+        medicalInfo: formData.medicalInfo, 
+        // settings: formData.settings // If you want to update all settings sections via this form
+      };
+      
+      const response = await api.put('/profile/me', payload);
+      setFormData(prev => ({ // Update with response which might have more/formatted data
+          ...prev, // Keep parts not returned by profile/me like activeTab
+          personalInfo: {
+            ...prev.personalInfo,
+            ...response.data.personalInfo,
+            firstName: response.data.firstName, // Top level fields
+            lastName: response.data.lastName,
+            email: response.data.email,
+            phone: response.data.phone,
+            dateOfBirth: response.data.dateOfBirth ? response.data.dateOfBirth.split('T')[0] : "",
+            gender: response.data.gender,
+            address: response.data.address,
+            emergencyContact: response.data.emergencyContact,
+          },
+          medicalInfo: response.data.medicalInfo || initialFormData.medicalInfo,
+          settings: response.data.settings || {},
+          profilePicture: response.data.profilePicture || null,
+          profilePicturePublicId: response.data.profilePicturePublicId || null,
+      }));
+      setSuccessMessage('Profile updated successfully!');
+      setIsEditing(false);
+    } catch (err) {
+      console.error("Error updating profile:", err);
+      setError(err.response?.data?.message || 'Failed to update profile.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleProfilePictureUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const uploadFormData = new FormData();
+    uploadFormData.append('profilePicture', file);
+
+    setError('');
+    setSuccessMessage('');
+    setLoading(true); // You might want a specific loading state for avatar
+
+    try {
+      const response = await api.post('/profile/me/avatar', uploadFormData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      // Update local state with new avatar URL
+      setFormData(prev => ({
+        ...prev,
+        profilePicture: response.data.profilePicture,
+        // profilePicturePublicId might also be returned if you want to store it client-side
+      }));
+      setSuccessMessage(response.data.message || 'Profile picture updated!');
+    } catch (err) {
+      console.error("Error uploading profile picture:", err);
+      setError(err.response?.data?.message || 'Failed to upload profile picture.');
+    } finally {
+      setLoading(false);
+      if(fileInputRef.current) { // Reset file input
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  const handleEditToggle = () => {
+    if (isEditing) {
+      // If was editing, now "Save Changes" was clicked
+      handleSave();
+    } else {
+      // If was not editing, now "Edit Profile" was clicked
+      setIsEditing(true);
+      setSuccessMessage(''); // Clear any previous success messages
+      setError('');
+    }
+  };
+
 
   const calculateAge = (dateOfBirth) => {
+    if (!dateOfBirth) return '';
     const today = new Date()
     const birthDate = new Date(dateOfBirth)
     let age = today.getFullYear() - birthDate.getFullYear()
@@ -99,31 +301,62 @@ const Profile = () => {
           <p className="text-sm sm:text-base text-gray-600 dark:text-slate-300 mt-1">Manage your personal information and preferences</p>
         </div>
         <button
-          onClick={() => setIsEditing(!isEditing)}
-          className="flex items-center space-x-2 bg-green-600 dark:bg-green-500 text-white px-3 py-1.5 text-sm sm:px-4 sm:py-2 rounded-xl hover:bg-green-700 dark:hover:bg-green-600 transition-colors mt-3 sm:mt-0"
+          onClick={handleEditToggle} // Updated onClick
+          disabled={loading && isEditing} // Disable while saving
+          className="flex items-center space-x-2 bg-green-600 dark:bg-green-500 text-white px-3 py-1.5 text-sm sm:px-4 sm:py-2 rounded-xl hover:bg-green-700 dark:hover:bg-green-600 transition-colors mt-3 sm:mt-0 disabled:opacity-70"
         >
           <PencilIcon className="w-4 h-4" />
-          <span>{isEditing ? "Save Changes" : "Edit Profile"}</span>
+          <span>{isEditing ? (loading ? "Saving..." : "Save Changes") : "Edit Profile"}</span>
         </button>
       </div>
+
+      {/* Feedback Messages */}
+      {error && <p className="text-sm text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-700/30 p-3 rounded-md">{error}</p>}
+      {successMessage && <p className="text-sm text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-700/30 p-3 rounded-md">{successMessage}</p>}
+      {loading && activeTab !== 'personal' && <p>Loading profile data...</p> } {/* General loading for initial fetch */}
+
 
       {/* Profile Header Card */}
       <div className="bg-white dark:bg-slate-800 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-slate-700">
         <div className="flex flex-col items-center text-center space-y-4 sm:flex-row sm:items-center sm:text-left sm:space-y-0 sm:space-x-6">
           <div className="relative">
-            <div className="w-20 h-20 sm:w-24 sm:h-24 bg-green-100 dark:bg-green-700/30 rounded-full flex items-center justify-center">
-              <UserIcon className="w-10 h-10 sm:w-12 sm:h-12 text-green-600 dark:text-green-400" />
-            </div>
-            <button className="absolute bottom-0 right-0 w-7 h-7 sm:w-8 sm:h-8 bg-green-600 dark:bg-green-500 rounded-full flex items-center justify-center text-white hover:bg-green-700 dark:hover:bg-green-600 transition-colors">
-              <CameraIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            </button>
+            {formData.profilePicture ? (
+              <img 
+                src={formData.profilePicture} 
+                alt="Profile" 
+                className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover" 
+              />
+            ) : (
+              <div className="w-20 h-20 sm:w-24 sm:h-24 bg-green-100 dark:bg-green-700/30 rounded-full flex items-center justify-center">
+                <UserIcon className="w-10 h-10 sm:w-12 sm:h-12 text-green-600 dark:text-green-400" />
+              </div>
+            )}
+            {isEditing && (
+              <>
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  onChange={handleProfilePictureUpload} 
+                  accept="image/png, image/jpeg, image/gif, image/webp"
+                  className="hidden" 
+                />
+                <button 
+                  onClick={() => fileInputRef.current && fileInputRef.current.click()}
+                  className="absolute bottom-0 right-0 w-7 h-7 sm:w-8 sm:h-8 bg-green-600 dark:bg-green-500 rounded-full flex items-center justify-center text-white hover:bg-green-700 dark:hover:bg-green-600 transition-colors"
+                  aria-label="Change profile picture"
+                  disabled={loading} // Disable while main form is saving, or use a specific avatar loading state
+                >
+                  <CameraIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                </button>
+              </>
+            )}
           </div>
 
           <div className="flex-1 mt-4 sm:mt-0">
             <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-slate-100">
-              {formData.personalInfo.firstName} {formData.personalInfo.lastName}
+              {loading && !formData.personalInfo.firstName ? 'Loading...' : `${formData.personalInfo.firstName} ${formData.personalInfo.lastName}`}
             </h2>
-            <p className="text-sm sm:text-base text-gray-600 dark:text-slate-300">Patient ID: #12345</p>
+            <p className="text-sm sm:text-base text-gray-600 dark:text-slate-300">Patient ID: #12345</p> {/* Assuming static or fetched elsewhere */}
             <div className="flex flex-col space-y-1 items-center mt-2 sm:flex-row sm:items-start sm:space-y-0 sm:space-x-4 text-xs sm:text-sm text-gray-500 dark:text-slate-400">
               <div className="flex items-center space-x-1">
                 <CalendarIcon className="w-3 h-3 sm:w-4 sm:h-4" />
