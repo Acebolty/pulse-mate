@@ -12,13 +12,16 @@ const healthDataSchema = new Schema({
     type: String,
     required: true,
     enum: [ // Define possible types of health data
-      'heartRate', 
+      'heartRate',
       'bloodPressure', // Could be an object: { systolic: Number, diastolic: Number }
-      'glucoseLevel', 
+      'glucoseLevel',
       'caloriesBurned',
       'stepsTaken',
       'sleepDuration',
       'bodyTemperature',
+      'weight',
+      'bodyFat',
+      'muscleMass',
       // Add other types as needed
     ],
     trim: true

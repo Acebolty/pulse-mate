@@ -18,6 +18,9 @@ app.use(cors());
 // Parse incoming JSON requests - allows us to read req.body
 app.use(express.json()); 
 
+// Define a port for the server to listen on
+const PORT = process.env.PORT || 5001;
+
 // MongoDB Atlas Connection String
 const MONGO_URI = process.env.MONGO_URI;
 
@@ -41,9 +44,7 @@ mongoose.connect(MONGO_URI)
     // process.exit(1); 
   });
 
-// Define a port for the server to listen on
-// It's good practice to use an environment variable for this, but we'll hardcode for now
-const PORT = process.env.PORT || 5001; // Using 5001 to avoid conflict with common frontend port 5173 or 3000
+
 
 // Basic route to test if the server is running
 app.get('/', (req, res) => {
@@ -73,5 +74,9 @@ app.use('/api/appointments', appointmentRoutes); // All routes will be prefixed 
 // Import and use chat routes
 const chatRoutes = require('./routes/chatRoutes');
 app.use('/api/chats', chatRoutes); // All routes will be prefixed with /api/chats
+
+// Import and use simulation routes
+const simulationRoutes = require('./routes/simulation');
+app.use('/api/simulation', simulationRoutes); // All routes will be prefixed with /api/simulation
 
 // Note: app.listen() is now inside the mongoose.connect().then() block
