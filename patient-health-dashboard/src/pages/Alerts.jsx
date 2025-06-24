@@ -414,6 +414,16 @@ const Alerts = () => {
   const unreadCount = getUnreadCount();
   const criticalCount = getCriticalUnreadCount();
 
+  // Calculate alerts this week
+  const now = new Date();
+  const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const alertsThisWeek = alerts.filter(alert =>
+    new Date(alert.timestamp) >= weekAgo
+  ).length;
+
+  // Calculate trend
+  const alertTrend = alertsThisWeek > 5 ? 'increasing' : alertsThisWeek < 2 ? 'decreasing' : 'stable';
+
   // Emergency action handler
   const handleEmergencyAction = (alert, action) => {
     console.log(`Emergency action: ${action} for alert:`, alert);
@@ -450,7 +460,7 @@ const Alerts = () => {
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-slate-100">Intelligent Health Alerts</h1>
           <p className="text-sm sm:text-base text-gray-600 dark:text-slate-300 mt-1">
-            {loading ? 'Analyzing health data...' : `${unreadCount} unread alerts • ${criticalCount} critical alerts • ${alertStats.alertsThisWeek} this week`}
+            {loading ? 'Analyzing health data...' : `${unreadCount} unread alerts • ${criticalCount} critical alerts • ${alertsThisWeek} this week`}
           </p>
         </div>
         <div className="flex flex-col space-y-2 items-end mt-2 sm:mt-0 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-3">
@@ -511,12 +521,12 @@ const Alerts = () => {
                   <ChartBarIcon className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-slate-100">{alertStats.alertsThisWeek}</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-slate-100">{alertsThisWeek}</p>
                   <p className="text-sm text-gray-600 dark:text-slate-300">Alerts This Week</p>
                 </div>
               </div>
               <div className="mt-2 text-xs text-gray-500 dark:text-slate-400">
-                Trend: {alertStats.alertTrend === 'increasing' ? '📈 Increasing' : alertStats.alertTrend === 'decreasing' ? '📉 Decreasing' : '➡️ Stable'}
+                Trend: {alertTrend === 'increasing' ? '📈 Increasing' : alertTrend === 'decreasing' ? '📉 Decreasing' : '➡️ Stable'}
               </div>
             </div>
 
