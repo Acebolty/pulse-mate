@@ -363,6 +363,20 @@ const Alerts = () => {
 
         {/* Alerts List */}
         <div className="divide-y divide-gray-200 dark:divide-slate-700">
+          {loading && (
+            <div className="p-8 text-center">
+              <ClockIcon className="w-12 h-12 text-gray-400 dark:text-slate-500 mx-auto mb-4 animate-spin" />
+              <p className="text-gray-500 dark:text-slate-400">Loading alerts...</p>
+            </div>
+          )}
+
+          {!loading && error && (
+            <div className="p-8 text-center">
+              <ExclamationTriangleIcon className="w-12 h-12 text-red-500 dark:text-red-400 mx-auto mb-4" />
+              <p className="text-red-600 dark:text-red-400">{error}</p>
+            </div>
+          )}
+
           {!loading && !error && alerts.length === 0 && (
             <div className="p-8 text-center">
               <BellIcon className="w-12 h-12 text-gray-400 dark:text-slate-500 mx-auto mb-4" />
@@ -376,7 +390,7 @@ const Alerts = () => {
               <div
                 key={alert._id} // Use _id from MongoDB
                 className={`p-3 sm:p-4 md:p-6 hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors ${
-                  !alert.isRead 
+                  !alert.isRead
                     ? (isDarkMode ? 'bg-sky-800/40 border-sky-700/60' : 'bg-sky-50 border-sky-200') // Distinct unread style with border
                     : getAlertBgColor(alert.type) // Style based on type for read messages
                 }`}
@@ -436,8 +450,32 @@ const Alerts = () => {
                   </div>
                 </div>
               </div>
-            ))
-          )}
+            ))}
+          </div>
+        )}
+        
+        {/* Pagination Controls */}
+        {!loading && !error && totalPages > 1 && (
+          <div className="flex items-center justify-between px-3 sm:px-4 md:px-6 py-3 border-t border-gray-200 dark:border-slate-700">
+            <button
+              onClick={() => setCurrentPage(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="px-3 py-2 text-sm text-gray-600 dark:text-slate-300 hover:text-gray-800 dark:hover:text-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
+            <span className="text-sm text-gray-600 dark:text-slate-300">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="px-3 py-2 text-sm text-gray-600 dark:text-slate-300 hover:text-gray-800 dark:hover:text-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </div>
+        )}
         </div>
       </div>
 
