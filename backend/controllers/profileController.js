@@ -22,24 +22,29 @@ const getUserProfile = async (req, res) => {
 // @route   PUT api/profile/me
 // @access  Private
 const updateUserProfile = async (req, res) => {
-  const { 
-    firstName, 
-    lastName, 
-    dateOfBirth, 
-    gender, 
-    address, 
-    emergencyContact, 
+  const {
+    firstName,
+    lastName,
+    email,
+    phone,
+    dateOfBirth,
+    gender,
+    address,
+    emergencyContact,
     profilePicture,
     timezone,
     language,
     settings,
-    medicalInfo // Added medicalInfo here
+    medicalInfo,
+    healthTargets // Added healthTargets here
   } = req.body;
 
   // Build fields to update
   const updateFields = {};
   if (firstName !== undefined) updateFields.firstName = firstName;
   if (lastName !== undefined) updateFields.lastName = lastName;
+  if (email !== undefined) updateFields.email = email;
+  if (phone !== undefined) updateFields.phone = phone;
   if (dateOfBirth !== undefined) updateFields.dateOfBirth = dateOfBirth;
   if (gender !== undefined) updateFields.gender = gender;
   // Special handling for profilePicture to allow removal
@@ -118,11 +123,24 @@ const updateUserProfile = async (req, res) => {
 
   // Handle nested settings object
   if (settings && typeof settings === 'object') {
-    for (const section in settings) { 
+    for (const section in settings) {
       if (settings.hasOwnProperty(section) && settings[section] !== null && typeof settings[section] === 'object') {
-        for (const key in settings[section]) { 
+        for (const key in settings[section]) {
           if (settings[section].hasOwnProperty(key) && settings[section][key] !== undefined ) { // ensure value is not undefined
             updateFields[`settings.${section}.${key}`] = settings[section][key];
+          }
+        }
+      }
+    }
+  }
+
+  // Handle nested healthTargets object
+  if (healthTargets && typeof healthTargets === 'object') {
+    for (const metric in healthTargets) {
+      if (healthTargets.hasOwnProperty(metric) && healthTargets[metric] !== null && typeof healthTargets[metric] === 'object') {
+        for (const key in healthTargets[metric]) {
+          if (healthTargets[metric].hasOwnProperty(key) && healthTargets[metric][key] !== undefined) {
+            updateFields[`healthTargets.${metric}.${key}`] = healthTargets[metric][key];
           }
         }
       }

@@ -14,8 +14,7 @@ const metrics = [
     gradient: "from-red-400 to-pink-500",
     bgGradient: "from-red-50 to-pink-50",
     bgGradientDark: "dark:from-red-900/50 dark:to-pink-900/50",
-    changeBgColor: "bg-emerald-50",
-    changeBgColorDark: "dark:bg-emerald-700/30",
+
     lastUpdated: "2 min ago",
   },
   {
@@ -29,8 +28,7 @@ const metrics = [
     gradient: "from-blue-400 to-cyan-500",
     bgGradient: "from-blue-50 to-cyan-50",
     bgGradientDark: "dark:from-blue-900/50 dark:to-cyan-900/50",
-    changeBgColor: "bg-red-50", // Negative change
-    changeBgColorDark: "dark:bg-red-700/30", // Negative change
+
     lastUpdated: "15 min ago",
   },
 ];
@@ -135,8 +133,7 @@ const HealthMetricsGrid = ({ latestMetrics = {} }) => {
           gradient: "from-red-400 to-pink-500",
           bgGradient: "from-red-50 to-pink-50",
           bgGradientDark: "dark:from-red-900/50 dark:to-pink-900/50",
-          changeBgColor: "bg-emerald-50",
-          changeBgColorDark: "dark:bg-emerald-700/30",
+
           lastUpdated: formatTimestamp(latestMetrics.bloodPressure.timestamp),
         };
         baseMetrics.push(bpMetric);
@@ -172,8 +169,7 @@ const HealthMetricsGrid = ({ latestMetrics = {} }) => {
           gradient: "from-orange-400 to-yellow-500",
           bgGradient: "from-orange-50 to-yellow-50",
           bgGradientDark: "dark:from-orange-900/50 dark:to-yellow-900/50",
-          changeBgColor: "bg-emerald-50",
-          changeBgColorDark: "dark:bg-emerald-700/30",
+
           lastUpdated: formatTimestamp(latestMetrics.bodyTemperature.timestamp),
         };
         baseMetrics.push(tempMetric);
@@ -205,8 +201,7 @@ const HealthMetricsGrid = ({ latestMetrics = {} }) => {
           gradient: "from-purple-400 to-pink-500",
           bgGradient: "from-purple-50 to-pink-50",
           bgGradientDark: "dark:from-purple-900/50 dark:to-pink-900/50",
-          changeBgColor: "bg-emerald-50",
-          changeBgColorDark: "dark:bg-emerald-700/30",
+
           lastUpdated: formatTimestamp(latestMetrics.weight.timestamp),
         };
         baseMetrics.push(weightMetric);
@@ -363,20 +358,19 @@ const HealthMetricsGrid = ({ latestMetrics = {} }) => {
             </div>
 
             <div className="flex items-center justify-between text-xs">
-              <motion.span 
-                className={`flex items-center font-semibold px-1 py-1 rounded-xl ${
-                  metric.change.startsWith("+") 
-                    ? `text-emerald-700 ${isDarkMode ? metric.changeBgColorDark : metric.changeBgColor}` 
-                    : `text-red-700 ${isDarkMode ? metric.changeBgColorDark : metric.changeBgColor}`
-                } dark:text-emerald-300 dark:text-red-300`} // Ensure text color is also dark mode aware
+              <motion.span
+                className={`flex items-center ${
+                  metric.change.startsWith("+")
+                    ? "text-green-600 dark:text-green-400"
+                    : metric.change.startsWith("-")
+                    ? "text-red-600 dark:text-red-400"
+                    : "text-gray-600 dark:text-gray-400"
+                }`}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: index * 0.1 + 0.5 }}
               >
-                <span className="mr-1">
-                  {metric.change.startsWith("+") ? "↗" : metric.change.startsWith("-") ? "↘" : ""}
-                </span>
-                {metric.change}
+                {metric.change.startsWith("+") ? "↗" : metric.change.startsWith("-") ? "↘" : ""} {metric.change}
               </motion.span>
               <span className="text-gray-500 dark:text-slate-400 font-medium">{metric.lastUpdated}</span>
             </div>

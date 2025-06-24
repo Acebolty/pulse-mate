@@ -16,6 +16,12 @@ const emergencyContactSchema = new Schema({
 }, { _id: false });
 
 const userSchema = new Schema({
+  patientId: {
+    type: String,
+    unique: true,
+    required: true,
+    trim: true
+  },
   firstName: {
     type: String,
     required: [true, 'First name is required'],
@@ -33,7 +39,11 @@ const userSchema = new Schema({
     trim: true,
     lowercase: true,
     // Basic email validation
-    match: [/.+\@.+\..+/, 'Please fill a valid email address'] 
+    match: [/.+\@.+\..+/, 'Please fill a valid email address']
+  },
+  phone: {
+    type: String,
+    trim: true
   },
   passwordHash: {
     type: String,
@@ -87,6 +97,40 @@ const userSchema = new Schema({
     }
   },
 
+  // Health targets for monitoring and alerts
+  healthTargets: {
+    heartRate: {
+      min: { type: Number, default: 60 },
+      max: { type: Number, default: 100 },
+      unit: { type: String, default: 'bpm' }
+    },
+    bloodPressure: {
+      systolic: {
+        min: { type: Number, default: 90 },
+        max: { type: Number, default: 120 }
+      },
+      diastolic: {
+        min: { type: Number, default: 60 },
+        max: { type: Number, default: 80 }
+      },
+      unit: { type: String, default: 'mmHg' }
+    },
+    bodyTemperature: {
+      min: { type: Number, default: 97.0 },
+      max: { type: Number, default: 99.5 },
+      unit: { type: String, default: '°F' }
+    },
+    glucoseLevel: {
+      min: { type: Number, default: 70 },
+      max: { type: Number, default: 140 },
+      unit: { type: String, default: 'mg/dL' }
+    },
+    weight: {
+      target: { type: Number, default: 175 },
+      unit: { type: String, default: 'lbs' }
+    }
+  },
+
   // Settings - directly embedded as per plan for simplicity
   settings: {
     privacy: {
@@ -134,6 +178,36 @@ const userSchema = new Schema({
   }
 
 }, { timestamps: true }); // timestamps: true adds createdAt and updatedAt fields automatically
+
+// Pre-save middleware to generate patient ID
+userSchema.pre('save', async function(next) {
+  // Generate patient ID only for new users
+  if (this.isNew && !this.patientId) {
+    try {
+      // Generate a unique patient ID with format: PM-YYYYMMDD-XXXX
+      const today = new Date();
+      const dateStr = today.getFullYear().toString() +
+                     (today.getMonth() + 1).toString().padStart(2, '0') +
+                     today.getDate().toString().padStart(2, '0');
+
+      // Find the highest patient ID for today to increment
+      const lastPatient = await this.constructor.findOne({
+        patientId: { $regex: `^PM-${dateStr}-` }
+      }).sort({ patientId: -1 });
+
+      let sequence = 1;
+      if (lastPatient) {
+        const lastSequence = parseInt(lastPatient.patientId.split('-')[2]);
+        sequence = lastSequence + 1;
+      }
+
+      this.patientId = `PM-${dateStr}-${sequence.toString().padStart(4, '0')}`;
+    } catch (error) {
+      return next(error);
+    }
+  }
+  next();
+});
 
 // Initialize settings and medicalInfo with defaults when a new user is created
 userSchema.pre('save', function(next) {
