@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import api from "../../services/api";
 
-const data = [
+const staticData = [
   { day: "Mon", steps: 8500, calories: 1200 },
   { day: "Tue", steps: 9200, calories: 1350 },
   { day: "Wed", steps: 7800, calories: 1100 },
@@ -37,6 +38,8 @@ const CustomTooltip = ({ active, payload, label, isDarkMode }) => { // Added isD
 
 const ActivitySummary = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [activityData, setActivityData] = useState(staticData);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const observer = new MutationObserver(() => {
@@ -47,10 +50,86 @@ const ActivitySummary = () => {
     return () => observer.disconnect();
   }, []);
 
+  useEffect(() => {
+    const fetchActivityData = async () => {
+      try {
+        setLoading(true);
+
+        // Get last 7 days of data
+        const endDate = new Date();
+        const startDate = new Date(endDate.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+        const [stepsRes, caloriesRes] = await Promise.allSettled([
+          api.get('/health-data', {
+            params: {
+              dataType: 'stepsTaken',
+              startDate: startDate.toISOString(),
+              endDate: endDate.toISOString(),
+              sortBy: 'timestamp',
+              order: 'asc'
+            }
+          }),
+          api.get('/health-data', {
+            params: {
+              dataType: 'caloriesBurned',
+              startDate: startDate.toISOString(),
+              endDate: endDate.toISOString(),
+              sortBy: 'timestamp',
+              order: 'asc'
+            }
+          })
+        ]);
+
+        const stepsData = stepsRes.status === 'fulfilled' ? stepsRes.value.data.data : [];
+        const caloriesData = caloriesRes.status === 'fulfilled' ? caloriesRes.value.data.data : [];
+
+        if (stepsData.length > 0 || caloriesData.length > 0) {
+          // Transform data for chart
+          const dayMap = new Map();
+          const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+          // Process steps data
+          stepsData.forEach(item => {
+            const date = new Date(item.timestamp);
+            const dayName = dayNames[date.getDay()];
+            const existing = dayMap.get(dayName) || { day: dayName, steps: 0, calories: 0 };
+            existing.steps = item.value;
+            dayMap.set(dayName, existing);
+          });
+
+          // Process calories data
+          caloriesData.forEach(item => {
+            const date = new Date(item.timestamp);
+            const dayName = dayNames[date.getDay()];
+            const existing = dayMap.get(dayName) || { day: dayName, steps: 0, calories: 0 };
+            existing.calories = item.value;
+            dayMap.set(dayName, existing);
+          });
+
+          // Convert to array and sort by day order
+          const chartArray = Array.from(dayMap.values()).sort((a, b) => {
+            return dayNames.indexOf(a.day) - dayNames.indexOf(b.day);
+          });
+
+          if (chartArray.length > 0) {
+            setActivityData(chartArray);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch activity data:', error);
+        // Keep static data as fallback
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchActivityData();
+  }, []);
+
   // Calculate weekly totals
-  const totalSteps = data.reduce((sum, day) => sum + day.steps, 0);
-  const totalCalories = data.reduce((sum, day) => sum + day.calories, 0);
-  const avgSteps = Math.round(totalSteps / data.length);
+  const totalSteps = activityData.reduce((sum, day) => sum + day.steps, 0);
+  const totalCalories = activityData.reduce((sum, day) => sum + day.calories, 0);
+  const avgSteps = Math.round(totalSteps / activityData.length);
 
   return (
     <motion.div 
@@ -96,7 +175,7 @@ const ActivitySummary = () => {
           transition={{ delay: 1.4, duration: 0.6 }}
         >
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} barCategoryGap="25%" margin={{ top: 10, right: 10, left: 10, bottom: 10 }}>
+            <BarChart data={activityData} barCategoryGap="25%" margin={{ top: 10, right: 10, left: 10, bottom: 10 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#334155" : "#f1f5f9"} strokeWidth={1} /> {/* slate-700 for dark */}
               <XAxis 
                 dataKey="day" 

@@ -32,9 +32,14 @@ api.interceptors.response.use(
   (error) => {
     if (error.response && error.response.status === 401) {
       // Handle unauthorized errors, e.g., redirect to login, clear token
-      console.error('Unauthorized request - 401. Redirecting to login or clearing token.');
-      // localStorage.removeItem('authToken');
-      // window.location.href = '/login'; // Example redirect
+      console.error('Unauthorized request - 401. Clearing token and redirecting to login.');
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('authUser');
+      window.dispatchEvent(new Event("authChange"));
+      // Only redirect if we're not already on the login page
+      if (!window.location.pathname.includes('/login')) {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

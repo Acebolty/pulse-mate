@@ -1,223 +1,87 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import api from '../services/api'; // Import API service
+import api from '../services/api'
 import {
   HeartIcon,
   BeakerIcon,
-  FireIcon,
-  MoonIcon,
-  ScaleIcon,
+  ArrowTrendingUpIcon,
+  SunIcon,
   ArrowDownTrayIcon,
   FunnelIcon,
   ClockIcon,
+  ChartBarIcon,
+  PlusIcon,
+  CalendarDaysIcon,
+  TableCellsIcon,
+  ChevronUpDownIcon,
+  MagnifyingGlassIcon,
 } from "@heroicons/react/24/outline"
 import {
   LineChart,
   Line,
   AreaChart,
   Area,
-  BarChart,
-  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
-  PieChart,
-  Pie,
-  Cell,
 } from "recharts"
 import { motion } from "framer-motion"
 
-// Dummy data for health metrics
-const vitalSignsData = [
-  { time: "00:00", heartRate: 65, systolic: 115, diastolic: 75, temperature: 98.2 },
-  { time: "04:00", heartRate: 62, systolic: 112, diastolic: 72, temperature: 97.8 },
-  { time: "08:00", heartRate: 72, systolic: 118, diastolic: 78, temperature: 98.6 },
-  { time: "12:00", heartRate: 78, systolic: 125, diastolic: 82, temperature: 99.1 },
-  { time: "16:00", heartRate: 82, systolic: 128, diastolic: 85, temperature: 99.3 },
-  { time: "20:00", heartRate: 75, systolic: 122, diastolic: 80, temperature: 98.8 },
-]
+// Helper functions for status calculation
+const getHeartRateStatus = (heartRate) => {
+  if (heartRate < 50) return "critical";
+  if (heartRate < 60) return "warning";
+  if (heartRate >= 60 && heartRate <= 100) return "good";
+  if (heartRate > 100 && heartRate <= 120) return "warning";
+  return "critical";
+};
 
-const glucoseData = [
-  { date: "Mon", fasting: 95, postMeal: 140, bedtime: 110 },
-  { date: "Tue", fasting: 92, postMeal: 135, bedtime: 108 },
-  { date: "Wed", fasting: 98, postMeal: 145, bedtime: 115 },
-  { date: "Thu", fasting: 90, postMeal: 132, bedtime: 105 },
-  { date: "Fri", fasting: 94, postMeal: 138, bedtime: 112 },
-  { date: "Sat", fasting: 96, postMeal: 142, bedtime: 118 },
-  { date: "Sun", fasting: 93, postMeal: 136, bedtime: 109 },
-]
+const getBloodPressureStatus = (systolic, diastolic) => {
+  if (systolic >= 180 || diastolic >= 110) return "critical";
+  if (systolic >= 140 || diastolic >= 90) return "warning";
+  if (systolic >= 120 || diastolic >= 80) return "normal";
+  return "good";
+};
 
-const activityData = [
-  { day: "Mon", steps: 8500, calories: 1200, activeMinutes: 45, distance: 4.2 },
-  { day: "Tue", steps: 9200, calories: 1350, activeMinutes: 52, distance: 4.8 },
-  { day: "Wed", steps: 7800, calories: 1100, activeMinutes: 38, distance: 3.9 },
-  { day: "Thu", steps: 10500, calories: 1450, activeMinutes: 58, distance: 5.2 },
-  { day: "Fri", steps: 9800, calories: 1380, activeMinutes: 55, distance: 4.9 },
-  { day: "Sat", steps: 12000, calories: 1600, activeMinutes: 72, distance: 6.0 },
-  { day: "Sun", steps: 6500, calories: 950, activeMinutes: 32, distance: 3.2 },
-]
+const getGlucoseStatus = (glucose) => {
+  if (glucose < 70) return "critical";
+  if (glucose >= 70 && glucose <= 100) return "good";
+  if (glucose > 100 && glucose <= 140) return "warning";
+  return "critical";
+};
 
-const sleepData = [
-  { date: "Mon", deep: 1.5, light: 4.2, rem: 1.8, awake: 0.5, total: 8.0 },
-  { date: "Tue", deep: 1.8, light: 4.5, rem: 2.0, awake: 0.3, total: 8.6 },
-  { date: "Wed", deep: 1.2, light: 3.8, rem: 1.5, awake: 0.8, total: 7.3 },
-  { date: "Thu", deep: 1.6, light: 4.1, rem: 1.9, awake: 0.4, total: 8.0 },
-  { date: "Fri", deep: 1.4, light: 3.9, rem: 1.7, awake: 0.6, total: 7.6 },
-  { date: "Sat", deep: 2.0, light: 4.8, rem: 2.2, awake: 0.2, total: 9.2 },
-  { date: "Sun", deep: 1.7, light: 4.3, rem: 1.9, awake: 0.4, total: 8.3 },
-]
-
-const weightData = [
-  { week: "Week 1", weight: 175.2, bodyFat: 18.5, muscle: 142.3 },
-  { week: "Week 2", weight: 174.8, bodyFat: 18.3, muscle: 142.5 },
-  { week: "Week 3", weight: 174.5, bodyFat: 18.1, muscle: 142.8 },
-  { week: "Week 4", weight: 174.1, bodyFat: 17.9, muscle: 143.0 },
-  { week: "Week 5", weight: 173.8, bodyFat: 17.7, muscle: 143.2 },
-  { week: "Week 6", weight: 173.5, bodyFat: 17.5, muscle: 143.5 },
-]
-
-const currentMetrics = [
-  {
-    id: 1,
-    name: "Heart Rate",
-    value: "72",
-    unit: "bpm",
-    status: "normal",
-    change: "+2",
-    icon: HeartIcon,
-    color: "text-red-500",
-    bgColor: "bg-red-50",
-    bgColorDark: "dark:bg-red-700/30",
-    range: "60-100 bpm",
-    lastReading: "2 min ago",
-  },
-  {
-    id: 2,
-    name: "Blood Pressure",
-    value: "120/80",
-    unit: "mmHg",
-    status: "normal",
-    change: "-2",
-    icon: HeartIcon,
-    color: "text-blue-500",
-    bgColor: "bg-blue-50",
-    bgColorDark: "dark:bg-blue-700/30",
-    range: "<120/80 mmHg",
-    lastReading: "5 min ago",
-  },
-  {
-    id: 3,
-    name: "Blood Glucose",
-    value: "95",
-    unit: "mg/dL",
-    status: "normal",
-    change: "-3",
-    icon: BeakerIcon,
-    color: "text-green-500",
-    bgColor: "bg-green-50",
-    bgColorDark: "dark:bg-green-700/30",
-    range: "70-100 mg/dL",
-    lastReading: "15 min ago",
-  },
-  {
-    id: 4,
-    name: "Body Temperature",
-    value: "98.6",
-    unit: "°F",
-    status: "normal",
-    change: "+0.2",
-    icon: FireIcon,
-    color: "text-orange-500",
-    bgColor: "bg-orange-50",
-    bgColorDark: "dark:bg-orange-600/30",
-    range: "97.8-99.1 °F",
-    lastReading: "30 min ago",
-  },
-  {
-    id: 5,
-    name: "Weight",
-    value: "173.5",
-    unit: "lbs",
-    status: "good",
-    change: "-1.7",
-    icon: ScaleIcon,
-    color: "text-purple-500",
-    bgColor: "bg-purple-50",
-    bgColorDark: "dark:bg-purple-700/30",
-    range: "Goal: 170 lbs",
-    lastReading: "This morning",
-  },
-  {
-    id: 6,
-    name: "Sleep Quality",
-    value: "8.3",
-    unit: "/10",
-    status: "excellent",
-    change: "+0.5",
-    icon: MoonIcon,
-    color: "text-indigo-500",
-    bgColor: "bg-indigo-50",
-    bgColorDark: "dark:bg-indigo-700/30",
-    range: "Goal: >7.5",
-    lastReading: "Last night",
-  },
-]
-
-const sleepBreakdown = [
-  { name: "Deep Sleep", value: 20, color: "#10b981", hours: 1.7 },
-  { name: "Light Sleep", value: 52, color: "#3b82f6", hours: 4.3 },
-  { name: "REM Sleep", value: 23, color: "#8b5cf6", hours: 1.9 },
-  { name: "Awake", value: 5, color: "#f59e0b", hours: 0.4 },
-]
-
-const getStatusColor = (status) => {
-  // Base classes are for light mode
-  // Dark mode classes are appended with dark: prefix
-  switch (status) {
-    case "excellent":
-      return "text-green-600 bg-green-100 dark:text-green-300 dark:bg-green-700/30"
-    case "good":
-      return "text-green-600 bg-green-100 dark:text-green-300 dark:bg-green-700/30"
-    case "normal":
-      return "text-blue-600 bg-blue-100 dark:text-blue-300 dark:bg-blue-700/30"
-    case "warning":
-      return "text-yellow-600 bg-yellow-100 dark:text-yellow-300 dark:bg-yellow-600/30"
-    case "critical":
-      return "text-red-600 bg-red-100 dark:text-red-300 dark:bg-red-700/30"
-    default:
-      return "text-gray-600 bg-gray-100 dark:text-gray-300 dark:bg-gray-700/50"
-  }
-}
-
-const cardVariants = {
-  hidden: { opacity: 0, y: 30 },
-  visible: (i) => ({ opacity: 1, y: 0, transition: { delay: i * 0.08 } }),
-}
+const getTemperatureStatus = (temp) => {
+  if (temp < 97.0) return "warning";
+  if (temp >= 97.0 && temp <= 99.0) return "normal";
+  if (temp > 99.0 && temp <= 100.4) return "warning";
+  return "critical";
+};
 
 const HealthMetrics = () => {
   const [timeRange, setTimeRange] = useState("7days");
-  // const [selectedMetric, setSelectedMetric] = useState("all"); // We'll use this for filtering later
-  // const [viewMode, setViewMode] = useState("overview"); // For switching between overview/detailed views
-
-  // State for fetched data
-  const [fetchedVitalSigns, setFetchedVitalSigns] = useState([]);
-  const [fetchedGlucose, setFetchedGlucose] = useState([]);
-  const [fetchedActivity, setFetchedActivity] = useState([]);
-  const [fetchedSleep, setFetchedSleep] = useState([]);
-  const [fetchedWeight, setFetchedWeight] = useState([]);
-  const [liveMetrics, setLiveMetrics] = useState(currentMetrics); // Initialize with dummy, update with fetched
-
+  const [healthData, setHealthData] = useState({
+    heartRate: [],
+    bloodPressure: [],
+    bodyTemperature: [],
+    glucoseLevel: []
+  });
+  const [latestMetrics, setLatestMetrics] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
 
+  // New state for advanced features
+  const [sortConfig, setSortConfig] = useState({ key: 'timestamp', direction: 'desc' });
+  const [filterConfig, setFilterConfig] = useState({ dataType: 'all', status: 'all', source: 'all' });
+  const [searchTerm, setSearchTerm] = useState('');
+  const [weeklyStats, setWeeklyStats] = useState({});
+  const [monthlyStats, setMonthlyStats] = useState({});
+  const [healthScore, setHealthScore] = useState(0);
 
   useEffect(() => {
-    // Dark mode listener
     const observer = new MutationObserver(() => {
       setIsDarkMode(document.documentElement.classList.contains('dark'));
     });
@@ -227,11 +91,12 @@ const HealthMetrics = () => {
   }, []);
 
   useEffect(() => {
-    const fetchAllMetrics = async () => {
+    const fetchHealthData = async () => {
       setLoading(true);
       setError(null);
+      
       try {
-        // Calculate date range based on timeRange state
+        // Calculate date range
         const endDate = new Date();
         let startDate = new Date();
         switch (timeRange) {
@@ -244,114 +109,527 @@ const HealthMetrics = () => {
           case "30days":
             startDate.setDate(endDate.getDate() - 30);
             break;
-          case "90days":
-            startDate.setDate(endDate.getDate() - 90);
-            break;
           default:
-            startDate.setDate(endDate.getDate() - 7); // Default to 7 days
+            startDate.setDate(endDate.getDate() - 7);
         }
 
         const commonParams = { 
-            startDate: startDate.toISOString(), 
-            endDate: endDate.toISOString(),
-            limit: 100 // Fetch enough data for charts, adjust as needed
+          startDate: startDate.toISOString(), 
+          endDate: endDate.toISOString(),
+          limit: 100,
+          sortBy: 'timestamp',
+          order: 'desc'
         };
 
-        // Fetch data for each type
-        const vitalSignsPromise = api.get('/health-data', { params: { ...commonParams, dataType: 'heartRate' } }); // Example, refine for BP etc.
-        const glucosePromise = api.get('/health-data', { params: { ...commonParams, dataType: 'glucoseLevel' } });
-        const activityPromise = api.get('/health-data', { params: { ...commonParams, dataType: 'stepsTaken' } }); // Example
-        const sleepPromise = api.get('/health-data', { params: { ...commonParams, dataType: 'sleepDuration' } });
-        const weightPromise = api.get('/health-data', { params: { ...commonParams, dataType: 'weight' } });
-        
-        // Fetch latest for summary cards (example for heart rate)
-        const latestHeartRatePromise = api.get('/health-data', { params: { dataType: 'heartRate', limit: 1, page: 1, sortBy: 'timestamp', order: 'desc' } });
-        const latestBloodPressurePromise = api.get('/health-data', { params: { dataType: 'bloodPressure', limit: 1, page: 1, sortBy: 'timestamp', order: 'desc' } });
-        // ... fetch latest for other summary metrics
-
-        const [
-            vitalsRes, glucoseRes, activityRes, sleepRes, weightRes,
-            latestHeartRateRes, latestBloodPressureRes 
-            /* ... other latest responses */
-        ] = await Promise.allSettled([
-            vitalSignsPromise, glucosePromise, activityPromise, sleepPromise, weightRes,
-            latestHeartRatePromise, latestBloodPressurePromise 
-            /* ... other latest promises */
+        // Fetch data for the 4 main health metrics
+        const [heartRateRes, bloodPressureRes, temperatureRes, glucoseRes] = await Promise.allSettled([
+          api.get('/health-data', { params: { ...commonParams, dataType: 'heartRate' } }),
+          api.get('/health-data', { params: { ...commonParams, dataType: 'bloodPressure' } }),
+          api.get('/health-data', { params: { ...commonParams, dataType: 'bodyTemperature' } }),
+          api.get('/health-data', { params: { ...commonParams, dataType: 'glucoseLevel' } })
         ]);
 
-        // Process and set data for charts
-        if (vitalsRes.status === 'fulfilled') setFetchedVitalSigns(vitalsRes.value.data.data); // Assuming .data.data is the array
-        if (glucoseRes.status === 'fulfilled') setFetchedGlucose(glucoseRes.value.data.data);
-        if (activityRes.status === 'fulfilled') setFetchedActivity(activityRes.value.data.data);
-        if (sleepRes.status === 'fulfilled') setFetchedSleep(sleepRes.value.data.data);
-        if (weightRes.status === 'fulfilled') setFetchedWeight(weightRes.value.data.data);
+        // Process the data
+        const newHealthData = {
+          heartRate: heartRateRes.status === 'fulfilled' ? heartRateRes.value.data.data : [],
+          bloodPressure: bloodPressureRes.status === 'fulfilled' ? bloodPressureRes.value.data.data : [],
+          bodyTemperature: temperatureRes.status === 'fulfilled' ? temperatureRes.value.data.data : [],
+          glucoseLevel: glucoseRes.status === 'fulfilled' ? glucoseRes.value.data.data : []
+        };
 
-        // Process and update liveMetrics for summary cards
-        const newLiveMetrics = [...currentMetrics]; // Start with dummy structure
-        if (latestHeartRateRes.status === 'fulfilled' && latestHeartRateRes.value.data.data.length > 0) {
-            const hrData = latestHeartRateRes.value.data.data[0];
-            const hrMetric = newLiveMetrics.find(m => m.name === "Heart Rate");
-            if (hrMetric) {
-                hrMetric.value = hrData.value.toString();
-                hrMetric.lastReading = formatTimestamp(hrData.timestamp); // You'll need a formatTimestamp function
-                // TODO: Calculate status and change for hrMetric
-            }
+        setHealthData(newHealthData);
+
+        // Get latest metrics for summary cards
+        const newLatestMetrics = {};
+        if (newHealthData.heartRate.length > 0) {
+          const latest = newHealthData.heartRate[0];
+          newLatestMetrics.heartRate = {
+            ...latest,
+            status: getHeartRateStatus(latest.value),
+            change: calculateChange(newHealthData.heartRate)
+          };
         }
-        if (latestBloodPressureRes.status === 'fulfilled' && latestBloodPressureRes.value.data.data.length > 0) {
-            const bpData = latestBloodPressureRes.value.data.data[0];
-            const bpMetric = newLiveMetrics.find(m => m.name === "Blood Pressure");
-            if (bpMetric && bpData.value.systolic && bpData.value.diastolic) {
-                bpMetric.value = `${bpData.value.systolic}/${bpData.value.diastolic}`;
-                bpMetric.lastReading = formatTimestamp(bpData.timestamp);
-                 // TODO: Calculate status and change for bpMetric
-            }
+        if (newHealthData.bloodPressure.length > 0) {
+          const latest = newHealthData.bloodPressure[0];
+          const systolic = typeof latest.value === 'object' ? latest.value.systolic : latest.value;
+          const diastolic = typeof latest.value === 'object' ? latest.value.diastolic : latest.value - 40;
+          newLatestMetrics.bloodPressure = {
+            ...latest,
+            status: getBloodPressureStatus(systolic, diastolic),
+            change: calculateChange(newHealthData.bloodPressure, 'bloodPressure')
+          };
         }
-        // ... update other live metrics similarly ...
-        setLiveMetrics(newLiveMetrics);
+        if (newHealthData.bodyTemperature.length > 0) {
+          const latest = newHealthData.bodyTemperature[0];
+          newLatestMetrics.bodyTemperature = {
+            ...latest,
+            status: getTemperatureStatus(latest.value),
+            change: calculateChange(newHealthData.bodyTemperature)
+          };
+        }
+        if (newHealthData.glucoseLevel.length > 0) {
+          const latest = newHealthData.glucoseLevel[0];
+          newLatestMetrics.glucoseLevel = {
+            ...latest,
+            status: getGlucoseStatus(latest.value),
+            change: calculateChange(newHealthData.glucoseLevel)
+          };
+        }
+
+        setLatestMetrics(newLatestMetrics);
 
       } catch (err) {
-        console.error("Failed to fetch health metrics:", err);
+        console.error("Failed to fetch health data:", err);
         setError("Could not load health data. Please try again later.");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchAllMetrics();
-  }, [timeRange]); // Re-fetch when timeRange changes
+    fetchHealthData();
+  }, [timeRange]);
 
-  // Helper function (you might want to move this to a utils file)
+  // Separate useEffect for calculating stats after data is set
+  useEffect(() => {
+    if (hasAnyData && Object.keys(latestMetrics).length > 0) {
+      setWeeklyStats(calculateWeeklyStats());
+      setMonthlyStats(calculateMonthlyStats());
+      setHealthScore(calculateHealthScore());
+    }
+  }, [healthData, latestMetrics]);
+
+  // Helper functions
   const formatTimestamp = (isoString) => {
     if (!isoString) return 'N/A';
     const date = new Date(isoString);
-    // Simple formatting, can be improved with date-fns or moment.js
-    const diffMinutes = Math.round((new Date() - date) / (1000 * 60));
-    if (diffMinutes < 1) return "Just now";
-    if (diffMinutes < 60) return `${diffMinutes} min ago`;
-    const diffHours = Math.round(diffMinutes / 60);
-    if (diffHours < 24) return `${diffHours} hr ago`;
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} min ago`;
+    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
     return date.toLocaleDateString();
   };
 
+  const calculateChange = (readings, dataType = null) => {
+    if (readings.length < 2) return "First reading";
+    
+    const current = readings[0].value;
+    const previous = readings[1].value;
+    
+    let currentVal, previousVal;
+    if (dataType === 'bloodPressure') {
+      currentVal = typeof current === 'object' ? current.systolic : current;
+      previousVal = typeof previous === 'object' ? previous.systolic : previous;
+    } else {
+      currentVal = current;
+      previousVal = previous;
+    }
+    
+    const difference = Math.round((currentVal - previousVal) * 10) / 10;
+    return difference > 0 ? `+${difference} from previous` : `${difference} from previous`;
+  };
 
-  // TODO: Transform fetched data for Recharts if needed
-  // Example:
-  const transformedVitalSignsData = fetchedVitalSigns.map(d => ({
-    time: new Date(d.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    heartRate: d.dataType === 'heartRate' ? d.value : null, // This needs more sophisticated merging if fetching BP separately
-    // systolic: d.dataType === 'bloodPressure' ? d.value.systolic : null,
-    // diastolic: d.dataType === 'bloodPressure' ? d.value.diastolic : null,
-  })).filter(d => d.heartRate !== null); // Filter out entries not relevant for this specific chart transformation
+  // Check if we have any data
+  const hasAnyData = Object.values(healthData).some(data => data.length > 0);
 
+  // Advanced calculation functions
+  const calculateWeeklyStats = () => {
+    console.log('Calculating weekly stats...', healthData);
+    const stats = {};
+    Object.entries(healthData).forEach(([dataType, readings]) => {
+      if (readings.length > 0) {
+        const values = readings.map(r => {
+          if (dataType === 'bloodPressure') {
+            return typeof r.value === 'object' ? r.value.systolic : r.value;
+          }
+          return r.value;
+        });
+
+        stats[dataType] = {
+          average: Math.round((values.reduce((sum, val) => sum + val, 0) / values.length) * 10) / 10,
+          min: Math.min(...values),
+          max: Math.max(...values),
+          count: readings.length,
+          trend: calculateTrendDirection(values)
+        };
+        console.log(`Weekly stats for ${dataType}:`, stats[dataType]);
+      }
+    });
+    console.log('Final weekly stats:', stats);
+    return stats;
+  };
+
+  const calculateMonthlyStats = () => {
+    console.log('Calculating monthly stats...', healthData);
+    // Similar to weekly but for longer period
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const stats = {};
+    Object.entries(healthData).forEach(([dataType, readings]) => {
+      const monthlyReadings = readings.filter(r => new Date(r.timestamp) >= thirtyDaysAgo);
+      if (monthlyReadings.length > 0) {
+        const values = monthlyReadings.map(r => {
+          if (dataType === 'bloodPressure') {
+            return typeof r.value === 'object' ? r.value.systolic : r.value;
+          }
+          return r.value;
+        });
+
+        stats[dataType] = {
+          average: Math.round((values.reduce((sum, val) => sum + val, 0) / values.length) * 10) / 10,
+          min: Math.min(...values),
+          max: Math.max(...values),
+          count: monthlyReadings.length,
+          trend: calculateTrendDirection(values)
+        };
+        console.log(`Monthly stats for ${dataType}:`, stats[dataType]);
+      }
+    });
+    console.log('Final monthly stats:', stats);
+    return stats;
+  };
+
+  const calculateTrendDirection = (values) => {
+    if (values.length < 3) return 'stable';
+    const firstThird = values.slice(0, Math.floor(values.length / 3));
+    const lastThird = values.slice(-Math.floor(values.length / 3));
+    const firstAvg = firstThird.reduce((sum, val) => sum + val, 0) / firstThird.length;
+    const lastAvg = lastThird.reduce((sum, val) => sum + val, 0) / lastThird.length;
+    const percentChange = ((lastAvg - firstAvg) / firstAvg) * 100;
+
+    if (percentChange > 5) return 'improving';
+    if (percentChange < -5) return 'declining';
+    return 'stable';
+  };
+
+  const calculateHealthScore = () => {
+    console.log('Calculating health score...', { hasAnyData, latestMetrics });
+
+    if (!hasAnyData || Object.keys(latestMetrics).length === 0) {
+      console.log('No data available for health score');
+      return 0;
+    }
+
+    let totalScore = 0;
+    let metricCount = 0;
+
+    // Score each metric based on latest reading
+    if (latestMetrics.heartRate && latestMetrics.heartRate.value) {
+      const hr = latestMetrics.heartRate.value;
+      let score = 0;
+      if (hr >= 60 && hr <= 100) score = 100;
+      else if (hr >= 50 && hr <= 120) score = 75;
+      else if (hr >= 40 && hr <= 140) score = 50;
+      else score = 25;
+      totalScore += score;
+      metricCount++;
+      console.log('Heart rate score:', score, 'for value:', hr);
+    }
+
+    if (latestMetrics.bloodPressure && latestMetrics.bloodPressure.value) {
+      const systolic = typeof latestMetrics.bloodPressure.value === 'object'
+        ? latestMetrics.bloodPressure.value.systolic
+        : latestMetrics.bloodPressure.value;
+      let score = 0;
+      if (systolic < 120) score = 100;
+      else if (systolic < 140) score = 75;
+      else if (systolic < 160) score = 50;
+      else score = 25;
+      totalScore += score;
+      metricCount++;
+      console.log('Blood pressure score:', score, 'for systolic:', systolic);
+    }
+
+    if (latestMetrics.bodyTemperature && latestMetrics.bodyTemperature.value) {
+      const temp = latestMetrics.bodyTemperature.value;
+      let score = 0;
+      if (temp >= 97.0 && temp <= 99.0) score = 100;
+      else if (temp >= 96.5 && temp <= 100.4) score = 75;
+      else score = 50;
+      totalScore += score;
+      metricCount++;
+      console.log('Temperature score:', score, 'for value:', temp);
+    }
+
+    if (latestMetrics.glucoseLevel && latestMetrics.glucoseLevel.value) {
+      const glucose = latestMetrics.glucoseLevel.value;
+      let score = 0;
+      if (glucose >= 70 && glucose <= 100) score = 100;
+      else if (glucose >= 60 && glucose <= 140) score = 75;
+      else if (glucose >= 50 && glucose <= 180) score = 50;
+      else score = 25;
+      totalScore += score;
+      metricCount++;
+      console.log('Glucose score:', score, 'for value:', glucose);
+    }
+
+    const finalScore = metricCount > 0 ? Math.round(totalScore / metricCount) : 0;
+    console.log('Final health score:', finalScore, 'from', metricCount, 'metrics');
+    return finalScore;
+  };
+
+  // Data table functions
+  const getAllReadingsForTable = () => {
+    const allReadings = [];
+
+    Object.entries(healthData).forEach(([dataType, readings]) => {
+      readings.forEach(reading => {
+        let displayValue = reading.value;
+        let status = 'normal';
+
+        // Format value and calculate status
+        switch (dataType) {
+          case 'heartRate':
+            status = getHeartRateStatus(reading.value);
+            displayValue = `${reading.value} bpm`;
+            break;
+          case 'bloodPressure':
+            const systolic = typeof reading.value === 'object' ? reading.value.systolic : reading.value;
+            const diastolic = typeof reading.value === 'object' ? reading.value.diastolic : reading.value - 40;
+            status = getBloodPressureStatus(systolic, diastolic);
+            displayValue = `${systolic}/${diastolic} mmHg`;
+            break;
+          case 'bodyTemperature':
+            status = getTemperatureStatus(reading.value);
+            displayValue = `${reading.value.toFixed(1)}°F`;
+            break;
+          case 'glucoseLevel':
+            status = getGlucoseStatus(reading.value);
+            displayValue = `${reading.value} mg/dL`;
+            break;
+        }
+
+        allReadings.push({
+          ...reading,
+          dataType,
+          displayValue,
+          status,
+          formattedTime: formatTimestamp(reading.timestamp),
+          sortableTime: new Date(reading.timestamp).getTime()
+        });
+      });
+    });
+
+    return allReadings;
+  };
+
+  const getFilteredAndSortedReadings = () => {
+    let readings = getAllReadingsForTable();
+
+    // Apply filters
+    if (filterConfig.dataType !== 'all') {
+      readings = readings.filter(r => r.dataType === filterConfig.dataType);
+    }
+    if (filterConfig.status !== 'all') {
+      readings = readings.filter(r => r.status === filterConfig.status);
+    }
+    if (filterConfig.source !== 'all') {
+      readings = readings.filter(r => r.source === filterConfig.source);
+    }
+    if (searchTerm) {
+      readings = readings.filter(r =>
+        r.displayValue.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        r.dataType.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        r.source.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Apply sorting
+    readings.sort((a, b) => {
+      let aVal = a[sortConfig.key];
+      let bVal = b[sortConfig.key];
+
+      if (sortConfig.key === 'timestamp') {
+        aVal = a.sortableTime;
+        bVal = b.sortableTime;
+      }
+
+      if (sortConfig.direction === 'asc') {
+        return aVal > bVal ? 1 : -1;
+      } else {
+        return aVal < bVal ? 1 : -1;
+      }
+    });
+
+    return readings;
+  };
+
+  // Transform data for charts
+  const transformVitalSignsData = () => {
+    const combined = [];
+    const timeMap = new Map();
+
+    // Process heart rate data
+    healthData.heartRate.forEach(item => {
+      const time = new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      timeMap.set(time, { ...timeMap.get(time), time, heartRate: item.value });
+    });
+
+    // Process blood pressure data
+    healthData.bloodPressure.forEach(item => {
+      const time = new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const systolic = typeof item.value === 'object' ? item.value.systolic : item.value;
+      timeMap.set(time, { ...timeMap.get(time), time, bloodPressure: systolic });
+    });
+
+    return Array.from(timeMap.values()).sort((a, b) => {
+      const timeA = new Date(`1970/01/01 ${a.time}`);
+      const timeB = new Date(`1970/01/01 ${b.time}`);
+      return timeA - timeB;
+    });
+  };
+
+  const transformGlucoseData = () => {
+    return healthData.glucoseLevel.map(item => ({
+      time: new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      glucose: item.value,
+      date: new Date(item.timestamp).toLocaleDateString()
+    })).reverse(); // Reverse to show chronological order
+  };
+
+  const transformTemperatureData = () => {
+    return healthData.bodyTemperature.map(item => ({
+      time: new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      temperature: parseFloat(item.value.toFixed(1)),
+      date: new Date(item.timestamp).toLocaleDateString()
+    })).reverse(); // Reverse to show chronological order
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'good':
+        return 'bg-green-100 text-green-800 dark:bg-green-700/30 dark:text-green-300';
+      case 'normal':
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-700/30 dark:text-blue-300';
+      case 'warning':
+        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-700/30 dark:text-yellow-300';
+      case 'critical':
+        return 'bg-red-100 text-red-800 dark:bg-red-700/30 dark:text-red-300';
+      default:
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-700/30 dark:text-gray-300';
+    }
+  };
+
+  // Empty state component
+  const EmptyState = () => (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6 }}
+      className="col-span-full"
+    >
+      <div className="bg-gradient-to-br from-blue-50 via-white to-green-50 dark:from-slate-800 dark:via-slate-700 dark:to-slate-800 rounded-2xl p-12 border-2 border-dashed border-blue-200 dark:border-slate-600 text-center">
+        <motion.div
+          initial={{ scale: 0.8 }}
+          animate={{ scale: 1 }}
+          transition={{ delay: 0.2, duration: 0.5 }}
+          className="mb-6"
+        >
+          <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
+            <ChartBarIcon className="w-12 h-12 text-white" />
+          </div>
+        </motion.div>
+        
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4, duration: 0.5 }}
+        >
+          <h3 className="text-3xl font-bold text-gray-900 dark:text-slate-100 mb-4">
+            No Health Data Available
+          </h3>
+          <p className="text-gray-600 dark:text-slate-400 mb-8 max-w-lg mx-auto text-lg">
+            Start recording your health metrics to see detailed analytics, trends, and insights about your wellness journey.
+          </p>
+          
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8 max-w-2xl mx-auto">
+            {[
+              { icon: HeartIcon, name: "Heart Rate", color: "text-red-500" },
+              { icon: ArrowTrendingUpIcon, name: "Blood Pressure", color: "text-blue-500" },
+              { icon: BeakerIcon, name: "Blood Glucose", color: "text-green-500" },
+              { icon: SunIcon, name: "Body Temperature", color: "text-orange-500" }
+            ].map((metric, index) => (
+              <motion.div
+                key={metric.name}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6 + index * 0.1, duration: 0.3 }}
+                className="flex flex-col items-center p-4 bg-white dark:bg-slate-700/50 rounded-xl border border-gray-100 dark:border-slate-600"
+              >
+                <metric.icon className={`w-8 h-8 ${metric.color} mb-3`} />
+                <span className="text-sm font-medium text-gray-700 dark:text-slate-300 text-center">
+                  {metric.name}
+                </span>
+              </motion.div>
+            ))}
+          </div>
+
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1.0, duration: 0.5 }}
+            className="flex flex-col sm:flex-row gap-4 justify-center items-center"
+          >
+            <div className="flex items-center space-x-2 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-6 py-3 rounded-xl">
+              <PlusIcon className="w-5 h-5" />
+              <span className="font-medium">Use the simulation panel to generate sample data</span>
+            </div>
+            <div className="text-gray-500 dark:text-slate-400 font-medium">
+              or manually enter your readings
+            </div>
+          </motion.div>
+        </motion.div>
+      </div>
+    </motion.div>
+  );
 
   if (loading) {
-    return <div className="flex justify-center items-center h-screen"><p className="text-xl text-gray-700 dark:text-slate-300">Loading health metrics...</p></div>;
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-xl text-gray-700 dark:text-slate-300">Loading health metrics...</p>
+        </div>
+      </div>
+    );
   }
 
   if (error) {
-    return <div className="flex justify-center items-center h-screen"><p className="text-xl text-red-500 dark:text-red-400 p-4 bg-red-100 dark:bg-red-700/30 rounded-md">{error}</p></div>;
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="text-center p-8 bg-red-50 dark:bg-red-900/20 rounded-2xl border border-red-200 dark:border-red-800">
+          <p className="text-xl text-red-600 dark:text-red-400 font-semibold mb-2">Error Loading Data</p>
+          <p className="text-red-500 dark:text-red-300">{error}</p>
+        </div>
+      </div>
+    );
   }
 
+  // Show empty state if no data
+  if (!hasAnyData) {
+    return (
+      <div className="space-y-10 px-2 md:px-0">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="flex flex-col md:flex-row md:items-center md:justify-between gap-4"
+        >
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-slate-100">Health Metrics</h1>
+            <p className="text-gray-500 dark:text-slate-400 mt-1">Comprehensive view of your health data and trends</p>
+          </div>
+        </motion.div>
+        <EmptyState />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-10 px-2 md:px-0">
@@ -370,68 +648,260 @@ const HealthMetrics = () => {
           <select
             value={timeRange}
             onChange={(e) => setTimeRange(e.target.value)}
-            className="px-4 py-2 border border-gray-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-200 shadow-sm"
+            className="px-4 py-2 border border-gray-200 dark:border-slate-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-200 shadow-sm"
           >
             <option value="24hours">Last 24 Hours</option>
             <option value="7days">Last 7 Days</option>
             <option value="30days">Last 30 Days</option>
-            <option value="90days">Last 90 Days</option>
           </select>
-          <button className="flex items-center space-x-2 px-4 py-2 text-gray-600 dark:text-slate-400 hover:text-gray-800 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition-colors">
-            <FunnelIcon className="w-5 h-5" />
-            <span>Filter</span>
-          </button>
-          <button className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-xl hover:bg-green-700 transition-colors shadow">
+          <button className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-xl hover:bg-blue-700 transition-colors shadow">
             <ArrowDownTrayIcon className="w-5 h-5" />
             <span>Export Data</span>
           </button>
         </div>
       </motion.div>
 
-      {/* Metrics Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {liveMetrics.map((metric, i) => (
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Heart Rate Card */}
+        {latestMetrics.heartRate && (
           <motion.div
-            key={metric.id}
-            custom={i}
-            initial="hidden"
-            animate="visible"
-            variants={cardVariants}
-            whileHover={{ scale: 1.04, boxShadow: "0 8px 32px rgba(16,185,129,0.10)" }}
-            className="group relative bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg dark:shadow-slate-700/50 border border-gray-100 dark:border-slate-700 cursor-pointer transition-all hover:ring-2 hover:ring-green-100 dark:hover:ring-green-600/50 overflow-hidden" // Added group and overflow-hidden
-            onClick={() => setSelectedMetric(metric.name.toLowerCase())}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg dark:shadow-slate-700/50 border border-gray-100 dark:border-slate-700"
           >
-            {/* Glare effect */}
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 dark:via-slate-700/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out"></div>
-            
-            {/* Content wrapper for z-index */}
-            <div className="relative z-10">
-              <div className="flex items-center justify-between mb-4">
-                <div className={`p-3 rounded-xl ${isDarkMode ? metric.bgColorDark : metric.bgColor} shadow-sm`}>
-                  <metric.icon className={`w-7 h-7 ${metric.color}`} />
-                </div>
-                <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(metric.status)}`}>{metric.status}</span>
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 rounded-xl bg-red-50 dark:bg-red-900/30">
+                <HeartIcon className="w-7 h-7 text-red-500" />
               </div>
-              <div className="mb-2">
-                <div className="flex items-baseline space-x-1">
-                  <span className="text-2xl font-bold text-gray-900 dark:text-slate-100">{metric.value}</span>
-                  <span className="text-sm text-gray-500 dark:text-slate-400">{metric.unit}</span>
-                </div>
-                <p className="text-sm text-gray-600 dark:text-slate-300 mt-1 font-medium">{metric.name}</p>
-                <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">Normal: {metric.range}</p>
+              <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(latestMetrics.heartRate.status)}`}>
+                {latestMetrics.heartRate.status}
+              </span>
+            </div>
+            <div className="mb-2">
+              <div className="flex items-baseline space-x-1">
+                <span className="text-2xl font-bold text-gray-900 dark:text-slate-100">{latestMetrics.heartRate.value}</span>
+                <span className="text-sm text-gray-500 dark:text-slate-400">bpm</span>
               </div>
-              <div className="flex items-center justify-between text-xs mt-2">
-                <span className={`flex items-center ${metric.change.startsWith("+") ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
-                  {metric.change} from yesterday
-                </span>
-                <div className="flex items-center space-x-1 text-gray-400 dark:text-slate-500">
-                  <ClockIcon className="w-3 h-3" />
-                  <span>{metric.lastReading}</span>
-                </div>
-              </div>
+              <p className="text-sm text-gray-600 dark:text-slate-300 mt-1 font-medium">Heart Rate</p>
+            </div>
+            <div className="flex items-center justify-between text-xs mt-2">
+              <span className={`flex items-center ${latestMetrics.heartRate.change.startsWith("+") ? "text-green-600 dark:text-green-400" : latestMetrics.heartRate.change.startsWith("-") ? "text-red-600 dark:text-red-400" : "text-gray-600 dark:text-gray-400"}`}>
+                {latestMetrics.heartRate.change.startsWith("+") ? "↗" : latestMetrics.heartRate.change.startsWith("-") ? "↘" : ""} {latestMetrics.heartRate.change}
+              </span>
+              <span className="text-gray-400 dark:text-slate-500">{formatTimestamp(latestMetrics.heartRate.timestamp)}</span>
             </div>
           </motion.div>
-        ))}
+        )}
+
+        {/* Blood Pressure Card */}
+        {latestMetrics.bloodPressure && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg dark:shadow-slate-700/50 border border-gray-100 dark:border-slate-700"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-900/30">
+                <ArrowTrendingUpIcon className="w-7 h-7 text-blue-500" />
+              </div>
+              <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(latestMetrics.bloodPressure.status)}`}>
+                {latestMetrics.bloodPressure.status}
+              </span>
+            </div>
+            <div className="mb-2">
+              <div className="flex items-baseline space-x-1">
+                <span className="text-2xl font-bold text-gray-900 dark:text-slate-100">
+                  {typeof latestMetrics.bloodPressure.value === 'object'
+                    ? `${latestMetrics.bloodPressure.value.systolic}/${latestMetrics.bloodPressure.value.diastolic}`
+                    : latestMetrics.bloodPressure.value}
+                </span>
+                <span className="text-sm text-gray-500 dark:text-slate-400">mmHg</span>
+              </div>
+              <p className="text-sm text-gray-600 dark:text-slate-300 mt-1 font-medium">Blood Pressure</p>
+            </div>
+            <div className="flex items-center justify-between text-xs mt-2">
+              <span className={`flex items-center ${latestMetrics.bloodPressure.change.startsWith("+") ? "text-green-600 dark:text-green-400" : latestMetrics.bloodPressure.change.startsWith("-") ? "text-red-600 dark:text-red-400" : "text-gray-600 dark:text-gray-400"}`}>
+                {latestMetrics.bloodPressure.change.startsWith("+") ? "↗" : latestMetrics.bloodPressure.change.startsWith("-") ? "↘" : ""} {latestMetrics.bloodPressure.change}
+              </span>
+              <span className="text-gray-400 dark:text-slate-500">{formatTimestamp(latestMetrics.bloodPressure.timestamp)}</span>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Body Temperature Card */}
+        {latestMetrics.bodyTemperature && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg dark:shadow-slate-700/50 border border-gray-100 dark:border-slate-700"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 rounded-xl bg-orange-50 dark:bg-orange-900/30">
+                <SunIcon className="w-7 h-7 text-orange-500" />
+              </div>
+              <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(latestMetrics.bodyTemperature.status)}`}>
+                {latestMetrics.bodyTemperature.status}
+              </span>
+            </div>
+            <div className="mb-2">
+              <div className="flex items-baseline space-x-1">
+                <span className="text-2xl font-bold text-gray-900 dark:text-slate-100">{latestMetrics.bodyTemperature.value.toFixed(1)}</span>
+                <span className="text-sm text-gray-500 dark:text-slate-400">°F</span>
+              </div>
+              <p className="text-sm text-gray-600 dark:text-slate-300 mt-1 font-medium">Body Temperature</p>
+            </div>
+            <div className="flex items-center justify-between text-xs mt-2">
+              <span className={`flex items-center ${latestMetrics.bodyTemperature.change.startsWith("+") ? "text-green-600 dark:text-green-400" : latestMetrics.bodyTemperature.change.startsWith("-") ? "text-red-600 dark:text-red-400" : "text-gray-600 dark:text-gray-400"}`}>
+                {latestMetrics.bodyTemperature.change.startsWith("+") ? "↗" : latestMetrics.bodyTemperature.change.startsWith("-") ? "↘" : ""} {latestMetrics.bodyTemperature.change}
+              </span>
+              <span className="text-gray-400 dark:text-slate-500">{formatTimestamp(latestMetrics.bodyTemperature.timestamp)}</span>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Glucose Level Card */}
+        {latestMetrics.glucoseLevel && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.4 }}
+            className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg dark:shadow-slate-700/50 border border-gray-100 dark:border-slate-700"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-3 rounded-xl bg-green-50 dark:bg-green-900/30">
+                <BeakerIcon className="w-7 h-7 text-green-500" />
+              </div>
+              <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(latestMetrics.glucoseLevel.status)}`}>
+                {latestMetrics.glucoseLevel.status}
+              </span>
+            </div>
+            <div className="mb-2">
+              <div className="flex items-baseline space-x-1">
+                <span className="text-2xl font-bold text-gray-900 dark:text-slate-100">{latestMetrics.glucoseLevel.value}</span>
+                <span className="text-sm text-gray-500 dark:text-slate-400">mg/dL</span>
+              </div>
+              <p className="text-sm text-gray-600 dark:text-slate-300 mt-1 font-medium">Blood Glucose</p>
+            </div>
+            <div className="flex items-center justify-between text-xs mt-2">
+              <span className={`flex items-center ${latestMetrics.glucoseLevel.change.startsWith("+") ? "text-green-600 dark:text-green-400" : latestMetrics.glucoseLevel.change.startsWith("-") ? "text-red-600 dark:text-red-400" : "text-gray-600 dark:text-gray-400"}`}>
+                {latestMetrics.glucoseLevel.change.startsWith("+") ? "↗" : latestMetrics.glucoseLevel.change.startsWith("-") ? "↘" : ""} {latestMetrics.glucoseLevel.change}
+              </span>
+              <span className="text-gray-400 dark:text-slate-500">{formatTimestamp(latestMetrics.glucoseLevel.timestamp)}</span>
+            </div>
+          </motion.div>
+        )}
+      </div>
+
+      {/* Weekly/Monthly Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Health Score Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl p-6 text-white shadow-lg"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold">Overall Health Score</h3>
+            <div className="p-2 bg-white/20 rounded-lg">
+              <ChartBarIcon className="w-6 h-6" />
+            </div>
+          </div>
+          <div className="text-center">
+            <div className="text-4xl font-bold mb-2">{healthScore}%</div>
+            <div className="text-sm opacity-90">
+              {healthScore >= 80 ? 'Excellent' : healthScore >= 60 ? 'Good' : healthScore >= 40 ? 'Fair' : 'Needs Attention'}
+            </div>
+          </div>
+          <div className="mt-4 text-xs opacity-75">
+            Based on latest readings from all health metrics
+          </div>
+        </motion.div>
+
+        {/* Weekly Summary */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg border border-gray-100 dark:border-slate-700"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Weekly Summary</h3>
+            <CalendarDaysIcon className="w-6 h-6 text-blue-500" />
+          </div>
+          <div className="space-y-3">
+            {Object.keys(weeklyStats).length > 0 ? (
+              Object.entries(weeklyStats).map(([dataType, stats]) => (
+                <div key={dataType} className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600 dark:text-slate-400 capitalize">
+                    {dataType.replace(/([A-Z])/g, ' $1').trim()}
+                  </span>
+                  <div className="text-right">
+                    <div className="text-sm font-medium text-gray-900 dark:text-slate-100">
+                      Avg: {stats.average}
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-slate-400">
+                      {stats.count} readings
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-4 text-gray-500 dark:text-slate-400">
+                <CalendarDaysIcon className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">No weekly data available</p>
+                <p className="text-xs">Generate some health readings to see weekly statistics</p>
+              </div>
+            )}
+          </div>
+        </motion.div>
+
+        {/* Monthly Summary */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg border border-gray-100 dark:border-slate-700"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Monthly Trends</h3>
+            <CalendarDaysIcon className="w-6 h-6 text-green-500" />
+          </div>
+          <div className="space-y-3">
+            {Object.keys(monthlyStats).length > 0 ? (
+              Object.entries(monthlyStats).map(([dataType, stats]) => (
+                <div key={dataType} className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600 dark:text-slate-400 capitalize">
+                    {dataType.replace(/([A-Z])/g, ' $1').trim()}
+                  </span>
+                  <div className="text-right">
+                    <div className="flex items-center space-x-1">
+                      <span className="text-sm font-medium text-gray-900 dark:text-slate-100">
+                        {stats.trend === 'improving' ? '↗️' : stats.trend === 'declining' ? '↘️' : '➡️'}
+                      </span>
+                      <span className="text-sm text-gray-600 dark:text-slate-400 capitalize">
+                        {stats.trend}
+                      </span>
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-slate-400">
+                      {stats.count} readings
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-4 text-gray-500 dark:text-slate-400">
+                <CalendarDaysIcon className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">No monthly data available</p>
+                <p className="text-xs">Generate some health readings to see monthly trends</p>
+              </div>
+            )}
+          </div>
+        </motion.div>
       </div>
 
       {/* Charts Section */}
@@ -445,7 +915,7 @@ const HealthMetrics = () => {
           className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg dark:shadow-slate-700/50 border border-gray-100 dark:border-slate-700"
         >
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Vital Signs (24h)</h3>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Vital Signs Trend</h3>
             <div className="flex items-center space-x-4 text-sm">
               <div className="flex items-center space-x-2">
                 <div className="w-3 h-3 bg-red-500 rounded-full"></div>
@@ -458,25 +928,33 @@ const HealthMetrics = () => {
             </div>
           </div>
           <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              {/* Using transformedVitalSignsData which is derived from fetchedVitalSigns */}
-              <LineChart data={transformedVitalSignsData}> 
-                <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#334155" : "#f0f0f0"} /> {/* slate-700 for dark */}
-                <XAxis dataKey="time" stroke={isDarkMode ? "#94a3b8" : "#6b7280"} fontSize={12} /> {/* slate-400 for dark */}
-                <YAxis stroke={isDarkMode ? "#94a3b8" : "#6b7280"} fontSize={12} /> {/* slate-400 for dark */}
-                <Tooltip 
-                  contentStyle={isDarkMode ? 
-                    { backgroundColor: "#1e293b", border: "1px solid #334155", borderRadius: "8px", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" } :
-                    { backgroundColor: "white", border: "1px solid #e5e7eb", borderRadius: "8px", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" }}
-                  itemStyle={isDarkMode ? { color: "#cbd5e1" } : { color: "#000" }} // slate-300 for dark text
-                  cursor={{ fill: isDarkMode ? 'rgba(100, 116, 139, 0.3)' : 'rgba(200, 200, 200, 0.3)' }} // slate-500 with opacity
-                />
-                <Line type="monotone" dataKey="heartRate" stroke="#ef4444" strokeWidth={3} dot={{ fill: "#ef4444", strokeWidth: 2, r: 4 }} name="Heart Rate (bpm)" />
-                <Line type="monotone" dataKey="systolic" stroke="#3b82f6" strokeWidth={3} dot={{ fill: "#3b82f6", strokeWidth: 2, r: 4 }} name="Systolic BP" />
-              </LineChart>
-            </ResponsiveContainer>
+            {transformVitalSignsData().length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={transformVitalSignsData()}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#334155" : "#f0f0f0"} />
+                  <XAxis dataKey="time" stroke={isDarkMode ? "#94a3b8" : "#6b7280"} fontSize={12} />
+                  <YAxis stroke={isDarkMode ? "#94a3b8" : "#6b7280"} fontSize={12} />
+                  <Tooltip
+                    contentStyle={isDarkMode ?
+                      { backgroundColor: "#1e293b", border: "1px solid #334155", borderRadius: "8px" } :
+                      { backgroundColor: "white", border: "1px solid #e5e7eb", borderRadius: "8px" }}
+                    itemStyle={isDarkMode ? { color: "#cbd5e1" } : { color: "#000" }}
+                  />
+                  <Line type="monotone" dataKey="heartRate" stroke="#ef4444" strokeWidth={3} dot={{ fill: "#ef4444", strokeWidth: 2, r: 4 }} name="Heart Rate (bpm)" />
+                  <Line type="monotone" dataKey="bloodPressure" stroke="#3b82f6" strokeWidth={3} dot={{ fill: "#3b82f6", strokeWidth: 2, r: 4 }} name="Blood Pressure (mmHg)" />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center text-gray-500 dark:text-slate-400">
+                <div className="text-center">
+                  <ChartBarIcon className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p>No vital signs data available</p>
+                </div>
+              </div>
+            )}
           </div>
         </motion.div>
+
         {/* Blood Glucose Chart */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -487,286 +965,207 @@ const HealthMetrics = () => {
         >
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Blood Glucose Levels</h3>
-            <div className="flex items-center space-x-4 text-sm">
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                <span className="text-gray-600 dark:text-slate-300">Fasting</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                <span className="text-gray-600 dark:text-slate-300">Post-Meal</span>
-              </div>
-            </div>
           </div>
           <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={glucoseData}>
-                <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#334155" : "#f0f0f0"} />
-                <XAxis dataKey="date" stroke={isDarkMode ? "#94a3b8" : "#6b7280"} fontSize={12} />
-                <YAxis stroke={isDarkMode ? "#94a3b8" : "#6b7280"} fontSize={12} />
-                <Tooltip 
-                  contentStyle={isDarkMode ? 
-                    { backgroundColor: "#1e293b", border: "1px solid #334155", borderRadius: "8px", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" } :
-                    { backgroundColor: "white", border: "1px solid #e5e7eb", borderRadius: "8px", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" }}
-                  itemStyle={isDarkMode ? { color: "#cbd5e1" } : { color: "#000" }}
-                  cursor={{ fill: isDarkMode ? 'rgba(100, 116, 139, 0.3)' : 'rgba(200, 200, 200, 0.3)' }}
-                />
-                <Area type="monotone" dataKey="fasting" stackId="1" stroke="#10b981" fill="#10b981" fillOpacity={isDarkMode ? 0.4 : 0.6} name="Fasting (mg/dL)" />
-                <Area type="monotone" dataKey="postMeal" stackId="2" stroke="#f97316" fill="#f97316" fillOpacity={isDarkMode ? 0.4 : 0.6} name="Post-Meal (mg/dL)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </motion.div>
-      </div>
-
-      {/* Activity and Sleep Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Weekly Activity */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.7, delay: 0.15 }}
-          className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg dark:shadow-slate-700/50 border border-gray-100 dark:border-slate-700"
-        >
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Weekly Activity Summary</h3>
-            <div className="flex items-center space-x-4 text-sm">
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                <span className="text-gray-600 dark:text-slate-300">Steps</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                <span className="text-gray-600 dark:text-slate-300">Calories</span>
-              </div>
-            </div>
-          </div>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={activityData} barCategoryGap="20%">
-                <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#334155" : "#f0f0f0"} />
-                <XAxis dataKey="day" stroke={isDarkMode ? "#94a3b8" : "#6b7280"} fontSize={12} />
-                <YAxis stroke={isDarkMode ? "#94a3b8" : "#6b7280"} fontSize={12} />
-                <Tooltip 
-                  contentStyle={isDarkMode ? 
-                    { backgroundColor: "#1e293b", border: "1px solid #334155", borderRadius: "8px", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" } :
-                    { backgroundColor: "white", border: "1px solid #e5e7eb", borderRadius: "8px", boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)" }}
-                  itemStyle={isDarkMode ? { color: "#cbd5e1" } : { color: "#000" }}
-                  cursor={{ fill: isDarkMode ? 'rgba(100, 116, 139, 0.2)' : 'rgba(200, 200, 200, 0.2)' }} // Lighter cursor for BarChart
-                />
-                <Bar dataKey="steps" fill="#10b981" radius={[4, 4, 0, 0]} name="Steps" />
-                <Bar dataKey="calories" fill="#f97316" radius={[4, 4, 0, 0]} name="Calories" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </motion.div>
-        {/* Sleep Quality */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.7, delay: 0.2 }}
-          className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg dark:shadow-slate-700/50 border border-gray-100 dark:border-slate-700"
-        >
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-6">Sleep Quality</h3>
-          <div className="h-48 mb-4">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={sleepBreakdown} cx="50%" cy="50%" innerRadius={40} outerRadius={80} paddingAngle={5} dataKey="value">
-                  {sleepBreakdown.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} stroke={isDarkMode ? '#1e293b' : '#fff'} strokeWidth={entry.name === "Awake" && isDarkMode ? 1 : 0} /> // Add stroke for contrast, especially for 'Awake' slice
-                  ))}
-                </Pie>
-                <Tooltip 
-                  contentStyle={isDarkMode ? 
-                    { backgroundColor: "#1e293b", border: "1px solid #334155", borderRadius: "8px" } :
-                    { backgroundColor: "white", border: "1px solid #e5e7eb", borderRadius: "8px" }}
-                  itemStyle={isDarkMode ? { color: "#cbd5e1" } : { color: "#000" }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="space-y-2">
-            {sleepBreakdown.map((item, index) => (
-              <div key={index} className="flex items-center justify-between text-sm">
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
-                  <span className="text-gray-600 dark:text-slate-300">{item.name}</span>
+            {transformGlucoseData().length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={transformGlucoseData()}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#334155" : "#f0f0f0"} />
+                  <XAxis dataKey="time" stroke={isDarkMode ? "#94a3b8" : "#6b7280"} fontSize={12} />
+                  <YAxis stroke={isDarkMode ? "#94a3b8" : "#6b7280"} fontSize={12} />
+                  <Tooltip
+                    contentStyle={isDarkMode ?
+                      { backgroundColor: "#1e293b", border: "1px solid #334155", borderRadius: "8px" } :
+                      { backgroundColor: "white", border: "1px solid #e5e7eb", borderRadius: "8px" }}
+                    itemStyle={isDarkMode ? { color: "#cbd5e1" } : { color: "#000" }}
+                  />
+                  <Area type="monotone" dataKey="glucose" stroke="#10b981" fill="#10b981" fillOpacity={isDarkMode ? 0.4 : 0.6} name="Glucose (mg/dL)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center text-gray-500 dark:text-slate-400">
+                <div className="text-center">
+                  <ChartBarIcon className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p>No glucose data available</p>
                 </div>
-                <span className="font-medium text-gray-900 dark:text-slate-100">{item.hours}h</span>
               </div>
-            ))}
+            )}
           </div>
         </motion.div>
       </div>
 
-      {/* Weight and Body Composition */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.7, delay: 0.25 }}
-          className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg dark:shadow-slate-700/50 border border-gray-100 dark:border-slate-700"
-        >
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-6">Weight & Body Composition Trends</h3>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={weightData}>
-                <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#334155" : "#f0f0f0"} />
-                <XAxis dataKey="week" stroke={isDarkMode ? "#94a3b8" : "#6b7280"} fontSize={12} />
-                <YAxis stroke={isDarkMode ? "#94a3b8" : "#6b7280"} fontSize={12} />
-                <Tooltip 
-                  contentStyle={isDarkMode ? 
-                    { backgroundColor: "#1e293b", border: "1px solid #334155", borderRadius: "8px" } :
-                    { backgroundColor: "white", border: "1px solid #e5e7eb", borderRadius: "8px" }}
-                  itemStyle={isDarkMode ? { color: "#cbd5e1" } : { color: "#000" }}
-                  cursor={{ fill: isDarkMode ? 'rgba(100, 116, 139, 0.3)' : 'rgba(200, 200, 200, 0.3)' }}
-                />
-                <Legend wrapperStyle={isDarkMode ? { color: "#94a3b8" } : {}} />
-                <Line type="monotone" dataKey="weight" stroke="#8b5cf6" strokeWidth={3} dot={{ fill: "#8b5cf6", strokeWidth: 2, r: 4 }} name="Weight (lbs)" />
-                <Line type="monotone" dataKey="bodyFat" stroke="#f59e0b" strokeWidth={3} dot={{ fill: "#f59e0b", strokeWidth: 2, r: 4 }} name="Body Fat (%)" />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </motion.div>
-        {/* Health Goals Progress */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.7, delay: 0.3 }}
-          className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg dark:shadow-slate-700/50 border border-gray-100 dark:border-slate-700"
-        >
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-6">Health Goals Progress</h3>
-          <div className="space-y-6">
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-medium text-gray-700 dark:text-slate-300">Daily Steps</span>
-                <span className="text-sm text-gray-500 dark:text-slate-400">9,200 / 10,000</span>
-              </div>
-              <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-3">
-                <div className="bg-green-500 h-3 rounded-full transition-all duration-300" style={{ width: "92%" }}></div>
-              </div>
-            </div>
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-medium text-gray-700 dark:text-slate-300">Weight Loss</span>
-                <span className="text-sm text-gray-500 dark:text-slate-400">1.7 / 5.0 lbs</span>
-              </div>
-              <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-3">
-                <div className="bg-blue-500 h-3 rounded-full transition-all duration-300" style={{ width: "34%" }}></div>
-              </div>
-            </div>
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-medium text-gray-700 dark:text-slate-300">Sleep Quality</span>
-                <span className="text-sm text-gray-500 dark:text-slate-400">8.3 / 8.0 hours</span>
-              </div>
-              <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-3">
-                <div className="bg-purple-500 h-3 rounded-full transition-all duration-300" style={{ width: "100%" }}></div>
-              </div>
-            </div>
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-medium text-gray-700 dark:text-slate-300">Blood Pressure Control</span>
-                <span className="text-sm text-gray-500 dark:text-slate-400">120/80 mmHg</span>
-              </div>
-              <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-3">
-                <div className="bg-green-500 h-3 rounded-full transition-all duration-300" style={{ width: "85%" }}></div>
-              </div>
-            </div>
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-medium text-gray-700 dark:text-slate-300">Glucose Management</span>
-                <span className="text-sm text-gray-500 dark:text-slate-400">95 mg/dL avg</span>
-              </div>
-              <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-3">
-                <div className="bg-green-500 h-3 rounded-full transition-all duration-300" style={{ width: "78%" }}></div>
-              </div>
-            </div>
-          </div>
-        </motion.div>
-      </div>
-
-      {/* Recent Readings Table */}
+      {/* Body Temperature Chart - Full Width */}
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
-        transition={{ duration: 0.7, delay: 0.35 }}
+        transition={{ duration: 0.7, delay: 0.2 }}
         className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg dark:shadow-slate-700/50 border border-gray-100 dark:border-slate-700"
       >
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Recent Readings</h3>
-          <button className="text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 text-sm font-medium">View All</button>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Body Temperature Trend</h3>
         </div>
+        <div className="h-64">
+          {transformTemperatureData().length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={transformTemperatureData()}>
+                <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#334155" : "#f0f0f0"} />
+                <XAxis dataKey="time" stroke={isDarkMode ? "#94a3b8" : "#6b7280"} fontSize={12} />
+                <YAxis stroke={isDarkMode ? "#94a3b8" : "#6b7280"} fontSize={12} domain={['dataMin - 0.5', 'dataMax + 0.5']} />
+                <Tooltip
+                  contentStyle={isDarkMode ?
+                    { backgroundColor: "#1e293b", border: "1px solid #334155", borderRadius: "8px" } :
+                    { backgroundColor: "white", border: "1px solid #e5e7eb", borderRadius: "8px" }}
+                  itemStyle={isDarkMode ? { color: "#cbd5e1" } : { color: "#000" }}
+                />
+                <Area type="monotone" dataKey="temperature" stroke="#f97316" fill="#f97316" fillOpacity={isDarkMode ? 0.4 : 0.6} name="Temperature (°F)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-full flex items-center justify-center text-gray-500 dark:text-slate-400">
+              <div className="text-center">
+                <ChartBarIcon className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                <p>No temperature data available</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </motion.div>
+
+      {/* Detailed Data Table */}
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.7, delay: 0.3 }}
+        className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg dark:shadow-slate-700/50 border border-gray-100 dark:border-slate-700"
+      >
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+          <div className="flex items-center space-x-3">
+            <TableCellsIcon className="w-6 h-6 text-blue-500" />
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Detailed Reading History</h3>
+          </div>
+
+          {/* Search and Filters */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            {/* Search */}
+            <div className="relative">
+              <MagnifyingGlassIcon className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search readings..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 pr-4 py-2 border border-gray-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-200 text-sm"
+              />
+            </div>
+
+            {/* Data Type Filter */}
+            <select
+              value={filterConfig.dataType}
+              onChange={(e) => setFilterConfig(prev => ({ ...prev, dataType: e.target.value }))}
+              className="px-3 py-2 border border-gray-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-200 text-sm"
+            >
+              <option value="all">All Metrics</option>
+              <option value="heartRate">Heart Rate</option>
+              <option value="bloodPressure">Blood Pressure</option>
+              <option value="bodyTemperature">Body Temperature</option>
+              <option value="glucoseLevel">Blood Glucose</option>
+            </select>
+
+            {/* Status Filter */}
+            <select
+              value={filterConfig.status}
+              onChange={(e) => setFilterConfig(prev => ({ ...prev, status: e.target.value }))}
+              className="px-3 py-2 border border-gray-200 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-200 text-sm"
+            >
+              <option value="all">All Status</option>
+              <option value="good">Good</option>
+              <option value="normal">Normal</option>
+              <option value="warning">Warning</option>
+              <option value="critical">Critical</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Table */}
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full">
             <thead>
-              <tr className="border-b border-gray-200 dark:border-slate-700">
-                <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-slate-200">Date & Time</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-slate-200">Metric</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-slate-200">Value</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-slate-200">Status</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-900 dark:text-slate-200">Source</th>
+              <tr className="border-b border-gray-200 dark:border-slate-600">
+                <th
+                  className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-slate-100 cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+                  onClick={() => setSortConfig({
+                    key: 'timestamp',
+                    direction: sortConfig.key === 'timestamp' && sortConfig.direction === 'desc' ? 'asc' : 'desc'
+                  })}
+                >
+                  <div className="flex items-center space-x-1">
+                    <span>Time</span>
+                    <ChevronUpDownIcon className="w-4 h-4" />
+                  </div>
+                </th>
+                <th
+                  className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-slate-100 cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+                  onClick={() => setSortConfig({
+                    key: 'dataType',
+                    direction: sortConfig.key === 'dataType' && sortConfig.direction === 'desc' ? 'asc' : 'desc'
+                  })}
+                >
+                  <div className="flex items-center space-x-1">
+                    <span>Metric</span>
+                    <ChevronUpDownIcon className="w-4 h-4" />
+                  </div>
+                </th>
+                <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-slate-100">Value</th>
+                <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-slate-100">Status</th>
+                <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-slate-100">Source</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
-              <tr className="hover:bg-gray-50 dark:hover:bg-slate-700/50">
-                <td className="py-3 px-4 text-gray-900 dark:text-slate-200">Today, 2:30 PM</td>
-                <td className="py-3 px-4 text-gray-600 dark:text-slate-400">Heart Rate</td>
-                <td className="py-3 px-4 font-medium text-gray-900 dark:text-slate-200">72 bpm</td>
-                <td className="py-3 px-4">
-                  <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-700/30 dark:text-green-300">Normal</span>
-                </td>
-                <td className="py-3 px-4 text-gray-600 dark:text-slate-400">Apple Watch</td>
-              </tr>
-              <tr className="hover:bg-gray-50 dark:hover:bg-slate-700/50">
-                <td className="py-3 px-4 text-gray-900 dark:text-slate-200">Today, 2:25 PM</td>
-                <td className="py-3 px-4 text-gray-600 dark:text-slate-400">Blood Pressure</td>
-                <td className="py-3 px-4 font-medium text-gray-900 dark:text-slate-200">120/80 mmHg</td>
-                <td className="py-3 px-4">
-                  <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-700/30 dark:text-green-300">Normal</span>
-                </td>
-                <td className="py-3 px-4 text-gray-600 dark:text-slate-400">BP Monitor</td>
-              </tr>
-              <tr className="hover:bg-gray-50 dark:hover:bg-slate-700/50">
-                <td className="py-3 px-4 text-gray-900 dark:text-slate-200">Today, 1:45 PM</td>
-                <td className="py-3 px-4 text-gray-600 dark:text-slate-400">Blood Glucose</td>
-                <td className="py-3 px-4 font-medium text-gray-900 dark:text-slate-200">95 mg/dL</td>
-                <td className="py-3 px-4">
-                  <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-700/30 dark:text-green-300">Normal</span>
-                </td>
-                <td className="py-3 px-4 text-gray-600 dark:text-slate-400">Glucose Monitor</td>
-              </tr>
-              <tr className="hover:bg-gray-50 dark:hover:bg-slate-700/50">
-                <td className="py-3 px-4 text-gray-900 dark:text-slate-200">Today, 8:00 AM</td>
-                <td className="py-3 px-4 text-gray-600 dark:text-slate-400">Weight</td>
-                <td className="py-3 px-4 font-medium text-gray-900 dark:text-slate-200">173.5 lbs</td>
-                <td className="py-3 px-4">
-                  <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800 dark:bg-blue-700/30 dark:text-blue-300">On Track</span>
-                </td>
-                <td className="py-3 px-4 text-gray-600 dark:text-slate-400">Smart Scale</td>
-              </tr>
-              <tr className="hover:bg-gray-50 dark:hover:bg-slate-700/50">
-                <td className="py-3 px-4 text-gray-900 dark:text-slate-200">Yesterday, 11:30 PM</td>
-                <td className="py-3 px-4 text-gray-600 dark:text-slate-400">Sleep Quality</td>
-                <td className="py-3 px-4 font-medium text-gray-900 dark:text-slate-200">8.3 hours</td>
-                <td className="py-3 px-4">
-                  <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-700/30 dark:text-green-300">
-                    Excellent
-                  </span>
-                </td>
-                <td className="py-3 px-4 text-gray-600 dark:text-slate-400">Sleep Tracker</td>
-              </tr>
+            <tbody>
+              {getFilteredAndSortedReadings().slice(0, 50).map((reading, index) => (
+                <tr
+                  key={`${reading.dataType}-${reading.timestamp}-${index}`}
+                  className="border-b border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors"
+                >
+                  <td className="py-3 px-4 text-sm text-gray-600 dark:text-slate-400">
+                    {reading.formattedTime}
+                  </td>
+                  <td className="py-3 px-4 text-sm text-gray-900 dark:text-slate-100 capitalize">
+                    {reading.dataType.replace(/([A-Z])/g, ' $1').trim()}
+                  </td>
+                  <td className="py-3 px-4 text-sm font-medium text-gray-900 dark:text-slate-100">
+                    {reading.displayValue}
+                  </td>
+                  <td className="py-3 px-4">
+                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(reading.status)}`}>
+                      {reading.status}
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 text-sm text-gray-600 dark:text-slate-400">
+                    {reading.source || 'Health Monitor'}
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
+
+          {getFilteredAndSortedReadings().length === 0 && (
+            <div className="text-center py-8 text-gray-500 dark:text-slate-400">
+              <TableCellsIcon className="w-12 h-12 mx-auto mb-2 opacity-50" />
+              <p>No readings found matching your filters</p>
+            </div>
+          )}
+
+          {getFilteredAndSortedReadings().length > 50 && (
+            <div className="text-center py-4 text-sm text-gray-500 dark:text-slate-400">
+              Showing first 50 of {getFilteredAndSortedReadings().length} readings
+            </div>
+          )}
         </div>
       </motion.div>
     </div>
-  )
-}
+  );
+};
 
-export default HealthMetrics
+export default HealthMetrics;

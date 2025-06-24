@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { HeartIcon, BeakerIcon, FireIcon, MoonIcon } from "@heroicons/react/24/outline";
+import { HeartIcon, BeakerIcon, FireIcon, ArrowTrendingUpIcon, SunIcon, PlusIcon, ChartBarIcon } from "@heroicons/react/24/outline";
 
 const metrics = [
   {
@@ -33,36 +33,6 @@ const metrics = [
     changeBgColorDark: "dark:bg-red-700/30", // Negative change
     lastUpdated: "15 min ago",
   },
-  {
-    id: 3,
-    name: "Calories Burned",
-    value: "1,247",
-    unit: "kcal",
-    status: "good",
-    change: "+156",
-    icon: FireIcon,
-    gradient: "from-orange-400 to-red-500",
-    bgGradient: "from-orange-50 to-red-50",
-    bgGradientDark: "dark:from-orange-900/50 dark:to-red-900/50",
-    changeBgColor: "bg-emerald-50",
-    changeBgColorDark: "dark:bg-emerald-700/30",
-    lastUpdated: "1 hour ago",
-  },
-  {
-    id: 4,
-    name: "Sleep Quality",
-    value: "8.2",
-    unit: "/10",
-    status: "excellent",
-    change: "+0.3",
-    icon: MoonIcon,
-    gradient: "from-purple-400 to-indigo-500",
-    bgGradient: "from-purple-50 to-indigo-50",
-    bgGradientDark: "dark:from-purple-900/50 dark:to-indigo-900/50",
-    changeBgColor: "bg-emerald-50",
-    changeBgColorDark: "dark:bg-emerald-700/30",
-    lastUpdated: "Last night",
-  },
 ];
 
 const getStatusColor = (status) => {
@@ -82,8 +52,174 @@ const getStatusColor = (status) => {
   }
 };
 
-const HealthMetricsGrid = () => {
+const HealthMetricsGrid = ({ latestMetrics = {} }) => {
   const [isDarkMode, setIsDarkMode] = useState(false);
+
+  // Helper function to format timestamp
+  const formatTimestamp = (isoString) => {
+    if (!isoString) return 'N/A';
+    const date = new Date(isoString);
+    const diffMinutes = Math.round((new Date() - date) / (1000 * 60));
+    if (diffMinutes < 1) return "Just now";
+    if (diffMinutes < 60) return `${diffMinutes} min ago`;
+    const diffHours = Math.round(diffMinutes / 60);
+    if (diffHours < 24) return `${diffHours} hr ago`;
+    return date.toLocaleDateString();
+  };
+
+  // Helper function to calculate heart rate status
+  const getHeartRateStatus = (heartRate) => {
+    if (heartRate < 50) return "critical";
+    if (heartRate < 60) return "warning";
+    if (heartRate >= 60 && heartRate <= 100) return "good";
+    if (heartRate > 100 && heartRate <= 120) return "warning";
+    return "critical";
+  };
+
+  // Helper function to calculate glucose status
+  const getGlucoseStatus = (glucose) => {
+    if (glucose < 70) return "critical";
+    if (glucose >= 70 && glucose <= 100) return "good";
+    if (glucose > 100 && glucose <= 140) return "warning";
+    return "critical";
+  };
+
+
+
+  // Create dynamic metrics based on fetched data
+  const getDynamicMetrics = () => {
+    const baseMetrics = [...metrics]; // Start with static structure
+
+    // Update with real data if available
+    if (latestMetrics.heartRate) {
+      const hrMetric = baseMetrics.find(m => m.name === "Heart Rate");
+      if (hrMetric) {
+        const heartRateValue = latestMetrics.heartRate.value;
+        hrMetric.value = heartRateValue.toString();
+        hrMetric.status = getHeartRateStatus(heartRateValue);
+        hrMetric.lastUpdated = formatTimestamp(latestMetrics.heartRate.timestamp);
+        hrMetric.change = latestMetrics.heartRate.change || "First reading";
+      }
+    }
+
+    if (latestMetrics.glucose) {
+      const glucoseMetric = baseMetrics.find(m => m.name === "Blood Glucose");
+      if (glucoseMetric) {
+        const glucoseValue = latestMetrics.glucose.value;
+        glucoseMetric.value = glucoseValue.toString();
+        glucoseMetric.status = getGlucoseStatus(glucoseValue);
+        glucoseMetric.lastUpdated = formatTimestamp(latestMetrics.glucose.timestamp);
+        glucoseMetric.change = latestMetrics.glucose.change || "First reading";
+      }
+    }
+
+    if (latestMetrics.bloodPressure) {
+      // Add blood pressure metric if not in base metrics
+      let bpMetric = baseMetrics.find(m => m.name === "Blood Pressure");
+      if (!bpMetric) {
+        const systolic = typeof latestMetrics.bloodPressure.value === 'object'
+          ? latestMetrics.bloodPressure.value.systolic
+          : latestMetrics.bloodPressure.value;
+        const diastolic = typeof latestMetrics.bloodPressure.value === 'object'
+          ? latestMetrics.bloodPressure.value.diastolic
+          : latestMetrics.bloodPressure.value - 40; // Estimate if not available
+
+        bpMetric = {
+          id: 6,
+          name: "Blood Pressure",
+          value: `${systolic}/${diastolic}`,
+          unit: "mmHg",
+          status: systolic > 140 || diastolic > 90 ? "warning" : systolic > 120 || diastolic > 80 ? "normal" : "good",
+          change: latestMetrics.bloodPressure.change || "First reading",
+          icon: ArrowTrendingUpIcon,
+          gradient: "from-red-400 to-pink-500",
+          bgGradient: "from-red-50 to-pink-50",
+          bgGradientDark: "dark:from-red-900/50 dark:to-pink-900/50",
+          changeBgColor: "bg-emerald-50",
+          changeBgColorDark: "dark:bg-emerald-700/30",
+          lastUpdated: formatTimestamp(latestMetrics.bloodPressure.timestamp),
+        };
+        baseMetrics.push(bpMetric);
+      } else {
+        const systolic = typeof latestMetrics.bloodPressure.value === 'object'
+          ? latestMetrics.bloodPressure.value.systolic
+          : latestMetrics.bloodPressure.value;
+        const diastolic = typeof latestMetrics.bloodPressure.value === 'object'
+          ? latestMetrics.bloodPressure.value.diastolic
+          : latestMetrics.bloodPressure.value - 40;
+
+        bpMetric.value = `${systolic}/${diastolic}`;
+        bpMetric.status = systolic > 140 || diastolic > 90 ? "warning" : systolic > 120 || diastolic > 80 ? "normal" : "good";
+        bpMetric.change = latestMetrics.bloodPressure.change || "First reading";
+        bpMetric.lastUpdated = formatTimestamp(latestMetrics.bloodPressure.timestamp);
+      }
+    }
+
+    if (latestMetrics.bodyTemperature) {
+      // Add body temperature metric if not in base metrics
+      let tempMetric = baseMetrics.find(m => m.name === "Body Temperature");
+      if (!tempMetric) {
+        const temp = parseFloat(latestMetrics.bodyTemperature.value.toFixed(1));
+
+        tempMetric = {
+          id: 7,
+          name: "Body Temperature",
+          value: temp.toString(),
+          unit: "°F",
+          status: temp < 97.0 ? "warning" : temp > 99.0 && temp <= 100.4 ? "warning" : temp > 100.4 ? "critical" : "normal",
+          change: latestMetrics.bodyTemperature.change || "First reading",
+          icon: SunIcon,
+          gradient: "from-orange-400 to-yellow-500",
+          bgGradient: "from-orange-50 to-yellow-50",
+          bgGradientDark: "dark:from-orange-900/50 dark:to-yellow-900/50",
+          changeBgColor: "bg-emerald-50",
+          changeBgColorDark: "dark:bg-emerald-700/30",
+          lastUpdated: formatTimestamp(latestMetrics.bodyTemperature.timestamp),
+        };
+        baseMetrics.push(tempMetric);
+      } else {
+        const temp = parseFloat(latestMetrics.bodyTemperature.value.toFixed(1));
+        tempMetric.value = temp.toString();
+        tempMetric.status = temp < 97.0 ? "warning" : temp > 99.0 && temp <= 100.4 ? "warning" : temp > 100.4 ? "critical" : "normal";
+        tempMetric.change = latestMetrics.bodyTemperature.change || "First reading";
+        tempMetric.lastUpdated = formatTimestamp(latestMetrics.bodyTemperature.timestamp);
+      }
+    }
+
+
+
+
+
+    if (latestMetrics.weight) {
+      // Add weight metric if not in base metrics
+      let weightMetric = baseMetrics.find(m => m.name === "Weight");
+      if (!weightMetric) {
+        weightMetric = {
+          id: 5,
+          name: "Weight",
+          value: Math.round(latestMetrics.weight.value * 10) / 10,
+          unit: "lbs",
+          status: "normal",
+          change: "-0.5",
+          icon: FireIcon, // Using FireIcon as placeholder
+          gradient: "from-purple-400 to-pink-500",
+          bgGradient: "from-purple-50 to-pink-50",
+          bgGradientDark: "dark:from-purple-900/50 dark:to-pink-900/50",
+          changeBgColor: "bg-emerald-50",
+          changeBgColorDark: "dark:bg-emerald-700/30",
+          lastUpdated: formatTimestamp(latestMetrics.weight.timestamp),
+        };
+        baseMetrics.push(weightMetric);
+      } else {
+        weightMetric.value = Math.round(latestMetrics.weight.value * 10) / 10;
+        weightMetric.lastUpdated = formatTimestamp(latestMetrics.weight.timestamp);
+      }
+    }
+
+    return baseMetrics;
+  };
+
+  const dynamicMetrics = getDynamicMetrics();
 
   useEffect(() => {
     const observer = new MutationObserver(() => {
@@ -94,9 +230,95 @@ const HealthMetricsGrid = () => {
     return () => observer.disconnect();
   }, []);
 
+  // Check if user has any health data
+  const hasAnyData = latestMetrics && Object.keys(latestMetrics).length > 0 &&
+    Object.values(latestMetrics).some(metric => metric && metric.value !== undefined);
+
+  // Empty state component
+  const EmptyState = () => (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6 }}
+      className="col-span-full"
+    >
+      <div className="bg-gradient-to-br from-blue-50 via-white to-green-50 dark:from-slate-800 dark:via-slate-700 dark:to-slate-800 rounded-2xl p-8 border-2 border-dashed border-blue-200 dark:border-slate-600 text-center">
+        <motion.div
+          initial={{ scale: 0.8 }}
+          animate={{ scale: 1 }}
+          transition={{ delay: 0.2, duration: 0.5 }}
+          className="mb-6"
+        >
+          <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+            <ChartBarIcon className="w-10 h-10 text-white" />
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.4, duration: 0.5 }}
+        >
+          <h3 className="text-2xl font-bold text-gray-900 dark:text-slate-100 mb-3">
+            Start Your Health Journey
+          </h3>
+          <p className="text-gray-600 dark:text-slate-400 mb-6 max-w-md mx-auto">
+            Record your first health readings to see your personalized health metrics and track your wellness progress.
+          </p>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            {[
+              { icon: HeartIcon, name: "Heart Rate", color: "text-red-500" },
+              { icon: ArrowTrendingUpIcon, name: "Blood Pressure", color: "text-blue-500" },
+              { icon: BeakerIcon, name: "Blood Glucose", color: "text-green-500" },
+              { icon: SunIcon, name: "Body Temperature", color: "text-orange-500" }
+            ].map((metric, index) => (
+              <motion.div
+                key={metric.name}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6 + index * 0.1, duration: 0.3 }}
+                className="flex flex-col items-center p-3 bg-white dark:bg-slate-700/50 rounded-lg border border-gray-100 dark:border-slate-600"
+              >
+                <metric.icon className={`w-6 h-6 ${metric.color} mb-2`} />
+                <span className="text-xs font-medium text-gray-700 dark:text-slate-300 text-center">
+                  {metric.name}
+                </span>
+              </motion.div>
+            ))}
+          </div>
+
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1.0, duration: 0.5 }}
+            className="flex flex-col sm:flex-row gap-3 justify-center items-center"
+          >
+            <div className="flex items-center space-x-2 text-sm text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-4 py-2 rounded-lg">
+              <PlusIcon className="w-4 h-4" />
+              <span>Use the simulation panel to generate sample data</span>
+            </div>
+            <div className="text-sm text-gray-500 dark:text-slate-400">
+              or manually enter your readings
+            </div>
+          </motion.div>
+        </motion.div>
+      </div>
+    </motion.div>
+  );
+
+  // Show empty state if no data, otherwise show metrics
+  if (!hasAnyData) {
+    return (
+      <div className="grid grid-cols-1 gap-6">
+        <EmptyState />
+      </div>
+    );
+  }
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      {metrics.map((metric, index) => (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      {dynamicMetrics.map((metric, index) => (
         <motion.div
           key={metric.id}
           className="group relative bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg dark:shadow-slate-400/20 border border-white/20 dark:border-slate-700/30 hover:shadow-2xl transition-all duration-500 overflow-hidden"
@@ -152,9 +374,9 @@ const HealthMetricsGrid = () => {
                 transition={{ delay: index * 0.1 + 0.5 }}
               >
                 <span className="mr-1">
-                  {metric.change.startsWith("+") ? "↗" : "↘"}
+                  {metric.change.startsWith("+") ? "↗" : metric.change.startsWith("-") ? "↘" : ""}
                 </span>
-                {metric.change} vs yesterday
+                {metric.change}
               </motion.span>
               <span className="text-gray-500 dark:text-slate-400 font-medium">{metric.lastUpdated}</span>
             </div>

@@ -1,6 +1,7 @@
 "use client"
 
 import { NavLink } from "react-router-dom"
+import React, { useState, useEffect } from "react"
 import {
   HomeIcon,
   HeartIcon,
@@ -14,18 +15,33 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
 } from "@heroicons/react/24/outline"
-
-const navigation = [
-  { name: "Dashboard", href: "/", icon: HomeIcon },
-  { name: "Health Metrics", href: "/health-metrics", icon: HeartIcon },
-  { name: "Appointments", href: "/appointments", icon: CalendarIcon },
-  { name: "Messages", href: "/messages", icon: ChatBubbleLeftIcon, badge: 3 },
-  { name: "Alerts", href: "/alerts", icon: BellIcon, badge: 2 },
-  { name: "Profile", href: "/profile", icon: UserIcon },
-  { name: "Settings", href: "/settings", icon: Cog6ToothIcon },
-]
+import { useAlerts } from "../../contexts/AlertContext"
 
 const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
+  const [isDarkMode, setIsDarkMode] = useState(false)
+  const { getUnreadCount } = useAlerts()
+
+  const unreadCount = getUnreadCount()
+  console.log('Sidebar unread count:', unreadCount) // Debug log
+
+  const navigation = React.useMemo(() => [
+    { name: "Dashboard", href: "/dashboard/overview", icon: HomeIcon },
+    { name: "Health Metrics", href: "/dashboard/health-metrics", icon: HeartIcon },
+    { name: "Appointments", href: "/dashboard/appointments", icon: CalendarIcon },
+    { name: "Messages", href: "/dashboard/messages", icon: ChatBubbleLeftIcon, badge: 3 },
+    { name: "Alerts", href: "/dashboard/alerts", icon: BellIcon, badge: unreadCount },
+    { name: "Profile", href: "/dashboard/profile", icon: UserIcon },
+    { name: "Settings", href: "/dashboard/settings", icon: Cog6ToothIcon },
+  ], [unreadCount])
+
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setIsDarkMode(document.documentElement.classList.contains('dark'))
+    })
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+    setIsDarkMode(document.documentElement.classList.contains('dark'))
+    return () => observer.disconnect()
+  }, [])
   return (
     <>
       {/* Mobile backdrop */}
@@ -120,7 +136,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
                   {!isCollapsed && (
                     <>
                       <span className="truncate">{item.name}</span>
-                      {item.badge && (
+                      {item.badge !== undefined && item.badge !== null && item.badge > 0 && (
                         <span className={`ml-auto text-xs rounded-full px-2 py-1 font-medium min-w-[20px] text-center ${isActive ? 'bg-green-100 text-green-700 dark:bg-green-600/30 dark:text-green-300' : 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400'}`}>
                           {item.badge}
                         </span>
@@ -132,7 +148,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
                   {isCollapsed && (
                     <div className="absolute left-full ml-2 px-3 py-2 bg-gray-800 dark:bg-slate-200 text-white dark:text-slate-800 text-sm rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-50 shadow-lg">
                       {item.name}
-                      {item.badge && (
+                      {item.badge !== undefined && item.badge !== null && item.badge > 0 && (
                         <span className="ml-2 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5">
                           {item.badge}
                         </span>

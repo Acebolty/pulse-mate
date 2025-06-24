@@ -1,32 +1,48 @@
 import { ExclamationTriangleIcon, InformationCircleIcon, CheckCircleIcon } from "@heroicons/react/24/outline"
 import { motion } from 'framer-motion';
 
-const RecentAlerts = () => {
-  const alerts = [
+const RecentAlerts = ({ alerts = [] }) => {
+  // Helper function to format timestamp
+  const formatTimestamp = (isoString) => {
+    if (!isoString) return 'N/A';
+    const date = new Date(isoString);
+    const diffMinutes = Math.round((new Date() - date) / (1000 * 60));
+    if (diffMinutes < 1) return "Just now";
+    if (diffMinutes < 60) return `${diffMinutes} min ago`;
+    const diffHours = Math.round(diffMinutes / 60);
+    if (diffHours < 24) return `${diffHours} hr ago`;
+    const diffDays = Math.round(diffHours / 24);
+    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+    return date.toLocaleDateString();
+  };
+
+  // Map backend alert types to display types
+  const mapAlertType = (backendType) => {
+    switch (backendType) {
+      case 'critical': return 'warning';
+      case 'warning': return 'warning';
+      case 'info': return 'info';
+      default: return 'info';
+    }
+  };
+
+  // Use real alerts if available, otherwise fall back to dummy data
+  const displayAlerts = alerts.length > 0 ? alerts.map(alert => ({
+    id: alert._id,
+    type: mapAlertType(alert.type),
+    title: alert.title,
+    message: alert.message,
+    time: formatTimestamp(alert.createdAt),
+    action: "View Details",
+  })) : [
     {
       id: 1,
-      type: "warning",
-      title: "High Blood Pressure Detected",
-      message: "Your blood pressure reading of 145/90 is above normal range.",
-      time: "2 hours ago",
-      action: "Contact Doctor",
-    },
-    {
-      id: 2,
       type: "info",
-      title: "Medication Reminder",
-      message: "Time to take your evening medication (Metformin 500mg).",
-      time: "4 hours ago",
-      action: "Mark as Taken",
-    },
-    {
-      id: 3,
-      type: "success",
-      title: "Daily Goal Achieved",
-      message: "Congratulations! You've reached your daily step goal of 10,000 steps.",
-      time: "6 hours ago",
-      action: "View Progress",
-    },
+      title: "No Recent Alerts",
+      message: "All your health metrics are looking good!",
+      time: "Now",
+      action: "View All",
+    }
   ];
 
   const getAlertStyles = (type) => {
@@ -73,7 +89,7 @@ const RecentAlerts = () => {
       </div>
 
       <div className="space-y-4">
-        {alerts.map((alert, index) => {
+        {displayAlerts.map((alert, index) => {
           const styles = getAlertStyles(alert.type);
           return (
             <motion.div 

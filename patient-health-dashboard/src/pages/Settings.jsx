@@ -153,7 +153,11 @@ const initialSettingsData = {
     temperatureUnit: "fahrenheit",
     autoSync: true,
     dataRetention: "5-years",
-    // emergencyContact is top-level in User model, managed in Profile.jsx ideally
+    emergencyContact: {
+      name: "",
+      relationship: "",
+      phone: "",
+    },
   },
   appearance: {
     theme: "system",
@@ -262,6 +266,23 @@ const Settings = () => {
       }
       return newData;
     });
+    setHasUnsavedChanges(true);
+    setSuccessMessage('');
+    setError('');
+  };
+
+  // Handle nested settings like health.emergencyContact.name
+  const handleNestedSettingChange = (section, nestedKey, field, value) => {
+    setSettingsData(prev => ({
+      ...prev,
+      [section]: {
+        ...prev[section],
+        [nestedKey]: {
+          ...prev[section][nestedKey],
+          [field]: value,
+        },
+      },
+    }));
     setHasUnsavedChanges(true);
     setSuccessMessage('');
     setError('');
@@ -450,7 +471,7 @@ const Settings = () => {
                     <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">First Name</label>
                     <input
                       type="text"
-                      value={settings.profile.firstName}
+                      value={settingsData.profile.firstName}
                       onChange={(e) => handleSettingChange("profile", "firstName", e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
                     />
@@ -459,7 +480,7 @@ const Settings = () => {
                     <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Last Name</label>
                     <input
                       type="text"
-                      value={settings.profile.lastName}
+                      value={settingsData.profile.lastName}
                       onChange={(e) => handleSettingChange("profile", "lastName", e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
                     />
@@ -468,7 +489,7 @@ const Settings = () => {
                     <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Email</label>
                     <input
                       type="email"
-                      value={settings.profile.email}
+                      value={settingsData.profile.email}
                       onChange={(e) => handleSettingChange("profile", "email", e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
                     />
@@ -477,7 +498,7 @@ const Settings = () => {
                     <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Phone</label>
                     <input
                       type="tel"
-                      value={settings.profile.phone}
+                      value={settingsData.profile.phone}
                       onChange={(e) => handleSettingChange("profile", "phone", e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
                     />
@@ -486,7 +507,7 @@ const Settings = () => {
                     <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Date of Birth</label>
                     <input
                       type="date"
-                      value={settings.profile.dateOfBirth}
+                      value={settingsData.profile.dateOfBirth}
                       onChange={(e) => handleSettingChange("profile", "dateOfBirth", e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
                     />
@@ -494,7 +515,7 @@ const Settings = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Gender</label>
                     <select
-                      value={settings.profile.gender}
+                      value={settingsData.profile.gender}
                       onChange={(e) => handleSettingChange("profile", "gender", e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
                     >
@@ -507,7 +528,7 @@ const Settings = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Timezone</label>
                     <select
-                      value={settings.profile.timezone}
+                      value={settingsData.profile.timezone}
                       onChange={(e) => handleSettingChange("profile", "timezone", e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
                     >
@@ -520,7 +541,7 @@ const Settings = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Language</label>
                     <select
-                      value={settings.profile.language}
+                      value={settingsData.profile.language}
                       onChange={(e) => handleSettingChange("profile", "language", e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
                     >
@@ -548,7 +569,7 @@ const Settings = () => {
                       <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400">Control who can see your profile information</p>
                     </div>
                     <select
-                      value={settings.privacy.profileVisibility}
+                      value={settingsData.privacy.profileVisibility}
                       onChange={(e) => handleSettingChange("privacy", "profileVisibility", e.target.value)}
                       className="w-full sm:w-auto mt-1 sm:mt-0 px-3 py-2 text-sm border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
                     >
@@ -568,7 +589,7 @@ const Settings = () => {
                     <label className="relative inline-flex items-center cursor-pointer mt-1 sm:mt-0 self-end sm:self-center">
                       <input
                         type="checkbox"
-                        checked={settings.privacy.dataSharing}
+                        checked={settingsData.privacy.dataSharing}
                         onChange={(e) => handleSettingChange("privacy", "dataSharing", e.target.checked)}
                         className="sr-only peer"
                       />
@@ -585,7 +606,7 @@ const Settings = () => {
                     <label className="relative inline-flex items-center cursor-pointer mt-1 sm:mt-0 self-end sm:self-center">
                       <input
                         type="checkbox"
-                        checked={settings.privacy.researchParticipation}
+                        checked={settingsData.privacy.researchParticipation}
                         onChange={(e) => handleSettingChange("privacy", "researchParticipation", e.target.checked)}
                         className="sr-only peer"
                       />
@@ -602,7 +623,7 @@ const Settings = () => {
                     <label className="relative inline-flex items-center cursor-pointer mt-1 sm:mt-0 self-end sm:self-center">
                       <input
                         type="checkbox"
-                        checked={settings.privacy.marketingEmails}
+                        checked={settingsData.privacy.marketingEmails}
                         onChange={(e) => handleSettingChange("privacy", "marketingEmails", e.target.checked)}
                         className="sr-only peer"
                       />
@@ -619,7 +640,7 @@ const Settings = () => {
                     <label className="relative inline-flex items-center cursor-pointer mt-1 sm:mt-0 self-end sm:self-center">
                       <input
                         type="checkbox"
-                        checked={settings.privacy.anonymousAnalytics}
+                        checked={settingsData.privacy.anonymousAnalytics}
                         onChange={(e) => handleSettingChange("privacy", "anonymousAnalytics", e.target.checked)}
                         className="sr-only peer"
                       />
@@ -670,7 +691,7 @@ const Settings = () => {
                     <label className="relative inline-flex items-center cursor-pointer mt-1 sm:mt-0 self-end sm:self-center">
                       <input
                         type="checkbox"
-                        checked={settings.notifications.pushNotifications}
+                        checked={settingsData.notifications.pushNotifications}
                         onChange={(e) => handleSettingChange("notifications", "pushNotifications", e.target.checked)}
                         className="sr-only peer"
                       />
@@ -687,7 +708,7 @@ const Settings = () => {
                     <label className="relative inline-flex items-center cursor-pointer mt-1 sm:mt-0 self-end sm:self-center">
                       <input
                         type="checkbox"
-                        checked={settings.notifications.emailNotifications}
+                        checked={settingsData.notifications.emailNotifications}
                         onChange={(e) => handleSettingChange("notifications", "emailNotifications", e.target.checked)}
                         className="sr-only peer"
                       />
@@ -704,11 +725,11 @@ const Settings = () => {
                     <label className="relative inline-flex items-center cursor-pointer mt-1 sm:mt-0 self-end sm:self-center">
                       <input
                         type="checkbox"
-                        checked={settings.notifications.smsNotifications}
+                        checked={settingsData.notifications.smsNotifications}
                         onChange={(e) => handleSettingChange("notifications", "smsNotifications", e.target.checked)}
                         className="sr-only peer"
                       />
-                      <div className="w-11 h-6 bg-gray-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] left-[2px] after:bg-white after:border-gray-300 dark:after:border-slate-500 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600 dark:peer-checked:bg-green-500"></div>
+                      <div className="w-11 h-6 bg-gray-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 dark:after:border-slate-500 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600 dark:peer-checked:bg-green-500"></div>
                     </label>
                   </div>
                 </div>
@@ -726,7 +747,7 @@ const Settings = () => {
                     <label className="relative inline-flex items-center cursor-pointer mt-1 sm:mt-0 self-end sm:self-center">
                       <input
                         type="checkbox"
-                        checked={settings.notifications.appointmentReminders}
+                        checked={settingsData.notifications.appointmentReminders}
                         onChange={(e) => handleSettingChange("notifications", "appointmentReminders", e.target.checked)}
                         className="sr-only peer"
                       />
@@ -743,7 +764,7 @@ const Settings = () => {
                     <label className="relative inline-flex items-center cursor-pointer mt-1 sm:mt-0 self-end sm:self-center">
                       <input
                         type="checkbox"
-                        checked={settings.notifications.medicationReminders}
+                        checked={settingsData.notifications.medicationReminders}
                         onChange={(e) => handleSettingChange("notifications", "medicationReminders", e.target.checked)}
                         className="sr-only peer"
                       />
@@ -760,7 +781,7 @@ const Settings = () => {
                     <label className="relative inline-flex items-center cursor-pointer mt-1 sm:mt-0 self-end sm:self-center">
                       <input
                         type="checkbox"
-                        checked={settings.notifications.healthAlerts}
+                        checked={settingsData.notifications.healthAlerts}
                         onChange={(e) => handleSettingChange("notifications", "healthAlerts", e.target.checked)}
                         className="sr-only peer"
                       />
@@ -781,7 +802,7 @@ const Settings = () => {
                     <label className="relative inline-flex items-center cursor-pointer mt-1 sm:mt-0 self-end sm:self-center">
                       <input
                         type="checkbox"
-                        checked={settings.notifications.quietHoursEnabled}
+                        checked={settingsData.notifications.quietHoursEnabled}
                         onChange={(e) => handleSettingChange("notifications", "quietHoursEnabled", e.target.checked)}
                         className="sr-only peer"
                       />
@@ -789,13 +810,13 @@ const Settings = () => {
                     </label>
                   </div>
 
-                  {settings.notifications.quietHoursEnabled && (
+                  {settingsData.notifications.quietHoursEnabled && (
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Start Time</label>
                         <input
                           type="time"
-                          value={settings.notifications.quietHoursStart}
+                          value={settingsData.notifications.quietHoursStart}
                           onChange={(e) => handleSettingChange("notifications", "quietHoursStart", e.target.value)}
                           className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
                         />
@@ -804,7 +825,7 @@ const Settings = () => {
                         <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">End Time</label>
                         <input
                           type="time"
-                          value={settings.notifications.quietHoursEnd}
+                          value={settingsData.notifications.quietHoursEnd}
                           onChange={(e) => handleSettingChange("notifications", "quietHoursEnd", e.target.value)}
                           className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
                         />
@@ -825,7 +846,7 @@ const Settings = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1 sm:mb-2">Measurement Units</label>
                     <select
-                      value={settings.health.units}
+                      value={settingsData.health.units}
                       onChange={(e) => handleSettingChange("health", "units", e.target.value)}
                       className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
                     >
@@ -837,7 +858,7 @@ const Settings = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1 sm:mb-2">Glucose Units</label>
                     <select
-                      value={settings.health.glucoseUnit}
+                      value={settingsData.health.glucoseUnit}
                       onChange={(e) => handleSettingChange("health", "glucoseUnit", e.target.value)}
                       className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
                     >
@@ -849,7 +870,7 @@ const Settings = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1 sm:mb-2">Temperature Units</label>
                     <select
-                      value={settings.health.temperatureUnit}
+                      value={settingsData.health.temperatureUnit}
                       onChange={(e) => handleSettingChange("health", "temperatureUnit", e.target.value)}
                       className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
                     >
@@ -861,7 +882,7 @@ const Settings = () => {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1 sm:mb-2">Data Retention</label>
                     <select
-                      value={settings.health.dataRetention}
+                      value={settingsData.health.dataRetention}
                       onChange={(e) => handleSettingChange("health", "dataRetention", e.target.value)}
                       className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
                     >
@@ -884,7 +905,7 @@ const Settings = () => {
                   <label className="relative inline-flex items-center cursor-pointer mt-1 sm:mt-0 self-end sm:self-center">
                     <input
                       type="checkbox"
-                      checked={settings.health.autoSync}
+                      checked={settingsData.health.autoSync}
                       onChange={(e) => handleSettingChange("health", "autoSync", e.target.checked)}
                       className="sr-only peer"
                     />
@@ -900,7 +921,7 @@ const Settings = () => {
                     <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1 sm:mb-2">Name</label>
                     <input
                       type="text"
-                      value={settings.health.emergencyContact.name}
+                      value={settingsData.health.emergencyContact?.name || ''}
                       onChange={(e) => handleNestedSettingChange("health", "emergencyContact", "name", e.target.value)}
                       className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
                     />
@@ -909,7 +930,7 @@ const Settings = () => {
                     <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1 sm:mb-2">Relationship</label>
                     <input
                       type="text"
-                      value={settings.health.emergencyContact.relationship}
+                      value={settingsData.health.emergencyContact?.relationship || ''}
                       onChange={(e) =>
                         handleNestedSettingChange("health", "emergencyContact", "relationship", e.target.value)
                       }
@@ -920,7 +941,7 @@ const Settings = () => {
                     <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Phone</label>
                     <input
                       type="tel"
-                      value={settings.health.emergencyContact.phone}
+                      value={settingsData.health.emergencyContact?.phone || ''}
                       onChange={(e) => handleNestedSettingChange("health", "emergencyContact", "phone", e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
                     />
@@ -994,15 +1015,15 @@ const Settings = () => {
                     <div className="flex items-center space-x-2 sm:space-x-3 mt-1 sm:mt-0 self-end sm:self-auto">
                       <span
                         className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          settings.security.twoFactorEnabled
+                          settingsData.security.twoFactorEnabled
                             ? "bg-green-100 text-green-800 dark:bg-green-700/30 dark:text-green-300"
                             : "bg-gray-100 text-gray-800 dark:bg-slate-600 dark:text-slate-200"
                         }`}
                       >
-                        {settings.security.twoFactorEnabled ? "Enabled" : "Disabled"}
+                        {settingsData.security.twoFactorEnabled ? "Enabled" : "Disabled"}
                       </span>
                       <button className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 text-xs sm:text-sm font-medium">
-                        {settings.security.twoFactorEnabled ? "Disable" : "Enable"}
+                        {settingsData.security.twoFactorEnabled ? "Disable" : "Enable"}
                       </button>
                     </div>
                   </div>
@@ -1016,7 +1037,7 @@ const Settings = () => {
                     <label className="relative inline-flex items-center cursor-pointer mt-1 sm:mt-0 self-end sm:self-center">
                       <input
                         type="checkbox"
-                        checked={settings.security.biometricLogin}
+                        checked={settingsData.security.biometricLogin}
                         onChange={(e) => handleSettingChange("security", "biometricLogin", e.target.checked)}
                         className="sr-only peer"
                       />
@@ -1031,7 +1052,7 @@ const Settings = () => {
                       <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400">Automatically log out after inactivity</p>
                     </div>
                     <select
-                      value={settings.security.sessionTimeout}
+                      value={settingsData.security.sessionTimeout}
                       onChange={(e) => handleSettingChange("security", "sessionTimeout", e.target.value)}
                       className="w-full sm:w-auto mt-1 sm:mt-0 px-3 py-2 text-sm border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
                     >
@@ -1052,7 +1073,7 @@ const Settings = () => {
                     <label className="relative inline-flex items-center cursor-pointer mt-1 sm:mt-0 self-end sm:self-center">
                       <input
                         type="checkbox"
-                        checked={settings.security.loginAlerts}
+                        checked={settingsData.security.loginAlerts}
                         onChange={(e) => handleSettingChange("security", "loginAlerts", e.target.checked)}
                         className="sr-only peer"
                       />
@@ -1097,7 +1118,7 @@ const Settings = () => {
                   <button
                     onClick={() => handleSettingChange("appearance", "theme", "light")}
                     className={`p-3 sm:p-4 border-2 rounded-lg transition-colors text-center ${
-                      settings.appearance.theme === "light"
+                      settingsData.appearance.theme === "light"
                         ? "border-green-500 bg-green-50 dark:bg-green-700/20 dark:border-green-600"
                         : "border-gray-200 dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-600"
                     }`}
@@ -1108,7 +1129,7 @@ const Settings = () => {
                   <button
                     onClick={() => handleSettingChange("appearance", "theme", "dark")}
                     className={`p-3 sm:p-4 border-2 rounded-lg transition-colors text-center ${
-                      settings.appearance.theme === "dark"
+                      settingsData.appearance.theme === "dark"
                         ? "border-green-500 bg-green-50 dark:bg-green-700/20 dark:border-green-600"
                         : "border-gray-200 dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-600"
                     }`}
@@ -1119,7 +1140,7 @@ const Settings = () => {
                   <button
                     onClick={() => handleSettingChange("appearance", "theme", "system")}
                     className={`p-3 sm:p-4 border-2 rounded-lg transition-colors text-center ${
-                      settings.appearance.theme === "system"
+                      settingsData.appearance.theme === "system"
                         ? "border-green-500 bg-green-50 dark:bg-green-700/20 dark:border-green-600"
                         : "border-gray-200 dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-600"
                     }`}
@@ -1136,7 +1157,7 @@ const Settings = () => {
                   <button
                     onClick={() => handleSettingChange("appearance", "fontSize", "small")}
                     className={`p-3 sm:p-4 border-2 rounded-lg transition-colors text-center ${
-                      settings.appearance.fontSize === "small"
+                      settingsData.appearance.fontSize === "small"
                         ? "border-green-500 bg-green-50 dark:bg-green-700/20 dark:border-green-600"
                         : "border-gray-200 dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-600"
                     }`}
@@ -1147,7 +1168,7 @@ const Settings = () => {
                   <button
                     onClick={() => handleSettingChange("appearance", "fontSize", "medium")}
                     className={`p-3 sm:p-4 border-2 rounded-lg transition-colors text-center ${
-                      settings.appearance.fontSize === "medium"
+                      settingsData.appearance.fontSize === "medium"
                         ? "border-green-500 bg-green-50 dark:bg-green-700/20 dark:border-green-600"
                         : "border-gray-200 dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-600"
                     }`}
@@ -1158,7 +1179,7 @@ const Settings = () => {
                   <button
                     onClick={() => handleSettingChange("appearance", "fontSize", "large")}
                     className={`p-3 sm:p-4 border-2 rounded-lg transition-colors text-center ${
-                      settings.appearance.fontSize === "large"
+                      settingsData.appearance.fontSize === "large"
                         ? "border-green-500 bg-green-50 dark:bg-green-700/20 dark:border-green-600"
                         : "border-gray-200 dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-600"
                     }`}
@@ -1175,7 +1196,7 @@ const Settings = () => {
                   <button
                     onClick={() => handleSettingChange("appearance", "colorScheme", "green")}
                     className={`p-3 sm:p-4 border-2 rounded-lg transition-colors text-center ${
-                      settings.appearance.colorScheme === "green"
+                      settingsData.appearance.colorScheme === "green"
                         ? "border-green-500 bg-green-50 dark:bg-green-700/20 dark:border-green-600"
                         : "border-gray-200 dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-600"
                     }`}
@@ -1186,7 +1207,7 @@ const Settings = () => {
                   <button
                     onClick={() => handleSettingChange("appearance", "colorScheme", "blue")}
                     className={`p-3 sm:p-4 border-2 rounded-lg transition-colors text-center ${
-                      settings.appearance.colorScheme === "blue"
+                      settingsData.appearance.colorScheme === "blue"
                         ? "border-green-500 bg-green-50 dark:bg-green-700/20 dark:border-green-600"
                         : "border-gray-200 dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-600"
                     }`}
@@ -1197,7 +1218,7 @@ const Settings = () => {
                   <button
                     onClick={() => handleSettingChange("appearance", "colorScheme", "purple")}
                     className={`p-3 sm:p-4 border-2 rounded-lg transition-colors text-center ${
-                      settings.appearance.colorScheme === "purple"
+                      settingsData.appearance.colorScheme === "purple"
                         ? "border-green-500 bg-green-50 dark:bg-green-700/20 dark:border-green-600"
                         : "border-gray-200 dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-600"
                     }`}
