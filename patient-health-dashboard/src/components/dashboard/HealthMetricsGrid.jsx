@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { HeartIcon, BeakerIcon, FireIcon, ArrowTrendingUpIcon, SunIcon, PlusIcon, ChartBarIcon } from "@heroicons/react/24/outline";
+;
 
 const metrics = [
   {
@@ -53,6 +54,8 @@ const getStatusColor = (status) => {
 const HealthMetricsGrid = ({ latestMetrics = {} }) => {
   const [isDarkMode, setIsDarkMode] = useState(false);
 
+
+
   // Helper function to format timestamp
   const formatTimestamp = (isoString) => {
     if (!isoString) return 'N/A';
@@ -94,6 +97,7 @@ const HealthMetricsGrid = ({ latestMetrics = {} }) => {
       if (hrMetric) {
         const heartRateValue = latestMetrics.heartRate.value;
         hrMetric.value = heartRateValue.toString();
+        hrMetric.unit = 'bpm';
         hrMetric.status = getHeartRateStatus(heartRateValue);
         hrMetric.lastUpdated = formatTimestamp(latestMetrics.heartRate.timestamp);
         hrMetric.change = latestMetrics.heartRate.change || "First reading";
@@ -105,6 +109,7 @@ const HealthMetricsGrid = ({ latestMetrics = {} }) => {
       if (glucoseMetric) {
         const glucoseValue = latestMetrics.glucose.value;
         glucoseMetric.value = glucoseValue.toString();
+        glucoseMetric.unit = 'mg/dL';
         glucoseMetric.status = getGlucoseStatus(glucoseValue);
         glucoseMetric.lastUpdated = formatTimestamp(latestMetrics.glucose.timestamp);
         glucoseMetric.change = latestMetrics.glucose.change || "First reading";
@@ -126,7 +131,7 @@ const HealthMetricsGrid = ({ latestMetrics = {} }) => {
           id: 6,
           name: "Blood Pressure",
           value: `${systolic}/${diastolic}`,
-          unit: "mmHg",
+          unit: 'mmHg',
           status: systolic > 140 || diastolic > 90 ? "warning" : systolic > 120 || diastolic > 80 ? "normal" : "good",
           change: latestMetrics.bloodPressure.change || "First reading",
           icon: ArrowTrendingUpIcon,
@@ -161,8 +166,8 @@ const HealthMetricsGrid = ({ latestMetrics = {} }) => {
         tempMetric = {
           id: 7,
           name: "Body Temperature",
-          value: temp.toString(),
-          unit: "°F",
+          value: temp.toFixed(1),
+          unit: '°F',
           status: temp < 97.0 ? "warning" : temp > 99.0 && temp <= 100.4 ? "warning" : temp > 100.4 ? "critical" : "normal",
           change: latestMetrics.bodyTemperature.change || "First reading",
           icon: SunIcon,
@@ -175,7 +180,8 @@ const HealthMetricsGrid = ({ latestMetrics = {} }) => {
         baseMetrics.push(tempMetric);
       } else {
         const temp = parseFloat(latestMetrics.bodyTemperature.value.toFixed(1));
-        tempMetric.value = temp.toString();
+        tempMetric.value = temp.toFixed(1);
+        tempMetric.unit = '°F';
         tempMetric.status = temp < 97.0 ? "warning" : temp > 99.0 && temp <= 100.4 ? "warning" : temp > 100.4 ? "critical" : "normal";
         tempMetric.change = latestMetrics.bodyTemperature.change || "First reading";
         tempMetric.lastUpdated = formatTimestamp(latestMetrics.bodyTemperature.timestamp);

@@ -26,6 +26,26 @@ const DashboardOverview = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
+  // Simple helper function to calculate change
+  const calculateChange = (readings, dataType = null) => {
+    if (readings.length < 2) return "First reading";
+
+    const current = readings[0].value;
+    const previous = readings[1].value;
+
+    let currentVal, previousVal;
+    if (dataType === 'bloodPressure') {
+      currentVal = typeof current === 'object' ? current.systolic : current;
+      previousVal = typeof previous === 'object' ? previous.systolic : previous;
+    } else {
+      currentVal = current;
+      previousVal = previous;
+    }
+
+    const difference = Math.round((currentVal - previousVal) * 10) / 10; // Round to 1 decimal
+    return difference > 0 ? `+${difference} from previous` : `${difference} from previous`;
+  };
+
   const fetchDashboardData = async () => {
       try {
         console.log('🔄 Fetching dashboard data...');
@@ -63,34 +83,17 @@ const DashboardOverview = () => {
           healthSummary: {}
         }
 
-        // Helper function to calculate change
-        const calculateChange = (readings, dataType = null) => {
-          if (readings.length < 2) return "First reading";
 
-          const current = readings[0].value;
-          const previous = readings[1].value;
-
-          let currentVal, previousVal;
-          if (dataType === 'bloodPressure') {
-            currentVal = typeof current === 'object' ? current.systolic : current;
-            previousVal = typeof previous === 'object' ? previous.systolic : previous;
-          } else {
-            currentVal = current;
-            previousVal = previous;
-          }
-
-          const difference = Math.round((currentVal - previousVal) * 10) / 10; // Round to 1 decimal
-          return difference > 0 ? `+${difference} from previous` : `${difference} from previous`;
-        };
 
         // Process latest metrics
         if (latestHeartRateRes.status === 'fulfilled' && latestHeartRateRes.value.data.data.length > 0) {
           const hrReadings = latestHeartRateRes.value.data.data;
+          console.log('💓 Heart rate readings:', hrReadings.length, 'readings available');
           newDashboardData.latestMetrics.heartRate = {
             ...hrReadings[0],
-            change: calculateChange(hrReadings)
+            change: calculateChange(hrReadings, 'heartRate')
           };
-          console.log('💓 Latest heart rate:', newDashboardData.latestMetrics.heartRate.value, 'bpm');
+          console.log('💓 Latest heart rate:', newDashboardData.latestMetrics.heartRate.value, 'bpm, change:', newDashboardData.latestMetrics.heartRate.change);
         }
         if (latestBloodPressureRes.status === 'fulfilled' && latestBloodPressureRes.value.data.data.length > 0) {
           const bpReadings = latestBloodPressureRes.value.data.data;
@@ -101,10 +104,12 @@ const DashboardOverview = () => {
         }
         if (latestGlucoseRes.status === 'fulfilled' && latestGlucoseRes.value.data.data.length > 0) {
           const glucoseReadings = latestGlucoseRes.value.data.data;
+          console.log('🩸 Glucose readings:', glucoseReadings.length, 'readings available');
           newDashboardData.latestMetrics.glucose = {
             ...glucoseReadings[0],
-            change: calculateChange(glucoseReadings)
+            change: calculateChange(glucoseReadings, 'glucoseLevel')
           };
+          console.log('🩸 Latest glucose:', newDashboardData.latestMetrics.glucose.value, 'mg/dL, change:', newDashboardData.latestMetrics.glucose.change);
         }
         if (latestWeightRes.status === 'fulfilled' && latestWeightRes.value.data.data.length > 0) {
           const weightReadings = latestWeightRes.value.data.data;
@@ -116,10 +121,12 @@ const DashboardOverview = () => {
 
         if (latestBodyTempRes.status === 'fulfilled' && latestBodyTempRes.value.data.data.length > 0) {
           const tempReadings = latestBodyTempRes.value.data.data;
+          console.log('🌡️ Temperature readings:', tempReadings.length, 'readings available');
           newDashboardData.latestMetrics.bodyTemperature = {
             ...tempReadings[0],
-            change: calculateChange(tempReadings)
+            change: calculateChange(tempReadings, 'bodyTemperature')
           };
+          console.log('🌡️ Latest temperature:', newDashboardData.latestMetrics.bodyTemperature.value, '°F, change:', newDashboardData.latestMetrics.bodyTemperature.change);
         }
         if (recentActivityRes.status === 'fulfilled' && recentActivityRes.value.data.data.length > 0) {
           newDashboardData.latestMetrics.steps = recentActivityRes.value.data.data[0]
@@ -139,6 +146,8 @@ const DashboardOverview = () => {
   useEffect(() => {
     fetchDashboardData()
   }, [])
+
+
 
   if (loading) {
     return (
@@ -207,6 +216,8 @@ const DashboardOverview = () => {
           }}
         />
       )}
+
+
     </div>
   )
 }

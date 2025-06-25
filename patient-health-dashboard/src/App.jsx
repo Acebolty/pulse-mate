@@ -5,12 +5,15 @@ import HealthMetrics from "./pages/HealthMetrics"
 import Appointments from "./pages/Appointments"
 import Messages from "./pages/Messages"
 import Settings from "./pages/Settings"
+
+
 import Alerts from "./pages/Alerts"
 import Profile from "./pages/ProfileNew"
 import LoginPage from "./pages/LoginPage"
 import SignupPage from "./pages/SignupPage"
 import ProtectedRoute from "./components/auth/ProtectedRoute"
 import { AlertProvider } from "./contexts/AlertContext"
+
 
 import { isAuthenticated } from "./services/authService"
 import "./App.css"
@@ -32,8 +35,8 @@ function App() {
         {/* Protected dashboard routes */}
         <Route path="/dashboard/*" element={
           <ProtectedRoute>
-            <AlertProvider>
-              <DashboardLayout>
+              <AlertProvider>
+                <DashboardLayout>
                 <Routes>
                   <Route path="overview" element={<DashboardOverview />} />
                   <Route path="health-metrics" element={<HealthMetrics />} />
@@ -42,9 +45,11 @@ function App() {
                   <Route path="alerts" element={<Alerts />} />
                   <Route path="profile" element={<Profile />} />
                   <Route path="settings" element={<Settings />} />
+
+
                 </Routes>
-              </DashboardLayout>
-            </AlertProvider>
+                </DashboardLayout>
+              </AlertProvider>
           </ProtectedRoute>
         } />
 

@@ -661,8 +661,7 @@ const Alerts = () => {
                 </div>
               </div>
               <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                <p className="text-sm font-medium text-red-800 dark:text-red-300">Emergency: 911</p>
-                <p className="text-sm text-red-600 dark:text-red-400">Doctor: (555) 123-4567</p>
+                <p className="text-sm font-medium text-red-800 dark:text-red-300">Emergency call: 911</p>
               </div>
             </div>
 
@@ -691,8 +690,7 @@ const Alerts = () => {
                 </div>
               </div>
               <div className="mt-4 p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
-                <p className="text-sm font-medium text-orange-800 dark:text-orange-300">Emergency: 911</p>
-                <p className="text-sm text-orange-600 dark:text-orange-400">Poison Control: (800) 222-1222</p>
+                <p className="text-sm font-medium text-orange-800 dark:text-orange-300">Emergency call: 911</p>
               </div>
             </div>
 

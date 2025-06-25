@@ -80,6 +80,26 @@ const HealthMetrics = () => {
   const [latestMetrics, setLatestMetrics] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Simple change calculation function
+  const calculateChange = (readings, dataType = null) => {
+    if (readings.length < 2) return "First reading";
+
+    const current = readings[0].value;
+    const previous = readings[1].value;
+
+    let currentVal, previousVal;
+    if (dataType === 'bloodPressure') {
+      currentVal = typeof current === 'object' ? current.systolic : current;
+      previousVal = typeof previous === 'object' ? previous.systolic : previous;
+    } else {
+      currentVal = current;
+      previousVal = previous;
+    }
+
+    const difference = Math.round((currentVal - previousVal) * 10) / 10;
+    return difference > 0 ? `+${difference} from previous` : `${difference} from previous`;
+  };
   const [isDarkMode, setIsDarkMode] = useState(false);
 
   // New state for advanced features
@@ -157,7 +177,7 @@ const HealthMetrics = () => {
           newLatestMetrics.heartRate = {
             ...latest,
             status: getHeartRateStatus(latest.value),
-            change: calculateChange(newHealthData.heartRate)
+            change: calculateChange(newHealthData.heartRate, 'heartRate')
           };
         }
         if (newHealthData.bloodPressure.length > 0) {
@@ -175,7 +195,7 @@ const HealthMetrics = () => {
           newLatestMetrics.bodyTemperature = {
             ...latest,
             status: getTemperatureStatus(latest.value),
-            change: calculateChange(newHealthData.bodyTemperature)
+            change: calculateChange(newHealthData.bodyTemperature, 'bodyTemperature')
           };
         }
         if (newHealthData.glucoseLevel.length > 0) {
@@ -183,7 +203,7 @@ const HealthMetrics = () => {
           newLatestMetrics.glucoseLevel = {
             ...latest,
             status: getGlucoseStatus(latest.value),
-            change: calculateChange(newHealthData.glucoseLevel)
+            change: calculateChange(newHealthData.glucoseLevel, 'glucoseLevel')
           };
         }
 
@@ -204,6 +224,8 @@ const HealthMetrics = () => {
 
     fetchHealthData();
   }, [timeRange]);
+
+
 
   // Separate useEffect for calculating stats after data is set
   useEffect(() => {
@@ -231,24 +253,7 @@ const HealthMetrics = () => {
     return date.toLocaleDateString();
   };
 
-  const calculateChange = (readings, dataType = null) => {
-    if (readings.length < 2) return "First reading";
-    
-    const current = readings[0].value;
-    const previous = readings[1].value;
-    
-    let currentVal, previousVal;
-    if (dataType === 'bloodPressure') {
-      currentVal = typeof current === 'object' ? current.systolic : current;
-      previousVal = typeof previous === 'object' ? previous.systolic : previous;
-    } else {
-      currentVal = current;
-      previousVal = previous;
-    }
-    
-    const difference = Math.round((currentVal - previousVal) * 10) / 10;
-    return difference > 0 ? `+${difference} from previous` : `${difference} from previous`;
-  };
+
 
   // Check if we have any data
   const hasAnyData = Object.values(healthData).some(data => data.length > 0);
@@ -729,8 +734,10 @@ const HealthMetrics = () => {
             </div>
             <div className="mb-2">
               <div className="flex items-baseline space-x-1">
-                <span className="text-2xl font-bold text-gray-900 dark:text-slate-100">{latestMetrics.heartRate.value}</span>
-                <span className="text-sm text-gray-500 dark:text-slate-400">bpm</span>
+                <span className="text-2xl font-bold text-gray-900 dark:text-slate-100">
+                  {latestMetrics.heartRate.value}
+                  <span className="text-sm text-gray-500 dark:text-slate-400 ml-1">bpm</span>
+                </span>
               </div>
               <p className="text-sm text-gray-600 dark:text-slate-300 mt-1 font-medium">Heart Rate</p>
             </div>
@@ -765,8 +772,8 @@ const HealthMetrics = () => {
                   {typeof latestMetrics.bloodPressure.value === 'object'
                     ? `${latestMetrics.bloodPressure.value.systolic}/${latestMetrics.bloodPressure.value.diastolic}`
                     : latestMetrics.bloodPressure.value}
+                  <span className="text-sm text-gray-500 dark:text-slate-400 ml-1">mmHg</span>
                 </span>
-                <span className="text-sm text-gray-500 dark:text-slate-400">mmHg</span>
               </div>
               <p className="text-sm text-gray-600 dark:text-slate-300 mt-1 font-medium">Blood Pressure</p>
             </div>
@@ -797,8 +804,10 @@ const HealthMetrics = () => {
             </div>
             <div className="mb-2">
               <div className="flex items-baseline space-x-1">
-                <span className="text-2xl font-bold text-gray-900 dark:text-slate-100">{latestMetrics.bodyTemperature.value.toFixed(1)}</span>
-                <span className="text-sm text-gray-500 dark:text-slate-400">°F</span>
+                <span className="text-2xl font-bold text-gray-900 dark:text-slate-100">
+                  {latestMetrics.bodyTemperature.value.toFixed(1)}
+                  <span className="text-sm text-gray-500 dark:text-slate-400 ml-1">°F</span>
+                </span>
               </div>
               <p className="text-sm text-gray-600 dark:text-slate-300 mt-1 font-medium">Body Temperature</p>
             </div>
@@ -829,8 +838,10 @@ const HealthMetrics = () => {
             </div>
             <div className="mb-2">
               <div className="flex items-baseline space-x-1">
-                <span className="text-2xl font-bold text-gray-900 dark:text-slate-100">{latestMetrics.glucoseLevel.value}</span>
-                <span className="text-sm text-gray-500 dark:text-slate-400">mg/dL</span>
+                <span className="text-2xl font-bold text-gray-900 dark:text-slate-100">
+                  {latestMetrics.glucoseLevel.value}
+                  <span className="text-sm text-gray-500 dark:text-slate-400 ml-1">mg/dL</span>
+                </span>
               </div>
               <p className="text-sm text-gray-600 dark:text-slate-300 mt-1 font-medium">Blood Glucose</p>
             </div>

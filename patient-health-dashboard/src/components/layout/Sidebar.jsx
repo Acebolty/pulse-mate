@@ -48,50 +48,148 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
     loadUserData()
   }, [])
 
-  // Load health status
+  // Load health status using same calculation as ProfileNew.jsx
   useEffect(() => {
     const loadHealthStatus = async () => {
       try {
-        const response = await api.get('/health-data/latest')
-        const latestData = response.data
 
-        // Calculate simple health score based on available data
-        let score = 85 // Default good score
-        let status = 'good'
-        let statusColor = 'green'
+        // Load user profile first to get health targets
+        const profileResponse = await api.get('/profile/me')
 
+        // Set up parameters for health data (same as ProfileNew.jsx)
+        const endDate = new Date()
+        const startDate = new Date()
+        startDate.setDate(endDate.getDate() - 7) // Last 7 days
+
+        const commonParams = {
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString(),
+          limit: 1, // Only need the latest reading
+          order: 'desc'
+        }
+
+        // Fetch recent health data using same endpoints as ProfileNew.jsx
+        const [heartRateRes, bloodPressureRes, temperatureRes, glucoseRes] = await Promise.allSettled([
+          api.get('/health-data', { params: { ...commonParams, dataType: 'heartRate' } }),
+          api.get('/health-data', { params: { ...commonParams, dataType: 'bloodPressure' } }),
+          api.get('/health-data', { params: { ...commonParams, dataType: 'bodyTemperature' } }),
+          api.get('/health-data', { params: { ...commonParams, dataType: 'glucoseLevel' } })
+        ])
+
+        const latestData = {
+          heartRate: heartRateRes.status === 'fulfilled' ? heartRateRes.value.data.data : [],
+          bloodPressure: bloodPressureRes.status === 'fulfilled' ? bloodPressureRes.value.data.data : [],
+          bodyTemperature: temperatureRes.status === 'fulfilled' ? temperatureRes.value.data.data : [],
+          glucoseLevel: glucoseRes.status === 'fulfilled' ? glucoseRes.value.data.data : []
+        }
+
+        const userTargets = profileResponse.data.healthTargets || {
+          heartRate: { min: 60, max: 100 },
+          bloodPressure: { systolic: { min: 90, max: 120 }, diastolic: { min: 60, max: 80 } },
+          bodyTemperature: { min: 97.0, max: 99.0 },
+          glucoseLevel: { min: 70, max: 140 }
+        }
+
+        // Calculate health score using same logic as ProfileNew.jsx
+        let score = 100
+        let factors = []
+
+        // Check heart rate against user's targets
         if (latestData.heartRate && latestData.heartRate.length > 0) {
-          const hr = latestData.heartRate[0].value
-          if (hr < 60 || hr > 100) {
+          const currentHR = latestData.heartRate[0].value
+          const hrMin = userTargets.heartRate.min
+          const hrMax = userTargets.heartRate.max
+
+          if (currentHR < hrMin - 10 || currentHR > hrMax + 20) {
+            score -= 20
+            factors.push(`Heart rate outside optimal range`)
+          } else if (currentHR < hrMin || currentHR > hrMax) {
             score -= 10
-            status = 'warning'
-            statusColor = 'yellow'
+            factors.push(`Heart rate outside target range`)
           }
         }
 
+        // Check blood pressure against user's targets
         if (latestData.bloodPressure && latestData.bloodPressure.length > 0) {
-          const bp = latestData.bloodPressure[0].value
-          const systolic = typeof bp === 'object' ? bp.systolic : bp
-          if (systolic > 140) {
-            score -= 15
-            status = 'critical'
-            statusColor = 'red'
+          const latestBP = latestData.bloodPressure[0]
+          const systolic = typeof latestBP.value === 'object' ? latestBP.value.systolic : latestBP.value
+          const diastolic = typeof latestBP.value === 'object' ? latestBP.value.diastolic : latestBP.value - 40
+
+          const sysMin = userTargets.bloodPressure.systolic.min
+          const sysMax = userTargets.bloodPressure.systolic.max
+          const diaMin = userTargets.bloodPressure.diastolic.min
+          const diaMax = userTargets.bloodPressure.diastolic.max
+
+          if (systolic > sysMax + 20 || diastolic > diaMax + 10) {
+            score -= 20
+            factors.push(`Blood pressure critically elevated`)
+          } else if (systolic > sysMax || diastolic > diaMax || systolic < sysMin || diastolic < diaMin) {
+            score -= 10
+            factors.push(`Blood pressure outside target range`)
           }
+        }
+
+        // Check body temperature against user's targets
+        if (latestData.bodyTemperature && latestData.bodyTemperature.length > 0) {
+          const currentTemp = latestData.bodyTemperature[0].value
+          const tempMin = userTargets.bodyTemperature.min
+          const tempMax = userTargets.bodyTemperature.max
+
+          if (currentTemp > tempMax + 1 || currentTemp < tempMin - 1) {
+            score -= 15
+            factors.push(`Body temperature outside safe range`)
+          } else if (currentTemp > tempMax || currentTemp < tempMin) {
+            score -= 5
+            factors.push(`Body temperature outside target range`)
+          }
+        }
+
+        // Check glucose levels against user's targets
+        if (latestData.glucoseLevel && latestData.glucoseLevel.length > 0) {
+          const currentGlucose = latestData.glucoseLevel[0].value
+          const glucoseMin = userTargets.glucoseLevel.min
+          const glucoseMax = userTargets.glucoseLevel.max
+
+          if (currentGlucose > glucoseMax + 40 || currentGlucose < glucoseMin - 20) {
+            score -= 20
+            factors.push(`Blood glucose critically outside range`)
+          } else if (currentGlucose > glucoseMax || currentGlucose < glucoseMin) {
+            score -= 10
+            factors.push(`Blood glucose outside target range`)
+          }
+        }
+
+        // Ensure score doesn't go below 0
+        score = Math.max(0, score)
+
+        // Determine status and color based on score (same as ProfileNew.jsx)
+        let status, statusColor
+        if (score >= 80) {
+          status = 'excellent'
+          statusColor = 'green'
+        } else if (score >= 60) {
+          status = 'warning'
+          statusColor = 'yellow'
+        } else {
+          status = 'critical'
+          statusColor = 'red'
         }
 
         setHealthStatus({
-          score: Math.max(score, 0),
+          score: Math.round(score),
           status,
           statusColor,
+          factors,
           lastUpdated: new Date().toLocaleTimeString()
         })
       } catch (error) {
-        console.error('Failed to load health status:', error)
+        console.error('Sidebar: Failed to load health status:', error)
         // Default status if no data
         setHealthStatus({
           score: 85,
           status: 'good',
           statusColor: 'green',
+          factors: [],
           lastUpdated: 'No recent data'
         })
       }

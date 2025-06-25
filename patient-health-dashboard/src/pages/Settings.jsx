@@ -4,160 +4,44 @@ import { useState, useEffect } from "react" // Added useEffect
 import api from '../services/api'; // Import API service
 import { useNavigate } from 'react-router-dom'; // For potential redirects
 import {
-  UserIcon,
   BellIcon,
   ShieldCheckIcon,
-  DevicePhoneMobileIcon,
   CogIcon,
   KeyIcon,
-  PencilIcon,
   ArrowRightOnRectangleIcon,
   ExclamationTriangleIcon,
-  HeartIcon,
   MoonIcon,
   SunIcon,
   ComputerDesktopIcon,
 } from "@heroicons/react/24/outline"
 
-// Dummy user data
-const userSettings = {
-  profile: {
-    firstName: "John",
-    lastName: "Doe",
-    email: "john.doe@email.com",
-    phone: "+1 (555) 123-4567",
-    dateOfBirth: "1985-03-15",
-    gender: "Male",
-    profilePicture: null,
-    timezone: "America/New_York",
-    language: "English",
-  },
-  privacy: {
-    profileVisibility: "healthcare-providers",
-    dataSharing: true,
-    researchParticipation: false,
-    marketingEmails: false,
-    thirdPartySharing: false,
-    anonymousAnalytics: true,
-  },
-  notifications: {
-    pushNotifications: true,
-    emailNotifications: true,
-    smsNotifications: false,
-    appointmentReminders: true,
-    medicationReminders: true,
-    healthAlerts: true,
-    labResults: true,
-    messageNotifications: true,
-    quietHoursEnabled: true,
-    quietHoursStart: "22:00",
-    quietHoursEnd: "07:00",
-  },
-  health: {
-    units: "imperial", // imperial or metric
-    glucoseUnit: "mg/dL", // mg/dL or mmol/L
-    temperatureUnit: "fahrenheit", // fahrenheit or celsius
-    autoSync: true,
-    dataRetention: "5-years", // 1-year, 3-years, 5-years, forever
-    emergencyContact: {
-      name: "Jane Doe",
-      relationship: "Spouse",
-      phone: "+1 (555) 987-6543",
-    },
-  },
-  security: {
-    twoFactorEnabled: true,
-    biometricLogin: false,
-    sessionTimeout: "30-minutes",
-    loginAlerts: true,
-  },
-  appearance: {
-    theme: "system", // light, dark, system
-    fontSize: "medium", // small, medium, large
-    colorScheme: "green", // green, blue, purple
-  },
-}
 
-const connectedDevices = [
-  {
-    id: 1,
-    name: "Apple Watch Series 8",
-    type: "Smartwatch",
-    status: "Connected",
-    lastSync: "2 minutes ago",
-    batteryLevel: 85,
-  },
-  {
-    id: 2,
-    name: "Blood Pressure Monitor",
-    type: "Medical Device",
-    status: "Connected",
-    lastSync: "1 hour ago",
-    batteryLevel: null,
-  },
-  {
-    id: 3,
-    name: "Glucose Monitor",
-    type: "Medical Device",
-    status: "Disconnected",
-    lastSync: "3 hours ago",
-    batteryLevel: 45,
-  },
-  {
-    id: 4,
-    name: "Smart Scale",
-    type: "Health Device",
-    status: "Connected",
-    lastSync: "This morning",
-    batteryLevel: null,
-  },
-]
 
-// Default structure, similar to backend User model's settings + profile part
+
+
+// Default structure for health monitoring settings
 const initialSettingsData = {
-  profile: {
-    firstName: "",
-    lastName: "",
-    email: "",
-    phone: "",
-    dateOfBirth: "",
-    gender: "Prefer not to say",
-    profilePicture: null,
-    timezone: "America/New_York",
-    language: "English",
-  },
   // These directly map to the `settings` object in the User model
   privacy: {
     profileVisibility: "healthcare-providers",
     dataSharing: true,
-    researchParticipation: false,
-    marketingEmails: false,
-    anonymousAnalytics: true,
   },
   notifications: {
-    pushNotifications: true,
     emailNotifications: true,
-    smsNotifications: false,
     appointmentReminders: true,
     medicationReminders: true,
     healthAlerts: true,
-    labResults: true,
     messageNotifications: true,
-    quietHoursEnabled: false,
-    quietHoursStart: "22:00",
-    quietHoursEnd: "07:00",
+    anomalyDetection: false,
+    healthTaskReminders: false,
   },
-  health: { // Health preferences
-    units: "imperial",
-    glucoseUnit: "mg/dL",
-    temperatureUnit: "fahrenheit",
-    autoSync: true,
-    dataRetention: "5-years",
-    emergencyContact: {
-      name: "",
-      relationship: "",
-      phone: "",
-    },
+  health: {
+    providerAccess: {
+      shareRealTimeData: false,
+      shareHistoricalData: false,
+      allowRemoteMonitoring: false,
+      emergencyAccess: true,
+    }
   },
   appearance: {
     theme: "system",
@@ -165,7 +49,6 @@ const initialSettingsData = {
     colorScheme: "green",
   },
   security: { // Some basic security flags
-    twoFactorEnabled: false,
     sessionTimeout: "30-minutes",
     loginAlerts: true,
   }
@@ -173,11 +56,9 @@ const initialSettingsData = {
 
 
 const Settings = () => {
-  const [activeTab, setActiveTab] = useState("profile") // Default to profile or appearance
+  const [activeTab, setActiveTab] = useState("notifications") // Default to notifications
   const [settingsData, setSettingsData] = useState(initialSettingsData); // Renamed from 'settings' to avoid conflict
-  // const [showPassword, setShowPassword] = useState(false) // Not used in current JSX
-  // const [showDeleteModal, setShowDeleteModal] = useState(false) // Not used in current JSX
-  // const [showLogoutModal, setShowLogoutModal] = useState(false) // Not used in current JSX, handled in layout
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -192,17 +73,6 @@ const Settings = () => {
         const response = await api.get('/profile/me'); // Fetches the whole user object
         const userData = response.data;
         setSettingsData({ // Populate state from fetched user data
-          profile: { // For the profile picture section if kept
-            firstName: userData.firstName || "",
-            lastName: userData.lastName || "",
-            email: userData.email || "",
-            phone: userData.phone || "",
-            dateOfBirth: userData.dateOfBirth ? userData.dateOfBirth.split('T')[0] : "",
-            gender: userData.gender || "Prefer not to say",
-            profilePicture: userData.profilePicture || null,
-            timezone: userData.profile?.timezone || userData.settings?.profile?.timezone || initialSettingsData.profile.timezone, // Check both for older structures
-            language: userData.profile?.language || userData.settings?.profile?.language || initialSettingsData.profile.language,
-          },
           // Populate settings directly from userData.settings
           privacy: userData.settings?.privacy || initialSettingsData.privacy,
           notifications: userData.settings?.notifications || initialSettingsData.notifications,
@@ -226,11 +96,8 @@ const Settings = () => {
 
 
   const tabs = [
-    { id: "profile", label: "Profile", icon: UserIcon }, // This tab might be mostly redundant if Profile.jsx is separate
-    { id: "privacy", label: "Privacy", icon: ShieldCheckIcon },
     { id: "notifications", label: "Notifications", icon: BellIcon },
-    { id: "health", label: "Health Settings", icon: HeartIcon },
-    { id: "devices", label: "Connected Devices", icon: DevicePhoneMobileIcon },
+    { id: "privacy", label: "Privacy & Data", icon: ShieldCheckIcon },
     { id: "security", label: "Security", icon: KeyIcon },
     { id: "appearance", label: "Appearance", icon: CogIcon },
   ]
@@ -249,27 +116,7 @@ const Settings = () => {
     setError('');
   };
 
-  // Updated for nested settings within sections like 'health.emergencyContact' (though EC is top-level in User model)
-  // This one is primarily for 'profile' section's sub-objects if Profile tab is heavily used here.
-  // For settings.health.emergencyContact, it's not used as EC is at User root.
-  // Let's assume this is for a generic nested structure if any settings tab needs it.
-  // The backend expects settings.section.key, so this nestedKey might not be needed for settings directly.
-  // For profile fields like address: handleSettingChange('profile', 'street', value, 'address')
-  const handleProfileFieldChange = (mainKey, subKey, value, nestedSubKey = null) => {
-    setSettingsData(prev => {
-      const newData = JSON.parse(JSON.stringify(prev));
-      if (nestedSubKey) { // e.g. personalInfo.address.street
-        if (!newData[mainKey][subKey]) newData[mainKey][subKey] = {};
-        newData[mainKey][subKey][nestedSubKey] = value;
-      } else { // e.g. personalInfo.firstName
-        newData[mainKey][subKey] = value;
-      }
-      return newData;
-    });
-    setHasUnsavedChanges(true);
-    setSuccessMessage('');
-    setError('');
-  };
+
 
   // Handle nested settings like health.emergencyContact.name
   const handleNestedSettingChange = (section, nestedKey, field, value) => {
@@ -294,33 +141,15 @@ const Settings = () => {
     setSuccessMessage('');
     setLoading(true);
     try {
-      // Construct payload: send only fields that are part of the User model's top level or 'settings' object
-      // The profile tab fields (firstName, lastName, etc.) are top-level on User model.
-      // Other tabs (privacy, notifications, health prefs, appearance, security) are under 'settings' object.
+      // Construct payload: send settings (removed health settings)
+      // Profile information is handled by ProfileNew.jsx page
       const payload = {
-        // Profile tab fields that are top-level on User model
-        firstName: settingsData.profile.firstName,
-        lastName: settingsData.profile.lastName,
-        phone: settingsData.profile.phone,
-        dateOfBirth: settingsData.profile.dateOfBirth,
-        gender: settingsData.profile.gender,
-        timezone: settingsData.profile.timezone, // This was in settings.profile in frontend state
-        language: settingsData.profile.language, // This was in settings.profile in frontend state
-        // Email is typically not updatable here without verification
-        // ProfilePicture is handled by its own endpoint
-
         // Settings object
         settings: {
           privacy: settingsData.privacy,
           notifications: settingsData.notifications,
-          health: settingsData.health,
           appearance: settingsData.appearance,
           security: settingsData.security,
-          // If profile.timezone and profile.language from settingsData are meant for settings object:
-          // profile: { 
-          //   timezone: settingsData.profile.timezone, 
-          //   language: settingsData.profile.language 
-          // }
         }
       };
       
@@ -332,32 +161,30 @@ const Settings = () => {
 
       const response = await api.put('/profile/me', payload); // Using the same endpoint
       
-      // Update state with potentially validated/formatted data from backend
+      // Update state with response data to ensure consistency
       const userData = response.data;
       setSettingsData({
-        profile: {
-            firstName: userData.firstName || "",
-            lastName: userData.lastName || "",
-            email: userData.email || "",
-            phone: userData.phone || "",
-            dateOfBirth: userData.dateOfBirth ? userData.dateOfBirth.split('T')[0] : "",
-            gender: userData.gender || "Prefer not to say",
-            profilePicture: userData.profilePicture || null,
-            timezone: userData.timezone || initialSettingsData.profile.timezone, 
-            language: userData.language || initialSettingsData.profile.language,
-        },
         privacy: userData.settings?.privacy || initialSettingsData.privacy,
         notifications: userData.settings?.notifications || initialSettingsData.notifications,
-        health: userData.settings?.health || initialSettingsData.health,
         appearance: userData.settings?.appearance || initialSettingsData.appearance,
         security: userData.settings?.security || initialSettingsData.security,
       });
 
       setSuccessMessage('Settings saved successfully!');
       setHasUnsavedChanges(false);
+
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccessMessage(''), 3000);
+
     } catch (err) {
       console.error("Error saving settings:", err);
-      setError(err.response?.data?.message || 'Failed to save settings.');
+      const errorMessage = err.response?.data?.message ||
+                          err.response?.data?.error ||
+                          "Failed to save settings. Please try again.";
+      setError(errorMessage);
+
+      // Clear error message after 5 seconds
+      setTimeout(() => setError(''), 5000);
     } finally {
       setLoading(false);
     }
@@ -370,17 +197,67 @@ const Settings = () => {
     setHasUnsavedChanges(false);
     setError('');
     setSuccessMessage('');
+    setValidationErrors({});
     // To truly reset to last saved state, you'd call fetchUserSettings() again.
     // For now, let's just clear unsaved changes flag and reset to component's initial defaults.
   }
+
+
+
+
+
+  // Handle data download
+  const handleDownloadData = async () => {
+    try {
+      setLoading(true);
+
+      // Fetch all user data
+      const [profileRes, healthDataRes, alertsRes] = await Promise.allSettled([
+        api.get('/profile/me'),
+        api.get('/health-data'),
+        api.get('/alerts')
+      ]);
+
+      const exportData = {
+        profile: profileRes.status === 'fulfilled' ? profileRes.value.data : null,
+        healthData: healthDataRes.status === 'fulfilled' ? healthDataRes.value.data : [],
+        alerts: alertsRes.status === 'fulfilled' ? alertsRes.value.data : [],
+        exportDate: new Date().toISOString(),
+        exportVersion: '1.0'
+      };
+
+      // Create and download file
+      const dataStr = JSON.stringify(exportData, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(dataBlob);
+
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `health-data-export-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      setSuccessMessage('Health data exported successfully!');
+      setTimeout(() => setSuccessMessage(''), 3000);
+
+    } catch (err) {
+      console.error('Error downloading data:', err);
+      setError('Failed to export data. Please try again.');
+      setTimeout(() => setError(''), 5000);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col items-start sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-slate-100">Settings</h1>
-          <p className="text-sm sm:text-base text-gray-600 dark:text-slate-300 mt-1">Manage your account preferences and privacy settings</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-slate-100">Health Monitoring Settings</h1>
+          <p className="text-sm sm:text-base text-gray-600 dark:text-slate-300 mt-1">Configure your health monitoring preferences, privacy controls, and notification settings</p>
         </div>
         {hasUnsavedChanges && (
           <div className="flex items-center space-x-2 sm:space-x-3 mt-3 sm:mt-0">
@@ -394,9 +271,15 @@ const Settings = () => {
             <button
               onClick={saveSettings}
               disabled={loading}
-              className="px-3 py-1.5 text-sm sm:px-4 sm:py-2 bg-green-600 dark:bg-green-500 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 transition-colors disabled:opacity-50"
+              className="px-3 py-1.5 text-sm sm:px-4 sm:py-2 bg-green-600 dark:bg-green-500 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 transition-colors disabled:opacity-50 flex items-center space-x-2"
             >
-              Save Changes
+              {loading && (
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              )}
+              <span>{loading ? 'Saving...' : 'Save Changes'}</span>
             </button>
           </div>
         )}
@@ -408,6 +291,28 @@ const Settings = () => {
           <div className="flex items-center space-x-2">
             <ExclamationTriangleIcon className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
             <p className="text-sm text-yellow-800 dark:text-yellow-200">You have unsaved changes. Don't forget to save your settings.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Success Message */}
+      {successMessage && (
+        <div className="bg-green-50 dark:bg-green-700/30 border border-green-200 dark:border-green-600/50 rounded-lg p-4">
+          <div className="flex items-center space-x-2">
+            <svg className="w-5 h-5 text-green-600 dark:text-green-400" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            </svg>
+            <p className="text-sm text-green-800 dark:text-green-200">{successMessage}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Error Message */}
+      {error && (
+        <div className="bg-red-50 dark:bg-red-700/30 border border-red-200 dark:border-red-600/50 rounded-lg p-4">
+          <div className="flex items-center space-x-2">
+            <ExclamationTriangleIcon className="w-5 h-5 text-red-600 dark:text-red-400" />
+            <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
           </div>
         </div>
       )}
@@ -435,132 +340,86 @@ const Settings = () => {
 
         {/* Tab Content */}
         <div className="p-3 sm:p-4 md:p-6">
-          {/* Profile Settings */}
-          {activeTab === "profile" && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100 mb-3 sm:mb-4">Personal Information</h3>
 
-                {/* Profile Picture */}
-                <div className="flex flex-col items-start space-y-3 sm:flex-row sm:items-center sm:space-y-0 sm:space-x-6 mb-6">
-                  <div className="relative">
-                    <div className="w-16 h-16 sm:w-20 sm:h-20 bg-green-100 dark:bg-green-700/30 rounded-full flex items-center justify-center">
-                      <UserIcon className="w-8 h-8 sm:w-10 sm:h-10 text-green-600 dark:text-green-400" />
-                    </div>
-                    <button className="absolute bottom-0 right-0 w-6 h-6 bg-green-600 dark:bg-green-500 rounded-full flex items-center justify-center text-white hover:bg-green-700 dark:hover:bg-green-600 transition-colors">
-                      <PencilIcon className="w-3 h-3" />
-                    </button>
-                  </div>
-                  <div>
-                    <h4 className="text-sm sm:text-base font-medium text-gray-900 dark:text-slate-200">Profile Picture</h4>
-                    <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400 mb-2">Upload a photo to personalize your account</p>
-                    <div className="flex space-x-2">
-                      <button className="px-2 py-1 text-xs sm:px-3 sm:py-1 sm:text-sm border border-gray-300 dark:border-slate-600 dark:text-slate-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
-                        Upload Photo
-                      </button>
-                      <button className="px-2 py-1 text-xs sm:px-3 sm:py-1 sm:text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors">
-                        Remove
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Form Fields */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">First Name</label>
-                    <input
-                      type="text"
-                      value={settingsData.profile.firstName}
-                      onChange={(e) => handleSettingChange("profile", "firstName", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Last Name</label>
-                    <input
-                      type="text"
-                      value={settingsData.profile.lastName}
-                      onChange={(e) => handleSettingChange("profile", "lastName", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Email</label>
-                    <input
-                      type="email"
-                      value={settingsData.profile.email}
-                      onChange={(e) => handleSettingChange("profile", "email", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Phone</label>
-                    <input
-                      type="tel"
-                      value={settingsData.profile.phone}
-                      onChange={(e) => handleSettingChange("profile", "phone", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Date of Birth</label>
-                    <input
-                      type="date"
-                      value={settingsData.profile.dateOfBirth}
-                      onChange={(e) => handleSettingChange("profile", "dateOfBirth", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Gender</label>
-                    <select
-                      value={settingsData.profile.gender}
-                      onChange={(e) => handleSettingChange("profile", "gender", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
-                    >
-                      <option value="Male">Male</option>
-                      <option value="Female">Female</option>
-                      <option value="Other">Other</option>
-                      <option value="Prefer not to say">Prefer not to say</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Timezone</label>
-                    <select
-                      value={settingsData.profile.timezone}
-                      onChange={(e) => handleSettingChange("profile", "timezone", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
-                    >
-                      <option value="America/New_York">Eastern Time</option>
-                      <option value="America/Chicago">Central Time</option>
-                      <option value="America/Denver">Mountain Time</option>
-                      <option value="America/Los_Angeles">Pacific Time</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Language</label>
-                    <select
-                      value={settingsData.profile.language}
-                      onChange={(e) => handleSettingChange("profile", "language", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
-                    >
-                      <option value="English">English</option>
-                      <option value="Spanish">Spanish</option>
-                      <option value="French">French</option>
-                      <option value="German">German</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Privacy Settings */}
           {activeTab === "privacy" && (
             <div className="space-y-6">
               <div>
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100 mb-3 sm:mb-4">Privacy & Data Control</h3>
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100 mb-3 sm:mb-4">Healthcare Provider Access</h3>
+                <div className="space-y-3 sm:space-y-4">
+                  {/* Real-time Data Sharing */}
+                  <div className="flex flex-col items-start space-y-2 p-3 sm:p-4 border border-green-200 dark:border-green-800/40 bg-green-50 dark:bg-green-900/20 rounded-lg sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-900 dark:text-slate-200">Real-time Data Sharing</h4>
+                      <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400">Allow providers to access your live health data for monitoring</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer mt-1 sm:mt-0 self-end sm:self-center">
+                      <input
+                        type="checkbox"
+                        checked={settingsData.health.providerAccess?.shareRealTimeData || false}
+                        onChange={(e) => handleNestedSettingChange("health", "providerAccess", "shareRealTimeData", e.target.checked)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-gray-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 dark:after:border-slate-500 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600 dark:peer-checked:bg-green-500"></div>
+                    </label>
+                  </div>
+
+                  {/* Historical Data Sharing */}
+                  <div className="flex flex-col items-start space-y-2 p-3 sm:p-4 border border-gray-200 dark:border-slate-700 dark:bg-slate-700/30 rounded-lg sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-900 dark:text-slate-200">Historical Data Sharing</h4>
+                      <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400">Share your health history and trends with providers</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer mt-1 sm:mt-0 self-end sm:self-center">
+                      <input
+                        type="checkbox"
+                        checked={settingsData.health.providerAccess?.shareHistoricalData || false}
+                        onChange={(e) => handleNestedSettingChange("health", "providerAccess", "shareHistoricalData", e.target.checked)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-gray-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 dark:after:border-slate-500 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600 dark:peer-checked:bg-green-500"></div>
+                    </label>
+                  </div>
+
+                  {/* Remote Monitoring */}
+                  <div className="flex flex-col items-start space-y-2 p-3 sm:p-4 border border-gray-200 dark:border-slate-700 dark:bg-slate-700/30 rounded-lg sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-900 dark:text-slate-200">Remote Monitoring</h4>
+                      <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400">Allow providers to monitor your health remotely and receive alerts</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer mt-1 sm:mt-0 self-end sm:self-center">
+                      <input
+                        type="checkbox"
+                        checked={settingsData.health.providerAccess?.allowRemoteMonitoring || false}
+                        onChange={(e) => handleNestedSettingChange("health", "providerAccess", "allowRemoteMonitoring", e.target.checked)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-gray-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 dark:after:border-slate-500 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600 dark:peer-checked:bg-green-500"></div>
+                    </label>
+                  </div>
+
+                  {/* Emergency Access */}
+                  <div className="flex flex-col items-start space-y-2 p-3 sm:p-4 border border-red-200 dark:border-red-800/40 bg-red-50 dark:bg-red-900/20 rounded-lg sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-900 dark:text-slate-200">Emergency Access</h4>
+                      <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400">Allow emergency access to your health data in critical situations</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer mt-1 sm:mt-0 self-end sm:self-center">
+                      <input
+                        type="checkbox"
+                        checked={settingsData.health.providerAccess?.emergencyAccess || false}
+                        onChange={(e) => handleNestedSettingChange("health", "providerAccess", "emergencyAccess", e.target.checked)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-gray-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 dark:after:border-slate-500 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600 dark:peer-checked:bg-green-500"></div>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100 mb-3 sm:mb-4">General Privacy Settings</h3>
                 <div className="space-y-3 sm:space-y-4">
                   {/* Profile Visibility */}
                   <div className="flex flex-col items-start space-y-2 p-3 sm:p-4 border border-gray-200 dark:border-slate-700 dark:bg-slate-700/30 rounded-lg sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
@@ -579,74 +438,7 @@ const Settings = () => {
                     </select>
                   </div>
 
-                  {/* Data Sharing with Providers */}
-                  {/* THIS BLOCK WAS ALREADY MODIFIED IN A PREVIOUS FAILED DIFF, VERIFYING IT'S CORRECT */}
-                  <div className="flex flex-col items-start space-y-2 p-3 sm:p-4 border border-gray-200 dark:border-slate-700 dark:bg-slate-700/30 rounded-lg sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-900 dark:text-slate-200">Data Sharing with Providers</h4>
-                      <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400">Allow healthcare providers to access your health data</p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer mt-1 sm:mt-0 self-end sm:self-center">
-                      <input
-                        type="checkbox"
-                        checked={settingsData.privacy.dataSharing}
-                        onChange={(e) => handleSettingChange("privacy", "dataSharing", e.target.checked)}
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-gray-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 dark:after:border-slate-500 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600 dark:peer-checked:bg-green-500"></div>
-                    </label>
-                  </div>
 
-                  {/* Research Participation */}
-                  <div className="flex flex-col items-start space-y-2 p-3 sm:p-4 border border-gray-200 dark:border-slate-700 dark:bg-slate-700/30 rounded-lg sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-900 dark:text-slate-200">Research Participation</h4>
-                      <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400">Allow anonymized data to be used for medical research</p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer mt-1 sm:mt-0 self-end sm:self-center">
-                      <input
-                        type="checkbox"
-                        checked={settingsData.privacy.researchParticipation}
-                        onChange={(e) => handleSettingChange("privacy", "researchParticipation", e.target.checked)}
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-gray-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 dark:after:border-slate-500 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600 dark:peer-checked:bg-green-500"></div>
-                    </label>
-                  </div>
-
-                  {/* Marketing Communications */}
-                  <div className="flex flex-col items-start space-y-2 p-3 sm:p-4 border border-gray-200 dark:border-slate-700 dark:bg-slate-700/30 rounded-lg sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-900 dark:text-slate-200">Marketing Communications</h4>
-                      <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400">Receive promotional emails and health tips</p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer mt-1 sm:mt-0 self-end sm:self-center">
-                      <input
-                        type="checkbox"
-                        checked={settingsData.privacy.marketingEmails}
-                        onChange={(e) => handleSettingChange("privacy", "marketingEmails", e.target.checked)}
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-gray-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 dark:after:border-slate-500 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600 dark:peer-checked:bg-green-500"></div>
-                    </label>
-                  </div>
-
-                  {/* Anonymous Analytics */}
-                  <div className="flex flex-col items-start space-y-2 p-3 sm:p-4 border border-gray-200 dark:border-slate-700 dark:bg-slate-700/30 rounded-lg sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-900 dark:text-slate-200">Anonymous Analytics</h4>
-                      <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400">Help improve our services with anonymous usage data</p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer mt-1 sm:mt-0 self-end sm:self-center">
-                      <input
-                        type="checkbox"
-                        checked={settingsData.privacy.anonymousAnalytics}
-                        onChange={(e) => handleSettingChange("privacy", "anonymousAnalytics", e.target.checked)}
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-gray-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 dark:after:border-slate-500 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600 dark:peer-checked:bg-green-500"></div>
-                    </label>
-                  </div>
                 </div>
               </div>
 
@@ -673,6 +465,47 @@ const Settings = () => {
                   </button>
                 </div>
               </div>
+
+              <div>
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100 mb-3 sm:mb-4">Data Management</h3>
+                <div className="space-y-3 sm:space-y-4">
+                  {/* Download Data */}
+                  <div className="p-3 sm:p-4 border border-blue-200 dark:border-blue-800/40 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                    <div className="flex flex-col items-start space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-900 dark:text-slate-200">Download My Health Data</h4>
+                        <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400">Export all your health data in JSON format</p>
+                      </div>
+                      <button
+                        onClick={handleDownloadData}
+                        className="px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors flex items-center space-x-2"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span>Download Data</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Account Deletion */}
+                  <div className="p-3 sm:p-4 border border-red-200 dark:border-red-800/40 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                    <div className="flex flex-col items-start space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-900 dark:text-slate-200">Delete My Account</h4>
+                        <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400">Permanently delete your account and all associated data</p>
+                      </div>
+                      <button
+                        onClick={() => setShowDeleteModal(true)}
+                        className="px-4 py-2 bg-red-600 dark:bg-red-500 text-white text-sm rounded-lg hover:bg-red-700 dark:hover:bg-red-600 transition-colors flex items-center space-x-2"
+                      >
+                        <ExclamationTriangleIcon className="w-4 h-4" />
+                        <span>Delete Account</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
@@ -682,23 +515,6 @@ const Settings = () => {
               <div>
                 <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100 mb-3 sm:mb-4">Notification Preferences</h3>
                 <div className="space-y-3 sm:space-y-4">
-                  {/* Push Notifications */}
-                  <div className="flex flex-col items-start space-y-2 p-3 sm:p-4 border border-gray-200 dark:border-slate-700 dark:bg-slate-700/30 rounded-lg sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-900 dark:text-slate-200">Push Notifications</h4>
-                      <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400">Receive notifications on your device</p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer mt-1 sm:mt-0 self-end sm:self-center">
-                      <input
-                        type="checkbox"
-                        checked={settingsData.notifications.pushNotifications}
-                        onChange={(e) => handleSettingChange("notifications", "pushNotifications", e.target.checked)}
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-gray-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 dark:after:border-slate-500 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600 dark:peer-checked:bg-green-500"></div>
-                    </label>
-                  </div>
-
                   {/* Email Notifications */}
                   <div className="flex flex-col items-start space-y-2 p-3 sm:p-4 border border-gray-200 dark:border-slate-700 dark:bg-slate-700/30 rounded-lg sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
                     <div>
@@ -715,34 +531,86 @@ const Settings = () => {
                       <div className="w-11 h-6 bg-gray-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 dark:after:border-slate-500 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600 dark:peer-checked:bg-green-500"></div>
                     </label>
                   </div>
+                </div>
+              </div>
 
-                  {/* SMS Notifications */}
+              <div>
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100 mb-3 sm:mb-4">Health Monitoring Alerts</h3>
+                <div className="space-y-3 sm:space-y-4">
+                  {/* Critical Health Alerts */}
+                  <div className="flex flex-col items-start space-y-2 p-3 sm:p-4 border border-red-200 dark:border-red-800/40 bg-red-50 dark:bg-red-900/20 rounded-lg sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-900 dark:text-slate-200">Critical Health Alerts</h4>
+                      <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400">Immediate alerts for dangerous readings (cannot be disabled)</p>
+                    </div>
+                    <div className="px-3 py-1 bg-red-100 dark:bg-red-800/30 text-red-800 dark:text-red-300 text-xs font-medium rounded-full">
+                      Always On
+                    </div>
+                  </div>
+
+                  {/* Threshold Alerts */}
                   <div className="flex flex-col items-start space-y-2 p-3 sm:p-4 border border-gray-200 dark:border-slate-700 dark:bg-slate-700/30 rounded-lg sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
                     <div>
-                      <h4 className="text-sm font-medium text-gray-900 dark:text-slate-200">SMS Notifications</h4>
-                      <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400">Receive critical alerts via text message</p>
+                      <h4 className="text-sm font-medium text-gray-900 dark:text-slate-200">Threshold Alerts</h4>
+                      <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400">Alerts when readings exceed your target ranges</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer mt-1 sm:mt-0 self-end sm:self-center">
                       <input
                         type="checkbox"
-                        checked={settingsData.notifications.smsNotifications}
-                        onChange={(e) => handleSettingChange("notifications", "smsNotifications", e.target.checked)}
+                        checked={settingsData.notifications.healthAlerts}
+                        onChange={(e) => handleSettingChange("notifications", "healthAlerts", e.target.checked)}
                         className="sr-only peer"
                       />
                       <div className="w-11 h-6 bg-gray-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 dark:after:border-slate-500 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600 dark:peer-checked:bg-green-500"></div>
                     </label>
                   </div>
+
+                  {/* Anomaly Detection */}
+                  <div className="flex flex-col items-start space-y-2 p-3 sm:p-4 border border-gray-200 dark:border-slate-700 dark:bg-slate-700/30 rounded-lg sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-900 dark:text-slate-200">Anomaly Detection</h4>
+                      <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400">AI-powered detection of unusual patterns in your health data</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer mt-1 sm:mt-0 self-end sm:self-center">
+                      <input
+                        type="checkbox"
+                        checked={settingsData.notifications.anomalyDetection || false}
+                        onChange={(e) => handleSettingChange("notifications", "anomalyDetection", e.target.checked)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-gray-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 dark:after:border-slate-500 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600 dark:peer-checked:bg-green-500"></div>
+                    </label>
+                  </div>
+
+
                 </div>
               </div>
 
               <div>
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100 mb-3 sm:mb-4">Health Notifications</h3>
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100 mb-3 sm:mb-4">Healthcare Provider Notifications</h3>
                 <div className="space-y-3 sm:space-y-4">
+                  {/* Provider Messages */}
+                  <div className="flex flex-col items-start space-y-2 p-3 sm:p-4 border border-gray-200 dark:border-slate-700 dark:bg-slate-700/30 rounded-lg sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-900 dark:text-slate-200">Provider Messages</h4>
+                      <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400">Messages and updates from your healthcare providers</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer mt-1 sm:mt-0 self-end sm:self-center">
+                      <input
+                        type="checkbox"
+                        checked={settingsData.notifications.messageNotifications}
+                        onChange={(e) => handleSettingChange("notifications", "messageNotifications", e.target.checked)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-gray-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 dark:after:border-slate-500 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600 dark:peer-checked:bg-green-500"></div>
+                    </label>
+                  </div>
+
                   {/* Appointment Reminders */}
                   <div className="flex flex-col items-start space-y-2 p-3 sm:p-4 border border-gray-200 dark:border-slate-700 dark:bg-slate-700/30 rounded-lg sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
                     <div>
                       <h4 className="text-sm font-medium text-gray-900 dark:text-slate-200">Appointment Reminders</h4>
-                      <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400">Get reminded about upcoming appointments</p>
+                      <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400">Get reminded about upcoming appointments and consultations</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer mt-1 sm:mt-0 self-end sm:self-center">
                       <input
@@ -755,6 +623,13 @@ const Settings = () => {
                     </label>
                   </div>
 
+
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100 mb-3 sm:mb-4">Medication & Treatment</h3>
+                <div className="space-y-3 sm:space-y-4">
                   {/* Medication Reminders */}
                   <div className="flex flex-col items-start space-y-2 p-3 sm:p-4 border border-gray-200 dark:border-slate-700 dark:bg-slate-700/30 rounded-lg sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
                     <div>
@@ -772,17 +647,17 @@ const Settings = () => {
                     </label>
                   </div>
 
-                  {/* Health Alerts */}
+                  {/* Health Task Reminders */}
                   <div className="flex flex-col items-start space-y-2 p-3 sm:p-4 border border-gray-200 dark:border-slate-700 dark:bg-slate-700/30 rounded-lg sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
                     <div>
-                      <h4 className="text-sm font-medium text-gray-900 dark:text-slate-200">Health Alerts</h4>
-                      <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400">Critical health notifications and warnings</p>
+                      <h4 className="text-sm font-medium text-gray-900 dark:text-slate-200">Health Task Reminders</h4>
+                      <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400">Reminders to log daily health metrics</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer mt-1 sm:mt-0 self-end sm:self-center">
                       <input
                         type="checkbox"
-                        checked={settingsData.notifications.healthAlerts}
-                        onChange={(e) => handleSettingChange("notifications", "healthAlerts", e.target.checked)}
+                        checked={settingsData.notifications.healthTaskReminders || false}
+                        onChange={(e) => handleSettingChange("notifications", "healthTaskReminders", e.target.checked)}
                         className="sr-only peer"
                       />
                       <div className="w-11 h-6 bg-gray-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 dark:after:border-slate-500 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600 dark:peer-checked:bg-green-500"></div>
@@ -791,214 +666,13 @@ const Settings = () => {
                 </div>
               </div>
 
-              <div>
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100 mb-3 sm:mb-4">Quiet Hours</h3>
-                <div className="p-3 sm:p-4 border border-gray-200 dark:border-slate-700 dark:bg-slate-700/30 rounded-lg">
-                  <div className="flex flex-col items-start space-y-2 mb-3 sm:mb-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-900 dark:text-slate-200">Enable Quiet Hours</h4>
-                      <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400">Pause non-critical notifications during specified hours</p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer mt-1 sm:mt-0 self-end sm:self-center">
-                      <input
-                        type="checkbox"
-                        checked={settingsData.notifications.quietHoursEnabled}
-                        onChange={(e) => handleSettingChange("notifications", "quietHoursEnabled", e.target.checked)}
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-gray-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 dark:after:border-slate-500 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600 dark:peer-checked:bg-green-500"></div>
-                    </label>
-                  </div>
 
-                  {settingsData.notifications.quietHoursEnabled && (
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Start Time</label>
-                        <input
-                          type="time"
-                          value={settingsData.notifications.quietHoursStart}
-                          onChange={(e) => handleSettingChange("notifications", "quietHoursStart", e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">End Time</label>
-                        <input
-                          type="time"
-                          value={settingsData.notifications.quietHoursEnd}
-                          onChange={(e) => handleSettingChange("notifications", "quietHoursEnd", e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
             </div>
           )}
 
-          {/* Health Settings */}
-          {activeTab === "health" && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100 mb-3 sm:mb-4">Health Data Preferences</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6"> {/* Adjusted gap */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1 sm:mb-2">Measurement Units</label>
-                    <select
-                      value={settingsData.health.units}
-                      onChange={(e) => handleSettingChange("health", "units", e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
-                    >
-                      <option value="imperial">Imperial (lbs, ft, °F)</option>
-                      <option value="metric">Metric (kg, cm, °C)</option>
-                    </select>
-                  </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1 sm:mb-2">Glucose Units</label>
-                    <select
-                      value={settingsData.health.glucoseUnit}
-                      onChange={(e) => handleSettingChange("health", "glucoseUnit", e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
-                    >
-                      <option value="mg/dL">mg/dL</option>
-                      <option value="mmol/L">mmol/L</option>
-                    </select>
-                  </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1 sm:mb-2">Temperature Units</label>
-                    <select
-                      value={settingsData.health.temperatureUnit}
-                      onChange={(e) => handleSettingChange("health", "temperatureUnit", e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
-                    >
-                      <option value="fahrenheit">Fahrenheit (°F)</option>
-                      <option value="celsius">Celsius (°C)</option>
-                    </select>
-                  </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1 sm:mb-2">Data Retention</label>
-                    <select
-                      value={settingsData.health.dataRetention}
-                      onChange={(e) => handleSettingChange("health", "dataRetention", e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
-                    >
-                      <option value="1-year">1 Year</option>
-                      <option value="3-years">3 Years</option>
-                      <option value="5-years">5 Years</option>
-                      <option value="forever">Forever</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100 mb-3 sm:mb-4">Data Sync</h3>
-                <div className="flex flex-col items-start space-y-2 p-3 sm:p-4 border border-gray-200 dark:border-slate-700 dark:bg-slate-700/30 rounded-lg sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900 dark:text-slate-200">Automatic Data Sync</h4>
-                    <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400">Automatically sync data from connected devices</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer mt-1 sm:mt-0 self-end sm:self-center">
-                    <input
-                      type="checkbox"
-                      checked={settingsData.health.autoSync}
-                      onChange={(e) => handleSettingChange("health", "autoSync", e.target.checked)}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-gray-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 dark:after:border-slate-500 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600 dark:peer-checked:bg-green-500"></div>
-                  </label>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100 mb-3 sm:mb-4">Emergency Contact</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6"> {/* Adjusted gap */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1 sm:mb-2">Name</label>
-                    <input
-                      type="text"
-                      value={settingsData.health.emergencyContact?.name || ''}
-                      onChange={(e) => handleNestedSettingChange("health", "emergencyContact", "name", e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1 sm:mb-2">Relationship</label>
-                    <input
-                      type="text"
-                      value={settingsData.health.emergencyContact?.relationship || ''}
-                      onChange={(e) =>
-                        handleNestedSettingChange("health", "emergencyContact", "relationship", e.target.value)
-                      }
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Phone</label>
-                    <input
-                      type="tel"
-                      value={settingsData.health.emergencyContact?.phone || ''}
-                      onChange={(e) => handleNestedSettingChange("health", "emergencyContact", "phone", e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Connected Devices */}
-          {activeTab === "devices" && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100 mb-3 sm:mb-4">Connected Devices</h3>
-                <div className="space-y-3 sm:space-y-4">
-                  {connectedDevices.map((device) => (
-                    <div key={device.id} className="border border-gray-200 dark:border-slate-700 dark:bg-slate-700/30 rounded-lg p-3 sm:p-4">
-                      <div className="flex flex-col items-start space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-                        <div className="flex items-center space-x-3 sm:space-x-4">
-                          <div className="p-2 sm:p-3 bg-green-100 dark:bg-green-700/30 rounded-lg">
-                            <DevicePhoneMobileIcon className="w-5 h-5 sm:w-6 sm:h-6 text-green-600 dark:text-green-400" />
-                          </div>
-                          <div>
-                            <h4 className="text-sm font-medium text-gray-900 dark:text-slate-100">{device.name}</h4>
-                            <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-300">{device.type}</p>
-                            <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">Last sync: {device.lastSync}</p>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-col items-start space-y-2 w-full sm:w-auto sm:items-end sm:space-y-0 sm:flex-row sm:items-center sm:space-x-3">
-                          {device.batteryLevel && (
-                            <div className="text-xs sm:text-sm text-gray-600 dark:text-slate-300">Battery: {device.batteryLevel}%</div>
-                          )}
-                          <span
-                            className={`px-2 py-1 text-xs font-medium rounded-full self-start sm:self-auto ${
-                              device.status === "Connected" 
-                                ? "bg-green-100 text-green-800 dark:bg-green-700/30 dark:text-green-300" 
-                                : "bg-red-100 text-red-800 dark:bg-red-700/30 dark:text-red-300"
-                            }`}
-                          >
-                            {device.status}
-                          </span>
-                          <button className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 text-xs sm:text-sm font-medium">
-                            {device.status === "Connected" ? "Disconnect" : "Connect"}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <button className="w-full mt-4 p-3 sm:p-4 text-sm border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-lg text-gray-500 dark:text-slate-400 hover:border-gray-400 dark:hover:border-slate-500 hover:text-gray-600 dark:hover:text-slate-300 transition-colors">
-                  + Add New Device
-                </button>
-              </div>
-            </div>
-          )}
 
           {/* Security Settings */}
           {activeTab === "security" && (
@@ -1006,44 +680,7 @@ const Settings = () => {
               <div>
                 <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100 mb-3 sm:mb-4">Account Security</h3>
                 <div className="space-y-3 sm:space-y-4">
-                  {/* Two-Factor Authentication */}
-                  <div className="flex flex-col items-start space-y-2 p-3 sm:p-4 border border-gray-200 dark:border-slate-700 dark:bg-slate-700/30 rounded-lg sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-900 dark:text-slate-200">Two-Factor Authentication</h4>
-                      <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400">Add an extra layer of security to your account</p>
-                    </div>
-                    <div className="flex items-center space-x-2 sm:space-x-3 mt-1 sm:mt-0 self-end sm:self-auto">
-                      <span
-                        className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          settingsData.security.twoFactorEnabled
-                            ? "bg-green-100 text-green-800 dark:bg-green-700/30 dark:text-green-300"
-                            : "bg-gray-100 text-gray-800 dark:bg-slate-600 dark:text-slate-200"
-                        }`}
-                      >
-                        {settingsData.security.twoFactorEnabled ? "Enabled" : "Disabled"}
-                      </span>
-                      <button className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 text-xs sm:text-sm font-medium">
-                        {settingsData.security.twoFactorEnabled ? "Disable" : "Enable"}
-                      </button>
-                    </div>
-                  </div>
 
-                  {/* Biometric Login */}
-                  <div className="flex flex-col items-start space-y-2 p-3 sm:p-4 border border-gray-200 dark:border-slate-700 dark:bg-slate-700/30 rounded-lg sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-900 dark:text-slate-200">Biometric Login</h4>
-                      <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400">Use fingerprint or face recognition to log in</p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer mt-1 sm:mt-0 self-end sm:self-center">
-                      <input
-                        type="checkbox"
-                        checked={settingsData.security.biometricLogin}
-                        onChange={(e) => handleSettingChange("security", "biometricLogin", e.target.checked)}
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-gray-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 dark:after:border-slate-500 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600 dark:peer-checked:bg-green-500"></div>
-                    </label>
-                  </div>
 
                   {/* Session Timeout */}
                   <div className="flex flex-col items-start space-y-2 p-3 sm:p-4 border border-gray-200 dark:border-slate-700 dark:bg-slate-700/30 rounded-lg sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
@@ -1256,6 +893,48 @@ const Settings = () => {
           </div>
         </div>
       </div>
+
+      {/* Delete Account Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-slate-800 rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-center space-x-3 mb-4">
+              <ExclamationTriangleIcon className="w-6 h-6 text-red-600" />
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Delete Account</h3>
+            </div>
+
+            <p className="text-sm text-gray-600 dark:text-slate-400 mb-6">
+              Are you sure you want to delete your account? This action cannot be undone and will permanently delete:
+            </p>
+
+            <ul className="text-sm text-gray-600 dark:text-slate-400 mb-6 list-disc list-inside space-y-1">
+              <li>All your health data and history</li>
+              <li>Your profile and settings</li>
+              <li>All appointments and messages</li>
+              <li>All alerts and notifications</li>
+            </ul>
+
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  // Handle account deletion here
+                  setShowDeleteModal(false);
+                  setError('Account deletion is not implemented yet.');
+                }}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Delete Account
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
