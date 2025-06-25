@@ -22,9 +22,9 @@ const upload = multer({
   fileFilter: fileFilter
 });
 
-// Middleware to handle a single file upload with the field name 'profilePicture'
-// The field name 'profilePicture' must match the name attribute of the file input in your frontend form.
-const uploadProfilePicture = upload.single('profilePicture'); 
+// Middleware to handle a single file upload with the field name 'avatar'
+// The field name 'avatar' must match the name attribute of the file input in your frontend form.
+const uploadProfilePicture = upload.single('avatar');
 
 module.exports = {
   uploadProfilePicture,

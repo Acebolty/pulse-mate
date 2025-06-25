@@ -30,6 +30,15 @@ import {
 } from "recharts"
 import { motion } from "framer-motion"
 
+// Default health targets (same as ProfileNew.jsx)
+const defaultHealthTargets = {
+  heartRate: { min: 60, max: 100, unit: 'bpm' },
+  bloodPressure: { systolic: { min: 90, max: 120 }, diastolic: { min: 60, max: 80 }, unit: 'mmHg' },
+  bodyTemperature: { min: 97.0, max: 99.5, unit: '°F' },
+  glucoseLevel: { min: 70, max: 140, unit: 'mg/dL' },
+  weight: { target: 175, unit: 'lbs' },
+}
+
 // Helper functions for status calculation
 const getHeartRateStatus = (heartRate) => {
   if (heartRate < 50) return "critical";
@@ -79,7 +88,8 @@ const HealthMetrics = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [weeklyStats, setWeeklyStats] = useState({});
   const [monthlyStats, setMonthlyStats] = useState({});
-  const [healthScore, setHealthScore] = useState(0);
+  const [healthScore, setHealthScore] = useState({ score: 0, label: 'No Data', factors: [] });
+  const [healthTargets, setHealthTargets] = useState(defaultHealthTargets);
 
   useEffect(() => {
     const observer = new MutationObserver(() => {
@@ -121,12 +131,13 @@ const HealthMetrics = () => {
           order: 'desc'
         };
 
-        // Fetch data for the 4 main health metrics
-        const [heartRateRes, bloodPressureRes, temperatureRes, glucoseRes] = await Promise.allSettled([
+        // Fetch data for the 4 main health metrics and user profile (for health targets)
+        const [heartRateRes, bloodPressureRes, temperatureRes, glucoseRes, profileRes] = await Promise.allSettled([
           api.get('/health-data', { params: { ...commonParams, dataType: 'heartRate' } }),
           api.get('/health-data', { params: { ...commonParams, dataType: 'bloodPressure' } }),
           api.get('/health-data', { params: { ...commonParams, dataType: 'bodyTemperature' } }),
-          api.get('/health-data', { params: { ...commonParams, dataType: 'glucoseLevel' } })
+          api.get('/health-data', { params: { ...commonParams, dataType: 'glucoseLevel' } }),
+          api.get('/profile/me')
         ]);
 
         // Process the data
@@ -178,6 +189,11 @@ const HealthMetrics = () => {
 
         setLatestMetrics(newLatestMetrics);
 
+        // Load health targets from profile
+        if (profileRes.status === 'fulfilled' && profileRes.value.data?.healthTargets) {
+          setHealthTargets(profileRes.value.data.healthTargets);
+        }
+
       } catch (err) {
         console.error("Failed to fetch health data:", err);
         setError("Could not load health data. Please try again later.");
@@ -196,7 +212,7 @@ const HealthMetrics = () => {
       setMonthlyStats(calculateMonthlyStats());
       setHealthScore(calculateHealthScore());
     }
-  }, [healthData, latestMetrics]);
+  }, [healthData, latestMetrics, healthTargets]);
 
   // Helper functions
   const formatTimestamp = (isoString) => {
@@ -309,69 +325,101 @@ const HealthMetrics = () => {
   };
 
   const calculateHealthScore = () => {
-    console.log('Calculating health score...', { hasAnyData, latestMetrics });
+    console.log('Calculating health score...', { hasAnyData, latestMetrics, healthTargets });
 
     if (!hasAnyData || Object.keys(latestMetrics).length === 0) {
       console.log('No data available for health score');
-      return 0;
+      return { score: 0, label: 'No Data', factors: [] };
     }
 
-    let totalScore = 0;
-    let metricCount = 0;
+    let score = 100;
+    let factors = [];
 
-    // Score each metric based on latest reading
+    // Check heart rate against user's targets (using most recent reading)
     if (latestMetrics.heartRate && latestMetrics.heartRate.value) {
-      const hr = latestMetrics.heartRate.value;
-      let score = 0;
-      if (hr >= 60 && hr <= 100) score = 100;
-      else if (hr >= 50 && hr <= 120) score = 75;
-      else if (hr >= 40 && hr <= 140) score = 50;
-      else score = 25;
-      totalScore += score;
-      metricCount++;
-      console.log('Heart rate score:', score, 'for value:', hr);
+      const currentHR = latestMetrics.heartRate.value;
+      const hrMin = healthTargets.heartRate.min;
+      const hrMax = healthTargets.heartRate.max;
+
+      console.log('Heart Rate Check:', { currentHR, hrMin, hrMax });
+
+      if (currentHR < hrMin - 10 || currentHR > hrMax + 20) {
+        score -= 20;
+        factors.push(`Heart rate (${currentHR} bpm) outside optimal range (${hrMin}-${hrMax} bpm)`);
+      } else if (currentHR < hrMin || currentHR > hrMax) {
+        score -= 10;
+        factors.push(`Heart rate (${currentHR} bpm) outside target range (${hrMin}-${hrMax} bpm)`);
+      }
     }
 
+    // Check blood pressure against user's targets
     if (latestMetrics.bloodPressure && latestMetrics.bloodPressure.value) {
       const systolic = typeof latestMetrics.bloodPressure.value === 'object'
         ? latestMetrics.bloodPressure.value.systolic
         : latestMetrics.bloodPressure.value;
-      let score = 0;
-      if (systolic < 120) score = 100;
-      else if (systolic < 140) score = 75;
-      else if (systolic < 160) score = 50;
-      else score = 25;
-      totalScore += score;
-      metricCount++;
-      console.log('Blood pressure score:', score, 'for systolic:', systolic);
+      const diastolic = typeof latestMetrics.bloodPressure.value === 'object'
+        ? latestMetrics.bloodPressure.value.diastolic
+        : latestMetrics.bloodPressure.value - 40;
+
+      const sysMin = healthTargets.bloodPressure.systolic.min;
+      const sysMax = healthTargets.bloodPressure.systolic.max;
+      const diaMin = healthTargets.bloodPressure.diastolic.min;
+      const diaMax = healthTargets.bloodPressure.diastolic.max;
+
+      if (systolic > sysMax + 20 || diastolic > diaMax + 10) {
+        score -= 20;
+        factors.push(`Blood pressure (${systolic}/${diastolic}) critically elevated`);
+      } else if (systolic > sysMax || diastolic > diaMax || systolic < sysMin || diastolic < diaMin) {
+        score -= 10;
+        factors.push(`Blood pressure (${systolic}/${diastolic}) outside target range (${sysMin}-${sysMax}/${diaMin}-${diaMax})`);
+      }
     }
 
+    // Check body temperature against user's targets
     if (latestMetrics.bodyTemperature && latestMetrics.bodyTemperature.value) {
-      const temp = latestMetrics.bodyTemperature.value;
-      let score = 0;
-      if (temp >= 97.0 && temp <= 99.0) score = 100;
-      else if (temp >= 96.5 && temp <= 100.4) score = 75;
-      else score = 50;
-      totalScore += score;
-      metricCount++;
-      console.log('Temperature score:', score, 'for value:', temp);
+      const currentTemp = latestMetrics.bodyTemperature.value;
+      const tempMin = healthTargets.bodyTemperature.min;
+      const tempMax = healthTargets.bodyTemperature.max;
+
+      if (currentTemp > tempMax + 1 || currentTemp < tempMin - 1) {
+        score -= 15;
+        factors.push(`Body temperature (${currentTemp.toFixed(1)}°F) outside safe range`);
+      } else if (currentTemp > tempMax || currentTemp < tempMin) {
+        score -= 5;
+        factors.push(`Body temperature (${currentTemp.toFixed(1)}°F) outside target range (${tempMin}-${tempMax}°F)`);
+      }
     }
 
+    // Check glucose levels against user's targets
     if (latestMetrics.glucoseLevel && latestMetrics.glucoseLevel.value) {
-      const glucose = latestMetrics.glucoseLevel.value;
-      let score = 0;
-      if (glucose >= 70 && glucose <= 100) score = 100;
-      else if (glucose >= 60 && glucose <= 140) score = 75;
-      else if (glucose >= 50 && glucose <= 180) score = 50;
-      else score = 25;
-      totalScore += score;
-      metricCount++;
-      console.log('Glucose score:', score, 'for value:', glucose);
+      const currentGlucose = latestMetrics.glucoseLevel.value;
+      const glucoseMin = healthTargets.glucoseLevel.min;
+      const glucoseMax = healthTargets.glucoseLevel.max;
+
+      if (currentGlucose > glucoseMax + 40 || currentGlucose < glucoseMin - 20) {
+        score -= 20;
+        factors.push(`Blood glucose (${Math.round(currentGlucose)} mg/dL) critically outside range`);
+      } else if (currentGlucose > glucoseMax || currentGlucose < glucoseMin) {
+        score -= 10;
+        factors.push(`Blood glucose (${Math.round(currentGlucose)} mg/dL) outside target range (${glucoseMin}-${glucoseMax} mg/dL)`);
+      }
     }
 
-    const finalScore = metricCount > 0 ? Math.round(totalScore / metricCount) : 0;
-    console.log('Final health score:', finalScore, 'from', metricCount, 'metrics');
-    return finalScore;
+    // Ensure score doesn't go below 0
+    score = Math.max(0, score);
+
+    const getScoreLabel = (score) => {
+      if (score >= 90) return 'Excellent';
+      if (score >= 80) return 'Very Good';
+      if (score >= 70) return 'Good';
+      if (score >= 60) return 'Fair';
+      return 'Needs Attention';
+    };
+
+    const result = { score: Math.round(score), label: getScoreLabel(score), factors };
+    console.log('Final Health Score Result:', result);
+
+    return result;
   };
 
   // Data table functions
@@ -812,13 +860,22 @@ const HealthMetrics = () => {
             </div>
           </div>
           <div className="text-center">
-            <div className="text-4xl font-bold mb-2">{healthScore}%</div>
+            <div className="text-4xl font-bold mb-2">{healthScore.score}%</div>
             <div className="text-sm opacity-90">
-              {healthScore >= 80 ? 'Excellent' : healthScore >= 60 ? 'Good' : healthScore >= 40 ? 'Fair' : 'Needs Attention'}
+              {healthScore.label}
             </div>
           </div>
           <div className="mt-4 text-xs opacity-75">
-            Based on latest readings from all health metrics
+            {healthScore.factors.length > 0 ? (
+              <div>
+                <div className="mb-1">Health Score Breakdown:</div>
+                {healthScore.factors.map((factor, index) => (
+                  <div key={index} className="text-xs opacity-60">• {factor}</div>
+                ))}
+              </div>
+            ) : (
+              <div>All health metrics are within target ranges</div>
+            )}
           </div>
         </motion.div>
 
