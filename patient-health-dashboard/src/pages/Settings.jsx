@@ -135,6 +135,35 @@ const Settings = () => {
     setError('');
   };
 
+  const handleTestEmail = async () => {
+    setLoading(true);
+    setError('');
+    setSuccessMessage('');
+
+    try {
+      const response = await api.post('/email-test/send-test-alert');
+
+      if (response.data.success) {
+        setSuccessMessage('Test email sent successfully! Check your inbox.');
+        if (response.data.previewUrl) {
+          console.log('Email preview URL:', response.data.previewUrl);
+        }
+      } else {
+        setError('Failed to send test email: ' + response.data.message);
+      }
+    } catch (err) {
+      console.error('Error sending test email:', err);
+      const errorMessage = err.response?.data?.message || 'Failed to send test email. Please try again.';
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+      // Clear messages after 5 seconds
+      setTimeout(() => {
+        setSuccessMessage('');
+        setError('');
+      }, 5000);
+    }
+  };
 
   const saveSettings = async () => {
     setError('');
@@ -517,9 +546,18 @@ const Settings = () => {
                 <div className="space-y-3 sm:space-y-4">
                   {/* Email Notifications */}
                   <div className="flex flex-col items-start space-y-2 p-3 sm:p-4 border border-gray-200 dark:border-slate-700 dark:bg-slate-700/30 rounded-lg sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-                    <div>
+                    <div className="flex-1">
                       <h4 className="text-sm font-medium text-gray-900 dark:text-slate-200">Email Notifications</h4>
                       <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400">Receive notifications via email</p>
+                      {settingsData.notifications.emailNotifications && (
+                        <button
+                          onClick={handleTestEmail}
+                          disabled={loading}
+                          className="mt-2 px-3 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-md hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors disabled:opacity-50"
+                        >
+                          Send Test Email
+                        </button>
+                      )}
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer mt-1 sm:mt-0 self-end sm:self-center">
                       <input

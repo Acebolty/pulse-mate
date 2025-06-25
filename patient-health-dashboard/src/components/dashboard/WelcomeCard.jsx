@@ -133,13 +133,6 @@ const WelcomeCard = ({ user, latestMetrics }) => {
               <CalendarIcon className="w-4 h-4" />
               <span>{currentDate}</span>
             </div>
-            <div className="flex items-center space-x-2">
-              <ClockIcon className="w-4 h-4" />
-              <div className="flex items-center space-x-1">
-                <div className="w-2 h-2 bg-green-400 dark:bg-green-700 rounded-full animate-pulse"></div> {/* Adjusted sync dot for contrast if needed */}
-                <span className='dark:text-red-300'>Live sync active</span>
-              </div>
-            </div>
           </motion.div>
         </div>
 

@@ -157,7 +157,17 @@ const ManualDataEntry = ({ onClose, onDataAdded }) => {
       await Promise.all(promises);
 
       // Generate alerts based on the new data
-      await api.post('/simulation/generate-alerts');
+      const alertResponse = await api.post('/simulation/generate-alerts');
+      const alertsGenerated = alertResponse.data?.data?.alertsGenerated || 0;
+
+      // Notify other components about new alerts
+      window.dispatchEvent(new CustomEvent('alertsGenerated', {
+        detail: {
+          source: 'manualDataEntry',
+          entriesCount: healthDataEntries.length,
+          alertsCount: alertsGenerated
+        }
+      }));
 
       setResult({
         success: true,

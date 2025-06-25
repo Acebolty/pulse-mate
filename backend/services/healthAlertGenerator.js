@@ -1,5 +1,7 @@
 const Alert = require('../models/Alert');
 const HealthData = require('../models/HealthData');
+const User = require('../models/User');
+const emailService = require('./emailService');
 
 class HealthAlertGenerator {
   constructor(userId) {
@@ -42,7 +44,7 @@ class HealthAlertGenerator {
       const missedReadingAlerts = await this.checkForMissedReadings();
       alerts.push(...missedReadingAlerts);
 
-      // Save alerts to database
+      // Save alerts to database and send email notifications
       const savedAlerts = [];
       for (const alertData of alerts) {
         // Check if similar alert already exists in last 6 hours
@@ -56,6 +58,48 @@ class HealthAlertGenerator {
           const alert = new Alert(alertData);
           const savedAlert = await alert.save();
           savedAlerts.push(savedAlert);
+
+          // Send email notification based on user's alert type preferences
+          try {
+            const user = await User.findById(this.userId);
+            if (user && user.settings?.notifications?.emailNotifications && user.settings?.notifications?.healthAlerts) {
+              // Check if user wants emails for this specific alert type
+              const emailAlertTypes = user.settings?.notifications?.emailAlertTypes || {
+                critical: true, warning: true, info: false, success: false
+              };
+
+              const shouldSendEmail = emailAlertTypes[savedAlert.type];
+
+              if (shouldSendEmail) {
+                const emailResult = await emailService.sendHealthAlert(
+                  user.email,
+                  user.firstName || 'User',
+                  {
+                    title: savedAlert.title,
+                    message: savedAlert.message,
+                    type: savedAlert.type,
+                    timestamp: savedAlert.timestamp,
+                    source: savedAlert.source,
+                    relatedDataType: alertData.relatedDataType
+                  }
+                );
+
+                if (emailResult.success) {
+                  console.log(`${savedAlert.type.toUpperCase()} alert email sent automatically to:`, user.email);
+                  if (emailResult.previewUrl) {
+                    console.log('Email preview:', emailResult.previewUrl);
+                  }
+                } else {
+                  console.error('Failed to send health alert email:', emailResult.error);
+                }
+              } else {
+                console.log(`Skipping email for ${savedAlert.type} alert (user preference):`, savedAlert.title);
+              }
+            }
+          } catch (emailError) {
+            console.error('Error sending health alert email:', emailError);
+            // Don't fail the whole process if email fails
+          }
         }
       }
 

@@ -58,6 +58,12 @@ const SimulationPanel = ({ onClose, onDataGenerated }) => {
       });
 
       setResult(response.data);
+
+      // Notify other components about potential new alerts
+      window.dispatchEvent(new CustomEvent('alertsGenerated', {
+        detail: { source: 'historicalGeneration', days: days }
+      }));
+
       if (onDataGenerated) onDataGenerated();
       
     } catch (err) {
@@ -80,6 +86,11 @@ const SimulationPanel = ({ onClose, onDataGenerated }) => {
 
       console.log('Real-time data generated:', response.data);
       setResult(response.data);
+
+      // Notify other components about potential new alerts
+      window.dispatchEvent(new CustomEvent('alertsGenerated', {
+        detail: { source: 'realtimeGeneration', entriesCount: response.data.data?.entriesCreated || 0 }
+      }));
 
       // Call the callback to refresh dashboard data
       if (onDataGenerated) {

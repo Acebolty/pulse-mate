@@ -22,7 +22,7 @@ import {
   ShieldCheckIcon,
 } from "@heroicons/react/24/outline"
 import { motion } from "framer-motion"
-import { useAlerts } from '../contexts/AlertContext'
+import api from "../services/api"
 
 // Smart Alert Generation System
 const generateSmartAlerts = (healthData) => {
@@ -357,22 +357,126 @@ const formatTimestamp = (timestamp) => {
 }
 
 const Alerts = () => {
-  const {
-    alerts,
-    loading,
-    fetchAndGenerateAlerts,
-    markAsRead,
-    markAllAsRead,
-    getUnreadCount,
-    getCriticalUnreadCount
-  } = useAlerts();
-
+  const [alerts, setAlerts] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
   const [showSettings, setShowSettings] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [showEmergencyPlans, setShowEmergencyPlans] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [error, setError] = useState(null);
+
+  // Fetch alerts from backend API
+  const fetchAlerts = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/alerts', {
+        params: { limit: 50, sortBy: 'timestamp', order: 'desc' }
+      });
+
+      // Map backend alert format to frontend format
+      const mappedAlerts = (response.data.data || []).map(alert => ({
+        id: alert._id,
+        _id: alert._id,
+        type: alert.type,
+        title: alert.title,
+        message: alert.message,
+        timestamp: alert.timestamp || alert.createdAt,
+        isRead: alert.isRead,
+        source: alert.source,
+        // Add default values for frontend-specific fields
+        emergencyLevel: alert.type === 'critical' ? 'immediate' : 'normal',
+        actions: getDefaultActions(alert.type),
+        recommendations: getDefaultRecommendations(alert.type)
+      }));
+
+      setAlerts(mappedAlerts);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching alerts:', err);
+      setError('Failed to load alerts');
+      setAlerts([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Get default actions based on alert type
+  const getDefaultActions = (type) => {
+    switch (type) {
+      case 'critical':
+        return ['Call Emergency', 'Contact Doctor', 'View Trends'];
+      case 'warning':
+        return ['Contact Doctor', 'View Trends', 'Schedule Appointment'];
+      default:
+        return ['View Details', 'Dismiss'];
+    }
+  };
+
+  // Get default recommendations based on alert type
+  const getDefaultRecommendations = (type) => {
+    switch (type) {
+      case 'critical':
+        return [
+          'Seek immediate medical attention',
+          'Do not ignore this alert',
+          'Contact your healthcare provider'
+        ];
+      case 'warning':
+        return [
+          'Monitor your health closely',
+          'Consider contacting your doctor',
+          'Follow your treatment plan'
+        ];
+      default:
+        return [
+          'Continue monitoring your health',
+          'Maintain healthy habits'
+        ];
+    }
+  };
+
+  // Mark alert as read
+  const markAsRead = async (alertId) => {
+    try {
+      await api.put(`/alerts/${alertId}/read`);
+      setAlerts(prev => prev.map(alert =>
+        alert._id === alertId ? { ...alert, isRead: true } : alert
+      ));
+
+      // Notify other components about the alert update
+      window.dispatchEvent(new CustomEvent('alertUpdated', {
+        detail: { alertId, action: 'markAsRead' }
+      }));
+    } catch (err) {
+      console.error('Error marking alert as read:', err);
+    }
+  };
+
+  // Mark all alerts as read
+  const markAllAsRead = async () => {
+    try {
+      await api.put('/alerts/read-all/action');
+      setAlerts(prev => prev.map(alert => ({ ...alert, isRead: true })));
+
+      // Notify other components about the alert update
+      window.dispatchEvent(new CustomEvent('alertUpdated', {
+        detail: { action: 'markAllAsRead' }
+      }));
+    } catch (err) {
+      console.error('Error marking all alerts as read:', err);
+    }
+  };
+
+  // Get unread count
+  const getUnreadCount = () => {
+    return alerts.filter(alert => !alert.isRead).length;
+  };
+
+  // Get critical unread count
+  const getCriticalUnreadCount = () => {
+    return alerts.filter(alert => !alert.isRead && alert.type === 'critical').length;
+  };
 
   // Dark mode listener
   useEffect(() => {
@@ -384,10 +488,8 @@ const Alerts = () => {
     return () => observer.disconnect();
   }, []);
 
-
-
   useEffect(() => {
-    fetchAndGenerateAlerts();
+    fetchAlerts();
   }, []); // Fetch once on component mount
 
 

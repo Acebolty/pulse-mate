@@ -84,8 +84,12 @@ const BloodPressureChart = () => {
               time,
               systolic,
               diastolic,
-              date: new Date(item.timestamp).toLocaleDateString()
+              date: new Date(item.timestamp).toLocaleDateString(),
+              timestamp: item.timestamp // Keep original timestamp for sorting
             };
+          }).sort((a, b) => {
+            // Sort chronologically (oldest to newest)
+            return new Date(a.timestamp) - new Date(b.timestamp);
           });
 
           setChartData(transformedData);

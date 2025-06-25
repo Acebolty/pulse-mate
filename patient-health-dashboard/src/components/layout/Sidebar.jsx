@@ -15,7 +15,7 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
 } from "@heroicons/react/24/outline"
-import { useAlerts } from "../../contexts/AlertContext"
+// import { useAlerts } from "../../contexts/AlertContext"
 import { getCurrentUser } from "../../services/authService"
 import api from "../../services/api"
 
@@ -24,12 +24,31 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
   const [userData, setUserData] = useState(null)
   const [currentTip, setCurrentTip] = useState(null)
   const [healthStatus, setHealthStatus] = useState(null)
-  const { getUnreadCount } = useAlerts()
+  const [alerts, setAlerts] = useState([])
+
+  // Get unread count
+  const getUnreadCount = () => {
+    return alerts.filter(alert => !alert.isRead).length
+  }
 
   const unreadCount = getUnreadCount()
-  console.log('Sidebar unread count:', unreadCount) // Debug log
 
-  // Load user data
+  // Load alerts function
+  const loadAlerts = async () => {
+    try {
+      const response = await api.get('/alerts', {
+        params: { limit: 10, sortBy: 'timestamp', order: 'desc' }
+      })
+      const allAlerts = response.data.data || []
+      // Filter unread alerts on frontend to ensure we get the latest data
+      const unreadAlerts = allAlerts.filter(alert => !alert.isRead)
+      setAlerts(unreadAlerts)
+    } catch (error) {
+      console.error('Error loading alerts:', error)
+    }
+  }
+
+  // Load user data and alerts
   useEffect(() => {
     const loadUserData = async () => {
       try {
@@ -46,6 +65,40 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
     }
 
     loadUserData()
+    loadAlerts()
+  }, [])
+
+  // Listen for alert updates from other components
+  useEffect(() => {
+    const handleAlertUpdate = () => {
+      // Refresh alerts when they're updated elsewhere
+      loadAlerts()
+    }
+
+    const handleAlertsGenerated = () => {
+      // Refresh alerts when new ones might have been generated
+      setTimeout(() => {
+        loadAlerts()
+      }, 1000) // Delay to ensure alerts are saved to database
+    }
+
+    window.addEventListener('alertUpdated', handleAlertUpdate)
+    window.addEventListener('alertsGenerated', handleAlertsGenerated)
+
+    return () => {
+      window.removeEventListener('alertUpdated', handleAlertUpdate)
+      window.removeEventListener('alertsGenerated', handleAlertsGenerated)
+    }
+  }, [])
+
+  // Also refresh alerts when user focuses back on the window (as a fallback)
+  useEffect(() => {
+    const handleWindowFocus = () => {
+      loadAlerts()
+    }
+
+    window.addEventListener('focus', handleWindowFocus)
+    return () => window.removeEventListener('focus', handleWindowFocus)
   }, [])
 
   // Load health status using same calculation as ProfileNew.jsx
@@ -163,15 +216,23 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
         score = Math.max(0, score)
 
         // Determine status and color based on score (same as ProfileNew.jsx)
+        const getScoreLabel = (score) => {
+          if (score >= 90) return 'Excellent';
+          if (score >= 80) return 'Very Good';
+          if (score >= 70) return 'Good';
+          if (score >= 60) return 'Fair';
+          return 'Needs Attention';
+        };
+
         let status, statusColor
         if (score >= 80) {
-          status = 'excellent'
+          status = getScoreLabel(score)
           statusColor = 'green'
         } else if (score >= 60) {
-          status = 'warning'
+          status = getScoreLabel(score)
           statusColor = 'yellow'
         } else {
-          status = 'critical'
+          status = getScoreLabel(score)
           statusColor = 'red'
         }
 
@@ -187,7 +248,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
         // Default status if no data
         setHealthStatus({
           score: 85,
-          status: 'good',
+          status: 'Very Good',
           statusColor: 'green',
           factors: [],
           lastUpdated: 'No recent data'

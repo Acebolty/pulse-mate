@@ -1,5 +1,7 @@
 const HealthData = require('../models/HealthData');
-const Alert = require('../models/Alert'); // For anomaly detection
+const Alert = require('../models/Alert');
+const User = require('../models/User');
+const emailService = require('../services/emailService'); // For anomaly detection
 
 // @desc    Add new health data for the logged-in user
 // @route   POST api/health-data
@@ -64,6 +66,48 @@ const addHealthData = async (req, res) => {
         const newAlert = new Alert({ ...alertToCreate, userId: req.user.id });
         await newAlert.save();
         console.log('Alert created:', newAlert.title);
+
+        // Send email notification based on user's alert type preferences
+        try {
+          const user = await User.findById(req.user.id);
+          if (user && user.settings?.notifications?.emailNotifications && user.settings?.notifications?.healthAlerts) {
+            // Check if user wants emails for this specific alert type
+            const emailAlertTypes = user.settings?.notifications?.emailAlertTypes || {
+              critical: true, warning: true, info: false, success: false
+            };
+
+            const shouldSendEmail = emailAlertTypes[newAlert.type];
+
+            if (shouldSendEmail) {
+              const emailResult = await emailService.sendHealthAlert(
+                user.email,
+                user.firstName || 'User',
+                {
+                  title: newAlert.title,
+                  message: newAlert.message,
+                  type: newAlert.type,
+                  timestamp: newAlert.timestamp,
+                  source: newAlert.source,
+                  relatedDataType: dataType
+                }
+              );
+
+              if (emailResult.success) {
+                console.log(`${newAlert.type.toUpperCase()} alert email sent automatically to:`, user.email);
+                if (emailResult.previewUrl) {
+                  console.log('Email preview:', emailResult.previewUrl);
+                }
+              } else {
+                console.error('Failed to send health alert email:', emailResult.error);
+              }
+            } else {
+              console.log(`Skipping email for ${newAlert.type} alert (user preference):`, newAlert.title);
+            }
+          }
+        } catch (emailError) {
+          console.error('Error sending health alert email:', emailError);
+          // Don't fail the whole request if email fails
+        }
       }
     } catch (alertError) {
       console.error('Error during anomaly detection or alert creation:', alertError);
