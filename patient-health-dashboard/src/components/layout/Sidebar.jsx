@@ -34,11 +34,18 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
 
   // Get medication alert count
   const getMedicationAlertCount = () => {
-    return alerts.filter(alert =>
+    const medicationAlerts = alerts.filter(alert =>
       !alert.isRead &&
       (alert.title.toLowerCase().includes('medication') ||
        alert.source === 'Medication Reminder System')
-    ).length
+    );
+
+    console.log('Sidebar - All alerts:', alerts.length);
+    console.log('Sidebar - Unread alerts:', alerts.filter(a => !a.isRead).length);
+    console.log('Sidebar - Medication alerts (unread):', medicationAlerts.length);
+    console.log('Sidebar - Medication alerts:', medicationAlerts);
+
+    return medicationAlerts.length;
   }
 
   const unreadCount = getUnreadCount()
@@ -347,7 +354,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
     { name: "Dashboard", href: "/dashboard/overview", icon: HomeIcon },
     { name: "Health Metrics", href: "/dashboard/health-metrics", icon: HeartIcon },
     { name: "Appointments", href: "/dashboard/appointments", icon: CalendarIcon },
-    { name: "Medications", href: "/dashboard/profile", icon: BeakerIcon, badge: medicationAlertCount },
+    { name: "Medications", href: "/dashboard/medications", icon: BeakerIcon, badge: medicationAlertCount },
     { name: "Messages", href: "/dashboard/messages", icon: ChatBubbleLeftIcon, badge: 3 },
     { name: "Alerts", href: "/dashboard/alerts", icon: BellIcon, badge: unreadCount },
     { name: "Profile", href: "/dashboard/profile", icon: UserIcon },
