@@ -77,7 +77,11 @@ const BodyTemperatureChart = () => {
 
           // Transform data for chart
           const transformedData = temperatureData.map(item => ({
-            time: new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            time: new Date(item.timestamp).toLocaleTimeString([], {
+              hour: 'numeric',
+              minute: '2-digit',
+              hour12: true
+            }),
             temperature: parseFloat(item.value.toFixed(1)),
             date: new Date(item.timestamp).toLocaleDateString(),
             timestamp: item.timestamp // Keep original timestamp for sorting

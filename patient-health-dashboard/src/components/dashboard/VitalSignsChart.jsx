@@ -94,18 +94,27 @@ const VitalSignsChart = () => {
 
           // Process heart rate data
           heartRateData.forEach(item => {
-            const time = new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const time = new Date(item.timestamp).toLocaleTimeString([], {
+              hour: 'numeric',
+              minute: '2-digit',
+              hour12: true
+            });
             timeMap.set(time, { ...timeMap.get(time), time, heartRate: item.value });
           });
 
           // Process blood pressure data
           bloodPressureData.forEach(item => {
-            const time = new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const time = new Date(item.timestamp).toLocaleTimeString([], {
+              hour: 'numeric',
+              minute: '2-digit',
+              hour12: true
+            });
             const systolic = typeof item.value === 'object' ? item.value.systolic : item.value;
             timeMap.set(time, { ...timeMap.get(time), time, bloodPressure: systolic });
           });
 
           const chartArray = Array.from(timeMap.values()).sort((a, b) => {
+            // Convert 12-hour format to 24-hour for proper sorting
             const timeA = new Date(`1970/01/01 ${a.time}`);
             const timeB = new Date(`1970/01/01 ${b.time}`);
             return timeA - timeB;

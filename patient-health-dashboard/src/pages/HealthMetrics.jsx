@@ -513,45 +513,186 @@ const HealthMetrics = () => {
     return readings;
   };
 
-  // Transform data for charts
+  // Transform data for charts with smart time granularity
   const transformVitalSignsData = () => {
-    const combined = [];
-    const timeMap = new Map();
+    if (timeRange === '24hours') {
+      // For 24 hours: show individual readings by time
+      const timeMap = new Map();
 
-    // Process heart rate data
-    healthData.heartRate.forEach(item => {
-      const time = new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      timeMap.set(time, { ...timeMap.get(time), time, heartRate: item.value });
-    });
+      // Process heart rate data
+      healthData.heartRate.forEach(item => {
+        const time = new Date(item.timestamp).toLocaleTimeString([], {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        });
+        timeMap.set(time, { ...timeMap.get(time), time, heartRate: item.value });
+      });
 
-    // Process blood pressure data
-    healthData.bloodPressure.forEach(item => {
-      const time = new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      const systolic = typeof item.value === 'object' ? item.value.systolic : item.value;
-      timeMap.set(time, { ...timeMap.get(time), time, bloodPressure: systolic });
-    });
+      // Process blood pressure data
+      healthData.bloodPressure.forEach(item => {
+        const time = new Date(item.timestamp).toLocaleTimeString([], {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        });
+        const systolic = typeof item.value === 'object' ? item.value.systolic : item.value;
+        timeMap.set(time, { ...timeMap.get(time), time, bloodPressure: systolic });
+      });
 
-    return Array.from(timeMap.values()).sort((a, b) => {
-      const timeA = new Date(`1970/01/01 ${a.time}`);
-      const timeB = new Date(`1970/01/01 ${b.time}`);
-      return timeA - timeB;
-    });
+      return Array.from(timeMap.values()).sort((a, b) => {
+        const timeA = new Date(`1970/01/01 ${a.time}`);
+        const timeB = new Date(`1970/01/01 ${b.time}`);
+        return timeA - timeB;
+      });
+    } else {
+      // For 7 days, 30 days, 90 days: show daily averages
+      const dailyMap = new Map();
+
+      // Process heart rate data
+      healthData.heartRate.forEach(item => {
+        const date = new Date(item.timestamp);
+        const dayKey = timeRange === '7days'
+          ? date.toLocaleDateString('en-US', { weekday: 'short' }) // Mon, Tue, Wed
+          : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); // Dec 1, Dec 2
+
+        if (!dailyMap.has(dayKey)) {
+          dailyMap.set(dayKey, {
+            time: dayKey,
+            heartRateValues: [],
+            bloodPressureValues: [],
+            date: date.toDateString() // For sorting
+          });
+        }
+        dailyMap.get(dayKey).heartRateValues.push(item.value);
+      });
+
+      // Process blood pressure data
+      healthData.bloodPressure.forEach(item => {
+        const date = new Date(item.timestamp);
+        const dayKey = timeRange === '7days'
+          ? date.toLocaleDateString('en-US', { weekday: 'short' }) // Mon, Tue, Wed
+          : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); // Dec 1, Dec 2
+
+        if (!dailyMap.has(dayKey)) {
+          dailyMap.set(dayKey, {
+            time: dayKey,
+            heartRateValues: [],
+            bloodPressureValues: [],
+            date: date.toDateString() // For sorting
+          });
+        }
+        const systolic = typeof item.value === 'object' ? item.value.systolic : item.value;
+        dailyMap.get(dayKey).bloodPressureValues.push(systolic);
+      });
+
+      // Calculate daily averages
+      const dailyAverages = Array.from(dailyMap.values()).map(day => ({
+        time: day.time,
+        heartRate: day.heartRateValues.length > 0
+          ? Math.round(day.heartRateValues.reduce((sum, val) => sum + val, 0) / day.heartRateValues.length)
+          : undefined,
+        bloodPressure: day.bloodPressureValues.length > 0
+          ? Math.round(day.bloodPressureValues.reduce((sum, val) => sum + val, 0) / day.bloodPressureValues.length)
+          : undefined,
+        date: day.date
+      }));
+
+      // Sort by date
+      return dailyAverages.sort((a, b) => new Date(a.date) - new Date(b.date));
+    }
   };
 
   const transformGlucoseData = () => {
-    return healthData.glucoseLevel.map(item => ({
-      time: new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      glucose: item.value,
-      date: new Date(item.timestamp).toLocaleDateString()
-    })).reverse(); // Reverse to show chronological order
+    if (timeRange === '24hours') {
+      // For 24 hours: show individual readings by time
+      return healthData.glucoseLevel.map(item => ({
+        time: new Date(item.timestamp).toLocaleTimeString([], {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        }),
+        glucose: item.value,
+        date: new Date(item.timestamp).toLocaleDateString()
+      })).reverse(); // Reverse to show chronological order
+    } else {
+      // For 7 days, 30 days, 90 days: show daily averages
+      const dailyMap = new Map();
+
+      healthData.glucoseLevel.forEach(item => {
+        const date = new Date(item.timestamp);
+        const dayKey = timeRange === '7days'
+          ? date.toLocaleDateString('en-US', { weekday: 'short' }) // Mon, Tue, Wed
+          : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); // Dec 1, Dec 2
+
+        if (!dailyMap.has(dayKey)) {
+          dailyMap.set(dayKey, {
+            time: dayKey,
+            values: [],
+            date: date.toDateString() // For sorting
+          });
+        }
+        dailyMap.get(dayKey).values.push(item.value);
+      });
+
+      // Calculate daily averages
+      const dailyAverages = Array.from(dailyMap.values()).map(day => ({
+        time: day.time,
+        glucose: day.values.length > 0
+          ? Math.round(day.values.reduce((sum, val) => sum + val, 0) / day.values.length)
+          : 0,
+        date: day.date
+      }));
+
+      // Sort by date
+      return dailyAverages.sort((a, b) => new Date(a.date) - new Date(b.date));
+    }
   };
 
   const transformTemperatureData = () => {
-    return healthData.bodyTemperature.map(item => ({
-      time: new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      temperature: parseFloat(item.value.toFixed(1)),
-      date: new Date(item.timestamp).toLocaleDateString()
-    })).reverse(); // Reverse to show chronological order
+    if (timeRange === '24hours') {
+      // For 24 hours: show individual readings by time
+      return healthData.bodyTemperature.map(item => ({
+        time: new Date(item.timestamp).toLocaleTimeString([], {
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        }),
+        temperature: parseFloat(item.value.toFixed(1)),
+        date: new Date(item.timestamp).toLocaleDateString()
+      })).reverse(); // Reverse to show chronological order
+    } else {
+      // For 7 days, 30 days, 90 days: show daily averages
+      const dailyMap = new Map();
+
+      healthData.bodyTemperature.forEach(item => {
+        const date = new Date(item.timestamp);
+        const dayKey = timeRange === '7days'
+          ? date.toLocaleDateString('en-US', { weekday: 'short' }) // Mon, Tue, Wed
+          : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); // Dec 1, Dec 2
+
+        if (!dailyMap.has(dayKey)) {
+          dailyMap.set(dayKey, {
+            time: dayKey,
+            values: [],
+            date: date.toDateString() // For sorting
+          });
+        }
+        dailyMap.get(dayKey).values.push(item.value);
+      });
+
+      // Calculate daily averages
+      const dailyAverages = Array.from(dailyMap.values()).map(day => ({
+        time: day.time,
+        temperature: day.values.length > 0
+          ? parseFloat((day.values.reduce((sum, val) => sum + val, 0) / day.values.length).toFixed(1))
+          : 0,
+        date: day.date
+      }));
+
+      // Sort by date
+      return dailyAverages.sort((a, b) => new Date(a.date) - new Date(b.date));
+    }
   };
 
   const getStatusColor = (status) => {

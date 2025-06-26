@@ -76,7 +76,11 @@ const BloodPressureChart = () => {
 
           // Transform data for chart
           const transformedData = bloodPressureData.map(item => {
-            const time = new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const time = new Date(item.timestamp).toLocaleTimeString([], {
+              hour: 'numeric',
+              minute: '2-digit',
+              hour12: true
+            });
             const systolic = typeof item.value === 'object' ? item.value.systolic : item.value;
             const diastolic = typeof item.value === 'object' ? item.value.diastolic : item.value - 40; // Estimate if not available
 
