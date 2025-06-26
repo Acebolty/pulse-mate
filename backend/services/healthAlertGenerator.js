@@ -19,6 +19,10 @@ class HealthAlertGenerator {
 
   async generateAlertsFromRecentData() {
     try {
+      // Check if user has threshold alerts enabled
+      const user = await User.findById(this.userId);
+      const thresholdAlertsEnabled = user?.settings?.notifications?.healthAlerts !== false;
+
       // Get recent health data (last 24 hours)
       const endDate = new Date();
       const startDate = new Date(endDate.getTime() - 24 * 60 * 60 * 1000);
@@ -30,17 +34,21 @@ class HealthAlertGenerator {
 
       const alerts = [];
 
-      // Check each recent reading for alerts
-      for (const reading of recentData) {
-        const alertsForReading = this.checkReadingForAlerts(reading);
-        alerts.push(...alertsForReading);
+      if (thresholdAlertsEnabled) {
+        // Check each recent reading for alerts
+        for (const reading of recentData) {
+          const alertsForReading = this.checkReadingForAlerts(reading);
+          alerts.push(...alertsForReading);
+        }
+
+        // Check for pattern-based alerts
+        const patternAlerts = await this.checkForPatternAlerts();
+        alerts.push(...patternAlerts);
+      } else {
+        console.log(`Threshold alerts disabled for user ${this.userId} - skipping threshold-based alert generation`);
       }
 
-      // Check for pattern-based alerts
-      const patternAlerts = await this.checkForPatternAlerts();
-      alerts.push(...patternAlerts);
-
-      // Check for missed readings alerts
+      // Always check for missed readings alerts (these are informational, not threshold-based)
       const missedReadingAlerts = await this.checkForMissedReadings();
       alerts.push(...missedReadingAlerts);
 

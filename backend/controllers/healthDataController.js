@@ -1,7 +1,8 @@
 const HealthData = require('../models/HealthData');
 const Alert = require('../models/Alert');
 const User = require('../models/User');
-const emailService = require('../services/emailService'); // For anomaly detection
+const emailService = require('../services/emailService');
+const medicationReminderService = require('../services/medicationReminderService'); // For anomaly detection
 
 // @desc    Add new health data for the logged-in user
 // @route   POST api/health-data
@@ -41,25 +42,34 @@ const addHealthData = async (req, res) => {
 
     // Anomaly Detection & Alert Creation
     try {
+      // Check if user has threshold alerts enabled
+      const user = await User.findById(req.user.id);
+      const thresholdAlertsEnabled = user?.settings?.notifications?.healthAlerts !== false;
+
       let alertToCreate = null;
-      if (dataType === 'bloodPressure' && typeof value === 'object' && value.systolic && value.diastolic) {
-        if (value.systolic > 140 || value.diastolic > 90) {
-          alertToCreate = { type: 'critical', title: 'High Blood Pressure Alert', message: `Critical blood pressure reading: ${value.systolic}/${value.diastolic} mmHg. Please consult your doctor.`, source: source || 'Blood Pressure Monitor' };
-        } else if (value.systolic > 130 || value.diastolic > 85) {
-          alertToCreate = { type: 'warning', title: 'Elevated Blood Pressure', message: `Blood pressure reading: ${value.systolic}/${value.diastolic} mmHg is elevated. Monitor closely.`, source: source || 'Blood Pressure Monitor' };
+
+      if (thresholdAlertsEnabled) {
+        if (dataType === 'bloodPressure' && typeof value === 'object' && value.systolic && value.diastolic) {
+          if (value.systolic > 140 || value.diastolic > 90) {
+            alertToCreate = { type: 'critical', title: 'High Blood Pressure Alert', message: `Critical blood pressure reading: ${value.systolic}/${value.diastolic} mmHg. Please consult your doctor.`, source: source || 'Blood Pressure Monitor' };
+          } else if (value.systolic > 130 || value.diastolic > 85) {
+            alertToCreate = { type: 'warning', title: 'Elevated Blood Pressure', message: `Blood pressure reading: ${value.systolic}/${value.diastolic} mmHg is elevated. Monitor closely.`, source: source || 'Blood Pressure Monitor' };
+          }
+        } else if (dataType === 'heartRate' && typeof value === 'number') {
+          if (value > 100) {
+            alertToCreate = { type: 'warning', title: 'High Heart Rate Detected', message: `Heart rate of ${value} bpm detected. If resting, please monitor.`, source: source || 'Heart Rate Monitor' };
+          } else if (value < 50 && value > 0) {
+            alertToCreate = { type: 'warning', title: 'Low Heart Rate Detected', message: `Heart rate of ${value} bpm detected. If experiencing symptoms, consult your doctor.`, source: source || 'Heart Rate Monitor' };
+          }
+        } else if (dataType === 'glucoseLevel' && typeof value === 'number') {
+          if (value > 180) {
+            alertToCreate = { type: 'warning', title: 'High Blood Glucose Alert', message: `Blood glucose level is ${value} ${unit}, which is high.`, source: source || 'Glucose Monitor' };
+          } else if (value < 70 && value > 0) {
+            alertToCreate = { type: 'critical', title: 'Low Blood Glucose Alert', message: `Blood glucose level is ${value} ${unit}, which is low. Please take appropriate action.`, source: source || 'Glucose Monitor' };
+          }
         }
-      } else if (dataType === 'heartRate' && typeof value === 'number') {
-        if (value > 100) {
-          alertToCreate = { type: 'warning', title: 'High Heart Rate Detected', message: `Heart rate of ${value} bpm detected. If resting, please monitor.`, source: source || 'Heart Rate Monitor' };
-        } else if (value < 50 && value > 0) {
-          alertToCreate = { type: 'warning', title: 'Low Heart Rate Detected', message: `Heart rate of ${value} bpm detected. If experiencing symptoms, consult your doctor.`, source: source || 'Heart Rate Monitor' };
-        }
-      } else if (dataType === 'glucoseLevel' && typeof value === 'number') {
-        if (value > 180) {
-          alertToCreate = { type: 'warning', title: 'High Blood Glucose Alert', message: `Blood glucose level is ${value} ${unit}, which is high.`, source: source || 'Glucose Monitor' };
-        } else if (value < 70 && value > 0) {
-          alertToCreate = { type: 'critical', title: 'Low Blood Glucose Alert', message: `Blood glucose level is ${value} ${unit}, which is low. Please take appropriate action.`, source: source || 'Glucose Monitor' };
-        }
+      } else {
+        console.log(`Threshold alerts disabled for user ${req.user.id} - skipping alert generation for ${dataType}: ${JSON.stringify(value)}`);
       }
 
       if (alertToCreate) {
@@ -111,6 +121,14 @@ const addHealthData = async (req, res) => {
       }
     } catch (alertError) {
       console.error('Error during anomaly detection or alert creation:', alertError);
+    }
+
+    // Check for medication alerts (run in background)
+    try {
+      medicationReminderService.checkAndCreateMedicationAlerts(req.user.id);
+    } catch (medicationError) {
+      console.error('Error checking medication alerts:', medicationError);
+      // Don't fail the main request if medication check fails
     }
 
     res.status(201).json(newHealthData);

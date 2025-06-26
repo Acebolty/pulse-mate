@@ -149,6 +149,7 @@ const userSchema = new Schema({
       healthAlerts: { type: Boolean, default: true }, // For critical health notifications and warnings
       labResults: { type: Boolean, default: true }, // Notifications for new lab results
       messageNotifications: { type: Boolean, default: true }, // Notifications for new messages
+      weeklyHealthSummary: { type: Boolean, default: true }, // Weekly health summary emails
       // Email alert type preferences - which alert types should trigger emails
       emailAlertTypes: {
         critical: { type: Boolean, default: true },  // Always email for critical alerts
@@ -238,6 +239,7 @@ userSchema.pre('save', function(next) {
           healthAlerts: true,
           labResults: true,
           messageNotifications: true,
+          weeklyHealthSummary: true,
           emailAlertTypes: {
             critical: true,  // Always email for critical alerts
             warning: true,   // Email for warning alerts

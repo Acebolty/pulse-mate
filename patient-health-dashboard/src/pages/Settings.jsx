@@ -32,7 +32,7 @@ const initialSettingsData = {
     medicationReminders: true,
     healthAlerts: true,
     messageNotifications: true,
-    anomalyDetection: false,
+    weeklyHealthSummary: true,
     healthTaskReminders: false,
   },
   health: {
@@ -135,25 +135,114 @@ const Settings = () => {
     setError('');
   };
 
-  const handleTestEmail = async () => {
+  const handleTestWeeklySummary = async () => {
     setLoading(true);
     setError('');
     setSuccessMessage('');
 
     try {
-      const response = await api.post('/email-test/send-test-alert');
+      const response = await api.post('/email-test/send-weekly-summary');
 
       if (response.data.success) {
-        setSuccessMessage('Test email sent successfully! Check your inbox.');
+        setSuccessMessage('Weekly health summary email sent successfully! Check your inbox.');
         if (response.data.previewUrl) {
           console.log('Email preview URL:', response.data.previewUrl);
         }
       } else {
-        setError('Failed to send test email: ' + response.data.message);
+        setError('Failed to send weekly summary: ' + response.data.message);
       }
     } catch (err) {
-      console.error('Error sending test email:', err);
-      const errorMessage = err.response?.data?.message || 'Failed to send test email. Please try again.';
+      console.error('Error sending weekly summary:', err);
+      const errorMessage = err.response?.data?.message || 'Failed to send weekly summary. Please try again.';
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+      // Clear messages after 5 seconds
+      setTimeout(() => {
+        setSuccessMessage('');
+        setError('');
+      }, 5000);
+    }
+  };
+
+  const handleTestMedicationReminder = async () => {
+    setLoading(true);
+    setError('');
+    setSuccessMessage('');
+
+    try {
+      const response = await api.post('/email-test/send-medication-reminder');
+
+      if (response.data.success) {
+        setSuccessMessage('Test medication reminder sent successfully! Check your inbox.');
+        if (response.data.previewUrl) {
+          console.log('Email preview URL:', response.data.previewUrl);
+        }
+      } else {
+        setError('Failed to send medication reminder: ' + response.data.message);
+      }
+    } catch (err) {
+      console.error('Error sending medication reminder:', err);
+      const errorMessage = err.response?.data?.message || 'Failed to send medication reminder. Please try again.';
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+      // Clear messages after 5 seconds
+      setTimeout(() => {
+        setSuccessMessage('');
+        setError('');
+      }, 5000);
+    }
+  };
+
+  const handleTestDailySummary = async () => {
+    setLoading(true);
+    setError('');
+    setSuccessMessage('');
+
+    try {
+      const response = await api.post('/email-test/send-daily-medication-summary');
+
+      if (response.data.success) {
+        setSuccessMessage('Test daily medication summary sent successfully! Check your inbox.');
+        if (response.data.previewUrl) {
+          console.log('Email preview URL:', response.data.previewUrl);
+        }
+      } else {
+        setError('Failed to send daily summary: ' + response.data.message);
+      }
+    } catch (err) {
+      console.error('Error sending daily summary:', err);
+      const errorMessage = err.response?.data?.message || 'Failed to send daily summary. Please try again.';
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+      // Clear messages after 5 seconds
+      setTimeout(() => {
+        setSuccessMessage('');
+        setError('');
+      }, 5000);
+    }
+  };
+
+  const handleTestMedicationAlerts = async () => {
+    setLoading(true);
+    setError('');
+    setSuccessMessage('');
+
+    try {
+      const response = await api.post('/email-test/generate-medication-alerts');
+
+      if (response.data.success) {
+        setSuccessMessage(`Generated ${response.data.alertsCreated} medication alerts! Check your dashboard and alerts page.`);
+        // Trigger alert refresh in sidebar
+        window.dispatchEvent(new CustomEvent('alertsGenerated'));
+      } else {
+        setError('Failed to generate medication alerts: ' + response.data.message);
+      }
+    } catch (err) {
+      console.error('Error generating medication alerts:', err);
+      const errorMessage = err.response?.data?.message || 'Failed to generate medication alerts. Please try again.';
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -546,18 +635,9 @@ const Settings = () => {
                 <div className="space-y-3 sm:space-y-4">
                   {/* Email Notifications */}
                   <div className="flex flex-col items-start space-y-2 p-3 sm:p-4 border border-gray-200 dark:border-slate-700 dark:bg-slate-700/30 rounded-lg sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-                    <div className="flex-1">
+                    <div>
                       <h4 className="text-sm font-medium text-gray-900 dark:text-slate-200">Email Notifications</h4>
                       <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400">Receive notifications via email</p>
-                      {settingsData.notifications.emailNotifications && (
-                        <button
-                          onClick={handleTestEmail}
-                          disabled={loading}
-                          className="mt-2 px-3 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-md hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors disabled:opacity-50"
-                        >
-                          Send Test Email
-                        </button>
-                      )}
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer mt-1 sm:mt-0 self-end sm:self-center">
                       <input
@@ -603,17 +683,26 @@ const Settings = () => {
                     </label>
                   </div>
 
-                  {/* Anomaly Detection */}
+                  {/* Weekly Health Summary Emails */}
                   <div className="flex flex-col items-start space-y-2 p-3 sm:p-4 border border-gray-200 dark:border-slate-700 dark:bg-slate-700/30 rounded-lg sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-900 dark:text-slate-200">Anomaly Detection</h4>
-                      <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400">AI-powered detection of unusual patterns in your health data</p>
+                    <div className="flex-1">
+                      <h4 className="text-sm font-medium text-gray-900 dark:text-slate-200">Weekly Health Summary Emails</h4>
+                      <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400">Receive weekly email summaries of your health metrics and progress</p>
+                      {settingsData.notifications.weeklyHealthSummary && (
+                        <button
+                          onClick={handleTestWeeklySummary}
+                          disabled={loading}
+                          className="mt-2 px-3 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-md hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors disabled:opacity-50"
+                        >
+                          Send Test Summary
+                        </button>
+                      )}
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer mt-1 sm:mt-0 self-end sm:self-center">
                       <input
                         type="checkbox"
-                        checked={settingsData.notifications.anomalyDetection || false}
-                        onChange={(e) => handleSettingChange("notifications", "anomalyDetection", e.target.checked)}
+                        checked={settingsData.notifications.weeklyHealthSummary || false}
+                        onChange={(e) => handleSettingChange("notifications", "weeklyHealthSummary", e.target.checked)}
                         className="sr-only peer"
                       />
                       <div className="w-11 h-6 bg-gray-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 dark:after:border-slate-500 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600 dark:peer-checked:bg-green-500"></div>
@@ -670,9 +759,34 @@ const Settings = () => {
                 <div className="space-y-3 sm:space-y-4">
                   {/* Medication Reminders */}
                   <div className="flex flex-col items-start space-y-2 p-3 sm:p-4 border border-gray-200 dark:border-slate-700 dark:bg-slate-700/30 rounded-lg sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-                    <div>
+                    <div className="flex-1">
                       <h4 className="text-sm font-medium text-gray-900 dark:text-slate-200">Medication Reminders</h4>
                       <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400">Never miss your medication schedule</p>
+                      {settingsData.notifications.medicationReminders && (
+                        <div className="mt-2 space-x-2">
+                          <button
+                            onClick={handleTestMedicationReminder}
+                            disabled={loading}
+                            className="px-3 py-1 text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-md hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-colors disabled:opacity-50"
+                          >
+                            Test Email
+                          </button>
+                          <button
+                            onClick={handleTestDailySummary}
+                            disabled={loading}
+                            className="px-3 py-1 text-xs bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-md hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-colors disabled:opacity-50"
+                          >
+                            Test Summary
+                          </button>
+                          <button
+                            onClick={handleTestMedicationAlerts}
+                            disabled={loading}
+                            className="px-3 py-1 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-md hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors disabled:opacity-50"
+                          >
+                            Test Alerts
+                          </button>
+                        </div>
+                      )}
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer mt-1 sm:mt-0 self-end sm:self-center">
                       <input

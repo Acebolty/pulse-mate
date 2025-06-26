@@ -294,13 +294,8 @@ const filterAlertsByNotificationPreferences = (alerts, userSettings) => {
     );
   }
 
-  // If anomaly detection is disabled, filter out anomaly alerts
-  if (!notificationSettings.anomalyDetection) {
-    alerts = alerts.filter(alert =>
-      !alert.title.toLowerCase().includes('anomaly') &&
-      !alert.title.toLowerCase().includes('unusual pattern')
-    );
-  }
+  // Note: Anomaly detection has been replaced with Weekly Health Summary feature
+  // No additional filtering needed here
 
   return alerts;
 };
