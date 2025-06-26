@@ -11,11 +11,12 @@ import {
   ChartBarIcon,
   BellIcon,
   UserIcon,
+  BeakerIcon,
   XMarkIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
 } from "@heroicons/react/24/outline"
-import { useAlerts } from "../../contexts/AlertContext"
+// import { useAlerts } from "../../contexts/AlertContext"
 import { getCurrentUser } from "../../services/authService"
 import api from "../../services/api"
 
@@ -24,12 +25,41 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
   const [userData, setUserData] = useState(null)
   const [currentTip, setCurrentTip] = useState(null)
   const [healthStatus, setHealthStatus] = useState(null)
-  const { getUnreadCount } = useAlerts()
+  const [alerts, setAlerts] = useState([])
+
+  // Get unread count
+  const getUnreadCount = () => {
+    return alerts.filter(alert => !alert.isRead).length
+  }
+
+  // Get medication alert count
+  const getMedicationAlertCount = () => {
+    return alerts.filter(alert =>
+      !alert.isRead &&
+      (alert.title.toLowerCase().includes('medication') ||
+       alert.source === 'Medication Reminder System')
+    ).length
+  }
 
   const unreadCount = getUnreadCount()
-  console.log('Sidebar unread count:', unreadCount) // Debug log
+  const medicationAlertCount = getMedicationAlertCount()
 
-  // Load user data
+  // Load alerts function
+  const loadAlerts = async () => {
+    try {
+      const response = await api.get('/alerts', {
+        params: { limit: 10, sortBy: 'timestamp', order: 'desc' }
+      })
+      const allAlerts = response.data.data || []
+      // Filter unread alerts on frontend to ensure we get the latest data
+      const unreadAlerts = allAlerts.filter(alert => !alert.isRead)
+      setAlerts(unreadAlerts)
+    } catch (error) {
+      console.error('Error loading alerts:', error)
+    }
+  }
+
+  // Load user data and alerts
   useEffect(() => {
     const loadUserData = async () => {
       try {
@@ -46,52 +76,192 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
     }
 
     loadUserData()
+    loadAlerts()
   }, [])
 
-  // Load health status
+  // Listen for alert updates from other components
+  useEffect(() => {
+    const handleAlertUpdate = () => {
+      // Refresh alerts when they're updated elsewhere
+      loadAlerts()
+    }
+
+    const handleAlertsGenerated = () => {
+      // Refresh alerts when new ones might have been generated
+      setTimeout(() => {
+        loadAlerts()
+      }, 1000) // Delay to ensure alerts are saved to database
+    }
+
+    window.addEventListener('alertUpdated', handleAlertUpdate)
+    window.addEventListener('alertsGenerated', handleAlertsGenerated)
+
+    return () => {
+      window.removeEventListener('alertUpdated', handleAlertUpdate)
+      window.removeEventListener('alertsGenerated', handleAlertsGenerated)
+    }
+  }, [])
+
+  // Also refresh alerts when user focuses back on the window (as a fallback)
+  useEffect(() => {
+    const handleWindowFocus = () => {
+      loadAlerts()
+    }
+
+    window.addEventListener('focus', handleWindowFocus)
+    return () => window.removeEventListener('focus', handleWindowFocus)
+  }, [])
+
+  // Load health status using same calculation as ProfileNew.jsx
   useEffect(() => {
     const loadHealthStatus = async () => {
       try {
-        const response = await api.get('/health-data/latest')
-        const latestData = response.data
 
-        // Calculate simple health score based on available data
-        let score = 85 // Default good score
-        let status = 'good'
-        let statusColor = 'green'
+        // Load user profile first to get health targets
+        const profileResponse = await api.get('/profile/me')
 
+        // Set up parameters for health data (same as ProfileNew.jsx)
+        const endDate = new Date()
+        const startDate = new Date()
+        startDate.setDate(endDate.getDate() - 7) // Last 7 days
+
+        const commonParams = {
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString(),
+          limit: 1, // Only need the latest reading
+          order: 'desc'
+        }
+
+        // Fetch recent health data using same endpoints as ProfileNew.jsx
+        const [heartRateRes, bloodPressureRes, temperatureRes, glucoseRes] = await Promise.allSettled([
+          api.get('/health-data', { params: { ...commonParams, dataType: 'heartRate' } }),
+          api.get('/health-data', { params: { ...commonParams, dataType: 'bloodPressure' } }),
+          api.get('/health-data', { params: { ...commonParams, dataType: 'bodyTemperature' } }),
+          api.get('/health-data', { params: { ...commonParams, dataType: 'glucoseLevel' } })
+        ])
+
+        const latestData = {
+          heartRate: heartRateRes.status === 'fulfilled' ? heartRateRes.value.data.data : [],
+          bloodPressure: bloodPressureRes.status === 'fulfilled' ? bloodPressureRes.value.data.data : [],
+          bodyTemperature: temperatureRes.status === 'fulfilled' ? temperatureRes.value.data.data : [],
+          glucoseLevel: glucoseRes.status === 'fulfilled' ? glucoseRes.value.data.data : []
+        }
+
+        const userTargets = profileResponse.data.healthTargets || {
+          heartRate: { min: 60, max: 100 },
+          bloodPressure: { systolic: { min: 90, max: 120 }, diastolic: { min: 60, max: 80 } },
+          bodyTemperature: { min: 97.0, max: 99.0 },
+          glucoseLevel: { min: 70, max: 140 }
+        }
+
+        // Calculate health score using same logic as ProfileNew.jsx
+        let score = 100
+        let factors = []
+
+        // Check heart rate against user's targets
         if (latestData.heartRate && latestData.heartRate.length > 0) {
-          const hr = latestData.heartRate[0].value
-          if (hr < 60 || hr > 100) {
+          const currentHR = latestData.heartRate[0].value
+          const hrMin = userTargets.heartRate.min
+          const hrMax = userTargets.heartRate.max
+
+          if (currentHR < hrMin - 10 || currentHR > hrMax + 20) {
+            score -= 20
+            factors.push(`Heart rate outside optimal range`)
+          } else if (currentHR < hrMin || currentHR > hrMax) {
             score -= 10
-            status = 'warning'
-            statusColor = 'yellow'
+            factors.push(`Heart rate outside target range`)
           }
         }
 
+        // Check blood pressure against user's targets
         if (latestData.bloodPressure && latestData.bloodPressure.length > 0) {
-          const bp = latestData.bloodPressure[0].value
-          const systolic = typeof bp === 'object' ? bp.systolic : bp
-          if (systolic > 140) {
-            score -= 15
-            status = 'critical'
-            statusColor = 'red'
+          const latestBP = latestData.bloodPressure[0]
+          const systolic = typeof latestBP.value === 'object' ? latestBP.value.systolic : latestBP.value
+          const diastolic = typeof latestBP.value === 'object' ? latestBP.value.diastolic : latestBP.value - 40
+
+          const sysMin = userTargets.bloodPressure.systolic.min
+          const sysMax = userTargets.bloodPressure.systolic.max
+          const diaMin = userTargets.bloodPressure.diastolic.min
+          const diaMax = userTargets.bloodPressure.diastolic.max
+
+          if (systolic > sysMax + 20 || diastolic > diaMax + 10) {
+            score -= 20
+            factors.push(`Blood pressure critically elevated`)
+          } else if (systolic > sysMax || diastolic > diaMax || systolic < sysMin || diastolic < diaMin) {
+            score -= 10
+            factors.push(`Blood pressure outside target range`)
           }
+        }
+
+        // Check body temperature against user's targets
+        if (latestData.bodyTemperature && latestData.bodyTemperature.length > 0) {
+          const currentTemp = latestData.bodyTemperature[0].value
+          const tempMin = userTargets.bodyTemperature.min
+          const tempMax = userTargets.bodyTemperature.max
+
+          if (currentTemp > tempMax + 1 || currentTemp < tempMin - 1) {
+            score -= 15
+            factors.push(`Body temperature outside safe range`)
+          } else if (currentTemp > tempMax || currentTemp < tempMin) {
+            score -= 5
+            factors.push(`Body temperature outside target range`)
+          }
+        }
+
+        // Check glucose levels against user's targets
+        if (latestData.glucoseLevel && latestData.glucoseLevel.length > 0) {
+          const currentGlucose = latestData.glucoseLevel[0].value
+          const glucoseMin = userTargets.glucoseLevel.min
+          const glucoseMax = userTargets.glucoseLevel.max
+
+          if (currentGlucose > glucoseMax + 40 || currentGlucose < glucoseMin - 20) {
+            score -= 20
+            factors.push(`Blood glucose critically outside range`)
+          } else if (currentGlucose > glucoseMax || currentGlucose < glucoseMin) {
+            score -= 10
+            factors.push(`Blood glucose outside target range`)
+          }
+        }
+
+        // Ensure score doesn't go below 0
+        score = Math.max(0, score)
+
+        // Determine status and color based on score (same as ProfileNew.jsx)
+        const getScoreLabel = (score) => {
+          if (score >= 90) return 'Excellent';
+          if (score >= 80) return 'Very Good';
+          if (score >= 70) return 'Good';
+          if (score >= 60) return 'Fair';
+          return 'Needs Attention';
+        };
+
+        let status, statusColor
+        if (score >= 80) {
+          status = getScoreLabel(score)
+          statusColor = 'green'
+        } else if (score >= 60) {
+          status = getScoreLabel(score)
+          statusColor = 'yellow'
+        } else {
+          status = getScoreLabel(score)
+          statusColor = 'red'
         }
 
         setHealthStatus({
-          score: Math.max(score, 0),
+          score: Math.round(score),
           status,
           statusColor,
+          factors,
           lastUpdated: new Date().toLocaleTimeString()
         })
       } catch (error) {
-        console.error('Failed to load health status:', error)
+        console.error('Sidebar: Failed to load health status:', error)
         // Default status if no data
         setHealthStatus({
           score: 85,
-          status: 'good',
+          status: 'Very Good',
           statusColor: 'green',
+          factors: [],
           lastUpdated: 'No recent data'
         })
       }
@@ -177,11 +347,12 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
     { name: "Dashboard", href: "/dashboard/overview", icon: HomeIcon },
     { name: "Health Metrics", href: "/dashboard/health-metrics", icon: HeartIcon },
     { name: "Appointments", href: "/dashboard/appointments", icon: CalendarIcon },
+    { name: "Medications", href: "/dashboard/profile", icon: BeakerIcon, badge: medicationAlertCount },
     { name: "Messages", href: "/dashboard/messages", icon: ChatBubbleLeftIcon, badge: 3 },
     { name: "Alerts", href: "/dashboard/alerts", icon: BellIcon, badge: unreadCount },
     { name: "Profile", href: "/dashboard/profile", icon: UserIcon },
     { name: "Settings", href: "/dashboard/settings", icon: Cog6ToothIcon },
-  ], [unreadCount])
+  ], [unreadCount, medicationAlertCount])
 
   useEffect(() => {
     const observer = new MutationObserver(() => {

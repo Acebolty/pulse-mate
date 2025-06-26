@@ -79,4 +79,8 @@ app.use('/api/chats', chatRoutes); // All routes will be prefixed with /api/chat
 const simulationRoutes = require('./routes/simulation');
 app.use('/api/simulation', simulationRoutes); // All routes will be prefixed with /api/simulation
 
+// Import and use email test routes (for development/testing)
+const emailTestRoutes = require('./routes/emailTest');
+app.use('/api/email-test', emailTestRoutes); // All routes will be prefixed with /api/email-test
+
 // Note: app.listen() is now inside the mongoose.connect().then() block

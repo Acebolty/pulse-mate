@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react"
 import api from '../services/api'
+
 import {
   UserIcon,
   PencilIcon,
@@ -34,6 +35,8 @@ const Profile = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+
+
   const [uploadingImage, setUploadingImage] = useState(false);
 
   // States for adding new medical info

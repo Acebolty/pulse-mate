@@ -149,6 +149,14 @@ const userSchema = new Schema({
       healthAlerts: { type: Boolean, default: true }, // For critical health notifications and warnings
       labResults: { type: Boolean, default: true }, // Notifications for new lab results
       messageNotifications: { type: Boolean, default: true }, // Notifications for new messages
+      weeklyHealthSummary: { type: Boolean, default: true }, // Weekly health summary emails
+      // Email alert type preferences - which alert types should trigger emails
+      emailAlertTypes: {
+        critical: { type: Boolean, default: true },  // Always email for critical alerts
+        warning: { type: Boolean, default: true },   // Email for warning alerts
+        info: { type: Boolean, default: false },     // Don't email for info alerts
+        success: { type: Boolean, default: false }   // Don't email for success alerts
+      },
       quietHoursEnabled: { type: Boolean, default: false },
       quietHoursStart: { type: String, default: '22:00' }, // Store as HH:MM string
       quietHoursEnd: { type: String, default: '07:00' }   // Store as HH:MM string
@@ -231,6 +239,13 @@ userSchema.pre('save', function(next) {
           healthAlerts: true,
           labResults: true,
           messageNotifications: true,
+          weeklyHealthSummary: true,
+          emailAlertTypes: {
+            critical: true,  // Always email for critical alerts
+            warning: true,   // Email for warning alerts
+            info: false,     // Don't email for info alerts
+            success: false   // Don't email for success alerts
+          },
           quietHoursEnabled: false,
           quietHoursStart: '22:00',
           quietHoursEnd: '07:00'
