@@ -22,137 +22,40 @@ import {
   BriefcaseIcon, // For specialties or general doctor icon
 } from "@heroicons/react/24/outline"
 import { motion } from "framer-motion"
+import api from "../services/api"
+import { getCurrentUser } from "../services/authService"
 
-// Dummy appointments data for Doctor's View
-const upcomingAppointments = [
-  {
-    id: 1,
-    appointmentTitle: "Follow-up: Diabetes Management",
-    patient: {
-      name: "Alice Wonderland",
-      age: 45,
-      gender: "Female",
-      image: "https://randomuser.me/api/portraits/women/44.jpg", // Placeholder
-    },
-    date: "2024-01-25",
-    time: "10:00 AM",
-    duration: "30 min",
-    type: "chat", // 'chat' or 'in-person'
-    status: "confirmed", // 'confirmed', 'pending', 'completed', 'cancelled'
-    reasonForVisit: "Review A1C levels and medication adjustment.",
-    patientNotes: "Feeling tired lately, occasional dizziness.",
-    doctorNotes: "", // For doctor to fill
-    chatRoom: "diabetes-followup-alice-xyz789",
-  },
-  {
-    id: 2,
-    appointmentTitle: "New Patient: Cardiac Evaluation",
-    patient: {
-      name: "Robert Smith",
-      age: 58,
-      gender: "Male",
-      image: "https://randomuser.me/api/portraits/men/32.jpg", // Placeholder
-    },
-    date: "2024-01-25",
-    time: "11:00 AM",
-    duration: "60 min",
-    type: "in-person",
-    status: "confirmed",
-    location: "Clinic Room 3B",
-    reasonForVisit: "Referred by GP for palpitations.",
-    patientNotes: "Experiencing heart flutters, especially after exertion.",
-    doctorNotes: "Perform EKG, check vitals, review family history.",
-  },
-  {
-    id: 3,
-    appointmentTitle: "Routine Check-up",
-    patient: {
-      name: "Maria Garcia",
-      age: 32,
-      gender: "Female",
-      image: "https://randomuser.me/api/portraits/women/68.jpg", // Placeholder
-    },
-    date: "2024-01-26",
-    time: "09:30 AM",
-    duration: "45 min",
-    type: "in-person",
-    status: "pending", // Patient needs to confirm
-    location: "Clinic Room 1A",
-    reasonForVisit: "Annual physical examination.",
-    patientNotes: "No specific concerns, general wellness check.",
-    doctorNotes: "",
-  },
-    {
-    id: 4,
-    appointmentTitle: "Mental Health Support",
-    patient: {
-      name: "John Doe",
-      age: 28,
-      gender: "Male",
-      image: "https://randomuser.me/api/portraits/men/75.jpg",
-    },
-    date: "2024-01-26",
-    time: "02:00 PM",
-    duration: "50 min",
-    type: "chat",
-    status: "confirmed",
-    reasonForVisit: "Weekly check-in for anxiety management.",
-    patientNotes: "Feeling more anxious this week due to work stress.",
-    chatRoom: "mentalhealth-johnd-abc123",
-    doctorNotes: "Explore coping mechanisms, review medication effectiveness.",
-  },
-]
+// Helper function to transform backend appointment data for display
+const transformAppointmentData = (appointment, userData = null) => {
+  // Use populated userId data if available, otherwise use passed userData
+  const patientData = appointment.userId || userData;
 
-const pastAppointments = [
-  {
-    id: 5,
-    appointmentTitle: "Medication Review",
+  return {
+    id: appointment._id,
+    appointmentTitle: appointment.reason || "General Consultation",
     patient: {
-      name: "Charles Brown",
-      age: 67,
-      gender: "Male",
-      image: "https://randomuser.me/api/portraits/men/54.jpg",
+      name: patientData ? `${patientData.firstName} ${patientData.lastName}` : "Patient",
+      age: patientData?.dateOfBirth ? new Date().getFullYear() - new Date(patientData.dateOfBirth).getFullYear() : "N/A",
+      gender: patientData?.gender || "N/A",
+      image: patientData?.profilePicture || "https://via.placeholder.com/150/cccccc/808080?text=Patient",
     },
-    date: "2024-01-18",
-    time: "02:00 PM",
-    duration: "30 min",
-    type: "chat",
-    status: "completed",
-    reasonForVisit: "Reviewing blood pressure medication.",
-    summary: "Adjusted Lisinopril dosage. Patient reports no side effects. BP readings stable.",
-    followUp: "Check BP in 2 weeks.",
-  },
-  {
-    id: 6,
-    appointmentTitle: "Post-Op Follow-up",
-    patient: {
-      name: "Linda Green",
-      age: 52,
-      gender: "Female",
-      image: "https://randomuser.me/api/portraits/women/31.jpg",
-    },
-    date: "2024-01-15",
-    time: "10:30 AM",
-    duration: "45 min",
-    type: "in-person",
-    status: "completed",
-    location: "Clinic Room 2C",
-    reasonForVisit: "Knee surgery follow-up.",
-    summary: "Incision healing well. Range of motion improving. Prescribed further PT.",
-    followUp: "Physical therapy twice a week. Next follow-up in 4 weeks.",
-  },
-]
+    date: new Date(appointment.dateTime).toISOString().split('T')[0],
+    time: new Date(appointment.dateTime).toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    }),
+    duration: "30 min", // Default duration, could be added to backend model
+    type: appointment.type === 'Virtual' ? 'chat' : 'in-person',
+    status: appointment.status.toLowerCase(),
+    reasonForVisit: appointment.reason,
+    patientNotes: "", // Could be added to backend model
+    doctorNotes: appointment.notes || "",
+    virtualLink: appointment.virtualLink,
+    originalData: appointment // Keep reference to original data
+  };
+};
 
-// Simplified patient list for "Schedule Patient" tab
-const patientsForScheduling = [
-    { id: 101, name: "Alice Wonderland", lastSeen: "2024-01-10" },
-    { id: 102, name: "Robert Smith", lastSeen: "2023-12-05" },
-    { id: 103, name: "Maria Garcia", lastSeen: "2024-01-02" },
-    { id: 104, name: "John Doe", lastSeen: "2024-01-18" },
-    { id: 105, name: "Charles Brown", lastSeen: "2024-01-18"},
-    { id: 106, name: "Linda Green", lastSeen: "2024-01-15"},
-    { id: 107, name: "Kevin White", lastSeen: "2023-11-20"},
-];
 
 
 const getStatusColor = (status) => {
@@ -190,7 +93,7 @@ const cardVariants = {
 
 const YourAppointments = () => {
   const [activeTab, setActiveTab] = useState("upcoming");
-  const [showSchedulingModal, setShowSchedulingModal] = useState(false); // For doctor scheduling
+  const [showSchedulingModal, setShowSchedulingModal] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -198,10 +101,55 @@ const YourAppointments = () => {
   const [editingNotes, setEditingNotes] = useState(false);
   const [currentDoctorNotes, setCurrentDoctorNotes] = useState("");
 
+  // New state for real data
+  const [appointments, setAppointments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
+
+  // Fetch appointments from backend
+  const fetchAppointments = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Get current doctor info
+      const user = getCurrentUser();
+      setCurrentUser(user);
+
+      if (!user) {
+        setError("User not authenticated");
+        return;
+      }
+
+      // Use the doctor-specific endpoint
+      const response = await api.get('/appointments/doctor?limit=100');
+
+      if (response.data && response.data.data) {
+        // Transform the data for display
+        const transformedAppointments = response.data.data.map(apt =>
+          transformAppointmentData(apt, apt.userId)
+        );
+
+        setAppointments(transformedAppointments);
+      }
+    } catch (err) {
+      console.error('Error fetching appointments:', err);
+      setError(err.response?.data?.message || 'Failed to fetch appointments');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Separate appointments into upcoming and past
+  const now = new Date();
+  const upcomingAppointments = appointments.filter(apt => new Date(apt.originalData.dateTime) >= now);
+  const pastAppointments = appointments.filter(apt => new Date(apt.originalData.dateTime) < now);
+
   const tabs = [
     { id: "upcoming", label: "Upcoming Appointments", count: upcomingAppointments.length },
     { id: "past", label: "Past Appointments", count: pastAppointments.length },
-    { id: "schedule", label: "Schedule Patient / Calendar", count: 0 }, // Changed from "Book New"
+    { id: "schedule", label: "Schedule Patient / Calendar", count: 0 },
   ];
 
   const filteredAppointments = (activeTab === "upcoming" ? upcomingAppointments : pastAppointments).filter(
@@ -218,6 +166,11 @@ const YourAppointments = () => {
     }
   );
   
+  // Fetch appointments on component mount
+  useEffect(() => {
+    fetchAppointments();
+  }, []);
+
   useEffect(() => {
     if (selectedAppointment) {
       setCurrentDoctorNotes(selectedAppointment.doctorNotes || "");
@@ -230,20 +183,68 @@ const YourAppointments = () => {
     setEditingNotes(false); // Reset editing state
   };
   
-  const handleSaveNotes = () => {
+  const handleSaveNotes = async () => {
     if (selectedAppointment) {
-        // Here you would typically save the notes to your backend
-        console.log("Saving notes for appointment ID:", selectedAppointment.id, "Notes:", currentDoctorNotes);
-        // Update the local state for immediate UI feedback (optional, depends on data flow)
+      try {
+        // Save notes to backend
+        await api.put(`/appointments/${selectedAppointment.id}`, {
+          notes: currentDoctorNotes
+        });
+
+        // Update local state for immediate UI feedback
         setSelectedAppointment(prev => ({...prev, doctorNotes: currentDoctorNotes}));
+
+        // Update the appointments list
+        setAppointments(prev => prev.map(apt =>
+          apt.id === selectedAppointment.id
+            ? {...apt, doctorNotes: currentDoctorNotes}
+            : apt
+        ));
+
         setEditingNotes(false);
-        // You might want to refresh the appointments list or update the specific appointment
+        console.log("Notes saved successfully");
+      } catch (err) {
+        console.error("Error saving notes:", err);
+        setError("Failed to save notes");
+      }
     }
   };
 
 
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="space-y-10 px-2 md:px-0">
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <span className="ml-3 text-gray-600 dark:text-slate-400">Loading appointments...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-10 px-2 md:px-0">
+      {/* Error Message */}
+      {error && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4"
+        >
+          <div className="flex items-center">
+            <ExclamationTriangleIcon className="w-5 h-5 text-red-500 mr-2" />
+            <span className="text-red-700 dark:text-red-300">{error}</span>
+            <button
+              onClick={fetchAppointments}
+              className="ml-auto text-red-600 hover:text-red-800 text-sm underline"
+            >
+              Retry
+            </button>
+          </div>
+        </motion.div>
+      )}
+
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -252,8 +253,11 @@ const YourAppointments = () => {
         className="flex flex-col md:flex-row md:items-center md:justify-between gap-4"
       >
         <div className="text-center md:text-left">
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-slate-100">Patient Appointments</h1>
-          <p className="text-sm md:text-base text-gray-500 dark:text-slate-400 mt-1">Manage your schedule and patient consultations</p>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-slate-100">My Patient Appointments</h1>
+          <p className="text-sm md:text-base text-gray-500 dark:text-slate-400 mt-1">
+            Manage your schedule and patient consultations
+            {currentUser && ` - Dr. ${currentUser.firstName} ${currentUser.lastName}`}
+          </p>
         </div>
         <button
           onClick={() => { setActiveTab("schedule"); setShowSchedulingModal(true); }}

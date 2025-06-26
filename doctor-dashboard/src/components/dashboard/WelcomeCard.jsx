@@ -1,8 +1,15 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { CalendarIcon, UsersIcon, BellAlertIcon } from "@heroicons/react/24/outline"; // Changed ClockIcon to UsersIcon and added BellAlertIcon
+import { getCurrentUser } from '../../services/authService';
 
 const WelcomeCard = () => {
+  const [currentUser, setCurrentUser] = useState(null);
+
+  useEffect(() => {
+    const user = getCurrentUser();
+    setCurrentUser(user);
+  }, []);
   const currentDate = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     year: "numeric",
@@ -34,7 +41,7 @@ const WelcomeCard = () => {
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2, duration: 0.6 }}
           >
-            Hello, Dr. Smith! 
+            Hello, Dr. {currentUser?.firstName || 'Doctor'}!
           </motion.h1>
           <motion.p 
             className="text-sky-100 dark:text-white mb-6 text-lg" // Adjusted text color

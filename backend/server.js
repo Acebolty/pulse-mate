@@ -14,9 +14,10 @@ const app = express();
 
 // Middleware setup
 // Enable CORS for all routes - allows your frontend to communicate with this backend
-app.use(cors()); 
+app.use(cors());
+
 // Parse incoming JSON requests - allows us to read req.body
-app.use(express.json()); 
+app.use(express.json());
 
 // Define a port for the server to listen on
 const PORT = process.env.PORT || 5001;

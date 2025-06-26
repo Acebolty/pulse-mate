@@ -1,11 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware');
-const { 
-    createAppointment, 
-    getAppointments, 
-    updateAppointment, 
-    deleteAppointment 
+const {
+    createAppointment,
+    getAppointments,
+    updateAppointment,
+    deleteAppointment,
+    getDoctorAppointments
 } = require('../controllers/appointmentController');
 
 // @route   POST api/appointments
@@ -17,6 +18,11 @@ router.post('/', authMiddleware, createAppointment);
 // @desc    Get appointments for the logged-in user
 // @access  Private
 router.get('/', authMiddleware, getAppointments);
+
+// @route   GET api/appointments/doctor
+// @desc    Get appointments where the logged-in user is the doctor/provider
+// @access  Private
+router.get('/doctor', authMiddleware, getDoctorAppointments);
 
 // @route   PUT api/appointments/:appointmentId
 // @desc    Update an appointment (e.g., status, notes, reschedule)

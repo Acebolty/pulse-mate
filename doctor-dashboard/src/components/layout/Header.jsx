@@ -1,17 +1,21 @@
 "use client"
 
-import { 
-  Bars3Icon, 
+import {
+  Bars3Icon,
   BellIcon,
   ChevronDownIcon,
   SunIcon,
   MoonIcon
 } from "@heroicons/react/24/outline"
 import { useState, useEffect } from "react"
+import { useNavigate } from "react-router-dom"
+import { logout, getCurrentUser } from "../../services/authService"
 
 const Header = ({ onMenuClick, isCollapsed }) => {
   const [isDarkMode, setIsDarkMode] = useState(false)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
+  const [currentUser, setCurrentUser] = useState(null)
+  const navigate = useNavigate()
 
   useEffect(() => {
     const savedMode = localStorage.getItem("darkMode")
@@ -22,6 +26,10 @@ const Header = ({ onMenuClick, isCollapsed }) => {
       document.documentElement.classList.remove("dark")
       setIsDarkMode(false)
     }
+
+    // Get current user data
+    const user = getCurrentUser()
+    setCurrentUser(user)
   }, [])
 
   const toggleDarkMode = () => {
@@ -34,6 +42,11 @@ const Header = ({ onMenuClick, isCollapsed }) => {
       document.documentElement.classList.remove("dark")
       localStorage.setItem("darkMode", "false")
     }
+  }
+
+  const handleLogout = () => {
+    logout(navigate)
+    setShowProfileMenu(false)
   }
 
   const notifications = [
@@ -58,7 +71,9 @@ const Header = ({ onMenuClick, isCollapsed }) => {
           {isCollapsed && (
             <div className="hidden lg:block">
               <h1 className="text-xl font-semibold text-gray-800 dark:text-slate-200">Dashboard</h1>
-              <p className="text-sm text-gray-500 dark:text-slate-400">Welcome back, John!</p>
+              <p className="text-sm text-gray-500 dark:text-slate-400">
+                Welcome back, Dr. {currentUser?.firstName || 'Doctor'}!
+              </p>
             </div>
           )}
 
@@ -103,7 +118,9 @@ const Header = ({ onMenuClick, isCollapsed }) => {
                 <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 rounded-full border-2 border-white dark:border-slate-800"></div>
               </div>
               <div className="hidden sm:block text-left">
-                <p className="font-semibold text-gray-800 dark:text-slate-200">John Doe</p>
+                <p className="font-semibold text-gray-800 dark:text-slate-200">
+                  Dr. {currentUser?.firstName} {currentUser?.lastName}
+                </p>
                 <p className="text-xs text-gray-500 dark:text-slate-400">Good Morning! 🌅</p>
               </div>
               <ChevronDownIcon className={`w-4 h-4 text-gray-400 dark:text-slate-500 transition-transform duration-200 ${showProfileMenu ? 'rotate-180' : ''}`} />
@@ -120,8 +137,10 @@ const Header = ({ onMenuClick, isCollapsed }) => {
                       alt="User avatar"
                     />
                     <div>
-                      <p className="font-semibold text-gray-800 dark:text-slate-200">John Doe</p>
-                      <p className="text-sm text-gray-500 dark:text-slate-400">john.doe@email.com</p>
+                      <p className="font-semibold text-gray-800 dark:text-slate-200">
+                        Dr. {currentUser?.firstName} {currentUser?.lastName}
+                      </p>
+                      <p className="text-sm text-gray-500 dark:text-slate-400">{currentUser?.email}</p>
                     </div>
                   </div>
                 </div>
@@ -136,7 +155,10 @@ const Header = ({ onMenuClick, isCollapsed }) => {
                 </div>
                 
                 <div className="border-t border-gray-100 dark:border-slate-700 pt-2">
-                  <button className="block w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-700/30 transition-colors">
+                  <button
+                    onClick={handleLogout}
+                    className="block w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-500 hover:bg-red-50 dark:hover:bg-red-700/30 transition-colors"
+                  >
                     Sign Out
                   </button>
                 </div>

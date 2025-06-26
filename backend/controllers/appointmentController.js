@@ -146,9 +146,63 @@ const deleteAppointment = async (req, res) => {
   }
 };
 
+// @desc    Get appointments for a doctor (where doctor is the provider)
+// @route   GET api/appointments/doctor
+// @access  Private
+const getDoctorAppointments = async (req, res) => {
+  try {
+    const { status, upcoming, past, limit = 10, page = 1, sortBy = 'dateTime', order = 'asc' } = req.query;
+
+    // Get the current doctor's info
+    const User = require('../models/User');
+    const doctor = await User.findById(req.user.id);
+    if (!doctor) {
+      return res.status(404).json({ message: 'Doctor not found' });
+    }
+
+    // Build the query to find appointments where this doctor is the provider
+    const doctorName = `Dr. ${doctor.firstName} ${doctor.lastName}`;
+    const query = {
+      providerName: { $regex: doctorName, $options: 'i' }
+    };
+
+    if (status) query.status = status;
+
+    const now = new Date();
+    if (upcoming === 'true') query.dateTime = { $gte: now };
+    else if (past === 'true') query.dateTime = { $lt: now };
+
+    const sortOrder = order === 'desc' ? -1 : 1;
+    const sortOptions = {};
+    if (sortBy === 'dateTime') sortOptions.dateTime = sortOrder;
+    else sortOptions.createdAt = sortOrder;
+
+    const options = {
+      sort: sortOptions,
+      limit: parseInt(limit),
+      skip: (parseInt(page) - 1) * parseInt(limit)
+    };
+
+    // Populate patient information
+    const appointments = await Appointment.find(query, null, options).populate('userId', 'firstName lastName email dateOfBirth gender profilePicture');
+    const totalAppointments = await Appointment.countDocuments(query);
+
+    res.json({
+      data: appointments,
+      totalPages: Math.ceil(totalAppointments / limit),
+      currentPage: parseInt(page),
+      totalAppointments
+    });
+  } catch (error) {
+    console.error('Error fetching doctor appointments:', error);
+    res.status(500).json({ message: 'Server error while fetching doctor appointments.' });
+  }
+};
+
 module.exports = {
   createAppointment,
   getAppointments,
   updateAppointment,
   deleteAppointment,
+  getDoctorAppointments,
 };
