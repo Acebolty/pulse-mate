@@ -19,7 +19,6 @@ const healthDataSchema = new Schema({
       'stepsTaken',
       'sleepDuration',
       'bodyTemperature',
-      'weight',
       'bodyFat',
       'muscleMass',
       // Add other types as needed

@@ -192,30 +192,7 @@ const HealthMetricsGrid = ({ latestMetrics = {} }) => {
 
 
 
-    if (latestMetrics.weight) {
-      // Add weight metric if not in base metrics
-      let weightMetric = baseMetrics.find(m => m.name === "Weight");
-      if (!weightMetric) {
-        weightMetric = {
-          id: 5,
-          name: "Weight",
-          value: Math.round(latestMetrics.weight.value * 10) / 10,
-          unit: "lbs",
-          status: "normal",
-          change: "-0.5",
-          icon: FireIcon, // Using FireIcon as placeholder
-          gradient: "from-purple-400 to-pink-500",
-          bgGradient: "from-purple-50 to-pink-50",
-          bgGradientDark: "dark:from-purple-900/50 dark:to-pink-900/50",
-
-          lastUpdated: formatTimestamp(latestMetrics.weight.timestamp),
-        };
-        baseMetrics.push(weightMetric);
-      } else {
-        weightMetric.value = Math.round(latestMetrics.weight.value * 10) / 10;
-        weightMetric.lastUpdated = formatTimestamp(latestMetrics.weight.timestamp);
-      }
-    }
+    // Weight metric removed - no longer displayed in health metrics grid
 
     return baseMetrics;
   };

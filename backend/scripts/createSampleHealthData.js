@@ -57,15 +57,7 @@ const createSampleHealthData = async () => {
         source: 'BP Monitor'
       });
 
-      // Weight (morning)
-      healthDataEntries.push({
-        userId: demoUser._id,
-        dataType: 'weight',
-        value: 173.5 + (Math.random() - 0.5) * 2, // 172.5-174.5 lbs
-        unit: 'lbs',
-        timestamp: new Date(morningTime.getTime() + 10 * 60000),
-        source: 'Smart Scale'
-      });
+
 
       // Body Temperature (morning)
       healthDataEntries.push({

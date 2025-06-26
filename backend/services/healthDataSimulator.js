@@ -7,7 +7,6 @@ class HealthDataSimulator {
       heartRate: { min: 65, max: 85, resting: 72 },
       bloodPressure: { systolic: { min: 110, max: 130, normal: 120 }, diastolic: { min: 70, max: 85, normal: 80 } },
       glucoseLevel: { min: 80, max: 100, normal: 90 },
-      weight: { baseline: 175, variance: 2 }, // lbs
       bodyTemperature: { min: 97.8, max: 99.2, normal: 98.6 },
       stepsTaken: { min: 6000, max: 12000, target: 10000 },
       sleepDuration: { min: 6.5, max: 9, optimal: 8 }
@@ -100,18 +99,7 @@ class HealthDataSimulator {
     return glucoseLevel;
   }
 
-  generateWeight(dayOffset = 0) {
-    const { baseline, variance } = this.baselineData.weight;
-    
-    // Gradual weight trend (slight decrease over time for health improvement)
-    const trendAdjustment = dayOffset * -0.02; // Lose ~0.14 lbs per week
-    
-    // Daily fluctuations
-    const dailyVariation = (Math.random() - 0.5) * variance;
-    
-    const weight = baseline + trendAdjustment + dailyVariation;
-    return Math.round(weight * 10) / 10; // Round to 1 decimal
-  }
+
 
   generateBodyTemperature(hour, healthStatus = 'healthy') {
     const { min, max, normal } = this.baselineData.bodyTemperature;
@@ -206,7 +194,6 @@ class HealthDataSimulator {
 
     // Generate daily metrics
     const dailySteps = this.generateSteps(dayScenario.activity);
-    const dailyWeight = this.generateWeight(dayOffset);
     const dailySleep = this.generateSleepDuration(dayScenario.activity, dayScenario.stress);
 
     // Morning readings (6-9 AM)
@@ -236,15 +223,7 @@ class HealthDataSimulator {
       source: 'BP Monitor'
     });
 
-    // Weight (morning)
-    dayData.push({
-      userId: this.userId,
-      dataType: 'weight',
-      value: dailyWeight,
-      unit: 'lbs',
-      timestamp: new Date(morningTime.getTime() + 10 * 60000), // 10 min later
-      source: 'Smart Scale'
-    });
+
 
     // Body Temperature (morning)
     const morningTemp = this.generateBodyTemperature(morningHour, dayScenario.health);
