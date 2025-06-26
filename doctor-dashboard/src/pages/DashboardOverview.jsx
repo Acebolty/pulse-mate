@@ -16,6 +16,26 @@ const DashboardOverview = () => {
       {/* Welcome Section */}
       <WelcomeCard />
 
+      {/* Quick Actions or Summary Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm p-5 rounded-xl shadow-md border border-gray-100 dark:border-slate-700/50">
+          <h4 className="text-sm font-medium text-gray-500 dark:text-slate-400 mb-1">Total Patients</h4>
+          <p className="text-2xl font-bold text-gray-800 dark:text-slate-100">128</p> {/* Placeholder */}
+        </div>
+        <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm p-5 rounded-xl shadow-md border border-gray-100 dark:border-slate-700/50">
+          <h4 className="text-sm font-medium text-gray-500 dark:text-slate-400 mb-1">Messages Today</h4>
+          <p className="text-2xl font-bold text-gray-800 dark:text-slate-100">12 <span className="text-sm text-green-500">(+3 new)</span></p> {/* Placeholder */}
+        </div>
+        <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm p-5 rounded-xl shadow-md border border-gray-100 dark:border-slate-700/50">
+          <h4 className="text-sm font-medium text-gray-500 dark:text-slate-400 mb-1">Pending Lab Reviews</h4>
+          <p className="text-2xl font-bold text-gray-800 dark:text-slate-100">7</p> {/* Placeholder */}
+        </div>
+         <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm p-5 rounded-xl shadow-md border border-gray-100 dark:border-slate-700/50">
+          <h4 className="text-sm font-medium text-gray-500 dark:text-slate-400 mb-1">System Status</h4>
+          <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">All Systems Go</p> {/* Placeholder */}
+        </div>
+      </div>
+      
       {/* Optional: High-level alerts summary for the doctor */}
       {criticalAlertsCount > 0 && (
         <div className="bg-red-50 dark:bg-red-700/20 border border-red-200 dark:border-red-600/40 rounded-xl p-4 shadow-md">
@@ -60,25 +80,7 @@ const DashboardOverview = () => {
       </div>
       */}
 
-       {/* Quick Actions or Summary Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm p-5 rounded-xl shadow-md border border-gray-100 dark:border-slate-700/50">
-          <h4 className="text-sm font-medium text-gray-500 dark:text-slate-400 mb-1">Total Patients</h4>
-          <p className="text-2xl font-bold text-gray-800 dark:text-slate-100">128</p> {/* Placeholder */}
-        </div>
-        <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm p-5 rounded-xl shadow-md border border-gray-100 dark:border-slate-700/50">
-          <h4 className="text-sm font-medium text-gray-500 dark:text-slate-400 mb-1">Messages Today</h4>
-          <p className="text-2xl font-bold text-gray-800 dark:text-slate-100">12 <span className="text-sm text-green-500">(+3 new)</span></p> {/* Placeholder */}
-        </div>
-        <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm p-5 rounded-xl shadow-md border border-gray-100 dark:border-slate-700/50">
-          <h4 className="text-sm font-medium text-gray-500 dark:text-slate-400 mb-1">Pending Lab Reviews</h4>
-          <p className="text-2xl font-bold text-gray-800 dark:text-slate-100">7</p> {/* Placeholder */}
-        </div>
-         <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm p-5 rounded-xl shadow-md border border-gray-100 dark:border-slate-700/50">
-          <h4 className="text-sm font-medium text-gray-500 dark:text-slate-400 mb-1">System Status</h4>
-          <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">All Systems Go</p> {/* Placeholder */}
-        </div>
-      </div>
+       
 
     </div>
   );
