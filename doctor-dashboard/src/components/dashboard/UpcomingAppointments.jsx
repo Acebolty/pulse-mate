@@ -115,11 +115,8 @@ const UpcomingAppointments = () => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.2, duration: 0.8 }} // Adjusted delay
     >
-      <div className="flex items-center justify-between mb-6">
+      <div className="mb-6">
         <h3 className="text-xl font-bold text-gray-900 dark:text-slate-100">Today's Schedule</h3>
-        <button className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 text-sm font-semibold hover:bg-blue-50 dark:hover:bg-blue-700/30 px-3 py-1 rounded-lg transition-colors">
-          View Calendar
-        </button>
       </div>
 
       <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
