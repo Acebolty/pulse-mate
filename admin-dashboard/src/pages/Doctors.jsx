@@ -170,32 +170,32 @@ const Doctors = () => {
             Monitor and manage all registered doctors
           </p>
         </div>
-        <button className="mt-4 sm:mt-0 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors">
+        <button className="mt-4 sm:mt-0 px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-2xl transition-all duration-200 shadow-lg hover:shadow-xl">
           Add New Doctor
         </button>
       </div>
 
       {/* Filters and Search */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-slate-700">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg border border-gray-100 dark:border-slate-700">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0 lg:space-x-4">
           {/* Search */}
           <div className="relative flex-1 max-w-md">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <MagnifyingGlassIcon className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
               placeholder="Search doctors..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full pl-12 pr-4 py-3 border border-gray-200 dark:border-slate-600 rounded-2xl bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
             />
           </div>
 
           {/* Filters */}
-          <div className="flex space-x-4">
+          <div className="flex space-x-3">
             <select
               value={filterSpecialty}
               onChange={(e) => setFilterSpecialty(e.target.value)}
-              className="px-3 py-2 border border-gray-200 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="px-4 py-3 border border-gray-200 dark:border-slate-600 rounded-2xl bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
             >
               {specialties.map(specialty => (
                 <option key={specialty} value={specialty}>
@@ -207,7 +207,7 @@ const Doctors = () => {
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-3 py-2 border border-gray-200 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="px-4 py-3 border border-gray-200 dark:border-slate-600 rounded-2xl bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
             >
               <option value="all">All Status</option>
               <option value="active">Active</option>
@@ -218,7 +218,7 @@ const Doctors = () => {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="px-3 py-2 border border-gray-200 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="px-4 py-3 border border-gray-200 dark:border-slate-600 rounded-2xl bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
             >
               <option value="name">Sort by Name</option>
               <option value="experience">Sort by Experience</option>
@@ -229,111 +229,175 @@ const Doctors = () => {
         </div>
       </div>
 
-      {/* Doctors Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-        {sortedDoctors.map((doctor, index) => (
-          <motion.div
-            key={doctor.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-            className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-slate-700 hover:shadow-md transition-shadow"
-          >
-            {/* Doctor Header */}
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center">
-                  <span className="text-white font-medium">
-                    {doctor.name.split(' ').map(n => n[1] || n[0]).join('')}
-                  </span>
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-white">
-                    {doctor.name}
-                  </h3>
-                  <p className="text-sm text-gray-500 dark:text-slate-400">
-                    {doctor.specialty}
-                  </p>
-                </div>
-              </div>
-              <div className="flex flex-col space-y-1">
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(doctor.status)}`}>
-                  {doctor.status}
-                </span>
-                <span className={`px-2 py-1 rounded-full text-xs font-medium flex items-center space-x-1 ${getAvailabilityColor(doctor.availability)}`}>
-                  {getAvailabilityIcon(doctor.availability)}
-                  <span>{doctor.availability}</span>
-                </span>
-              </div>
-            </div>
+      {/* Doctors Table */}
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-gray-100 dark:border-slate-700 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50 dark:bg-slate-700">
+              <tr>
+                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">
+                  Doctor
+                </th>
+                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">
+                  Specialty
+                </th>
+                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">
+                  Experience
+                </th>
+                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">
+                  Patients
+                </th>
+                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">
+                  Rating
+                </th>
+                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">
+                  Availability
+                </th>
+                <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200 dark:divide-slate-700">
+              {sortedDoctors.map((doctor, index) => (
+                <motion.tr
+                  key={doctor.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  className="hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors duration-200"
+                >
+                  {/* Doctor Info */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg">
+                        <span className="text-white font-semibold text-sm">
+                          {doctor.name.split(' ').map(n => n[1] || n[0]).join('')}
+                        </span>
+                      </div>
+                      <div>
+                        <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                          {doctor.name}
+                        </div>
+                        <div className="text-sm text-gray-500 dark:text-slate-400">
+                          ID: {doctor.id}
+                        </div>
+                        <div className="text-xs text-gray-400 dark:text-slate-500">
+                          {doctor.email}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
 
-            {/* Doctor Stats */}
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div className="text-center p-3 bg-gray-50 dark:bg-slate-700 rounded-lg">
-                <UserGroupIcon className="w-5 h-5 text-blue-500 mx-auto mb-1" />
-                <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {doctor.patients}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-slate-400">Patients</p>
-              </div>
-              <div className="text-center p-3 bg-gray-50 dark:bg-slate-700 rounded-lg">
-                <StarIcon className="w-5 h-5 text-yellow-500 mx-auto mb-1" />
-                <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {doctor.rating}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-slate-400">Rating</p>
-              </div>
-            </div>
+                  {/* Status */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex items-center px-3 py-1 rounded-2xl text-xs font-medium ${getStatusColor(doctor.status)}`}>
+                      <span className="capitalize">{doctor.status}</span>
+                    </span>
+                  </td>
 
-            {/* Doctor Info */}
-            <div className="space-y-2 mb-4">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500 dark:text-slate-400">Experience:</span>
-                <span className="text-gray-900 dark:text-white">{doctor.experience} years</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500 dark:text-slate-400">License:</span>
-                <span className="text-gray-900 dark:text-white">{doctor.license}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500 dark:text-slate-400">Appointments:</span>
-                <span className="text-gray-900 dark:text-white">{doctor.totalAppointments}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500 dark:text-slate-400">Joined:</span>
-                <span className="text-gray-900 dark:text-white">
-                  {new Date(doctor.joinDate).toLocaleDateString()}
-                </span>
-              </div>
-            </div>
+                  {/* Specialty */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900 dark:text-white">
+                      {doctor.specialty}
+                    </div>
+                    <div className="text-sm text-gray-500 dark:text-slate-400">
+                      {doctor.department}
+                    </div>
+                  </td>
 
-            {/* Actions */}
-            <div className="flex space-x-2">
-              <button className="flex-1 flex items-center justify-center px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded-lg transition-colors">
-                <EyeIcon className="w-4 h-4 mr-1" />
-                View
-              </button>
-              <button className="flex items-center justify-center px-3 py-2 bg-gray-500 hover:bg-gray-600 text-white text-sm rounded-lg transition-colors">
-                <PencilIcon className="w-4 h-4" />
-              </button>
-              <button className="flex items-center justify-center px-3 py-2 bg-red-500 hover:bg-red-600 text-white text-sm rounded-lg transition-colors">
-                <TrashIcon className="w-4 h-4" />
-              </button>
-            </div>
-          </motion.div>
-        ))}
+                  {/* Experience */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900 dark:text-white">
+                      {doctor.experience} years
+                    </div>
+                    <div className="text-sm text-gray-500 dark:text-slate-400">
+                      License: {doctor.license}
+                    </div>
+                  </td>
+
+                  {/* Patients */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center space-x-2">
+                      <UserGroupIcon className="w-4 h-4 text-blue-500" />
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">
+                        {doctor.patients}
+                      </span>
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-slate-400">
+                      {doctor.totalAppointments} total appointments
+                    </div>
+                  </td>
+
+                  {/* Rating */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center space-x-2">
+                      <StarIcon className="w-4 h-4 text-yellow-500" />
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">
+                        {doctor.rating}
+                      </span>
+                    </div>
+                    <div className="flex items-center mt-1">
+                      {[...Array(5)].map((_, i) => (
+                        <StarIcon
+                          key={i}
+                          className={`w-3 h-3 ${
+                            i < Math.floor(doctor.rating)
+                              ? 'text-yellow-400 fill-current'
+                              : 'text-gray-300 dark:text-slate-600'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  </td>
+
+                  {/* Availability */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex items-center px-3 py-1 rounded-2xl text-xs font-medium ${getAvailabilityColor(doctor.availability)}`}>
+                      {getAvailabilityIcon(doctor.availability)}
+                      <span className="ml-1 capitalize">{doctor.availability}</span>
+                    </span>
+                  </td>
+
+                  {/* Actions */}
+                  <td className="px-6 py-4 whitespace-nowrap text-right">
+                    <div className="flex items-center justify-end space-x-2">
+                      <button className="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xl transition-all duration-200 shadow-md hover:shadow-lg">
+                        <EyeIcon className="w-4 h-4" />
+                      </button>
+                      <button className="p-2 bg-gray-500 hover:bg-gray-600 text-white rounded-xl transition-all duration-200 shadow-md hover:shadow-lg">
+                        <PencilIcon className="w-4 h-4" />
+                      </button>
+                      <button className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-xl transition-all duration-200 shadow-md hover:shadow-lg">
+                        <TrashIcon className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </motion.tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Empty State */}
       {sortedDoctors.length === 0 && (
-        <div className="text-center py-12">
-          <ShieldCheckIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-gray-100 dark:border-slate-700 text-center py-16">
+          <div className="w-16 h-16 bg-gray-100 dark:bg-slate-700 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <ShieldCheckIcon className="w-8 h-8 text-gray-400" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
             No doctors found
           </h3>
-          <p className="text-gray-500 dark:text-slate-400">
+          <p className="text-gray-500 dark:text-slate-400 mb-6">
             Try adjusting your search or filter criteria
           </p>
+          <button className="px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-2xl transition-all duration-200 shadow-lg hover:shadow-xl">
+            Add First Doctor
+          </button>
         </div>
       )}
     </div>

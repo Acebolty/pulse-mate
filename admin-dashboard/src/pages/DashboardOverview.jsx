@@ -128,7 +128,7 @@ const DashboardOverview = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
-            className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-slate-700"
+            className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg border border-gray-100 dark:border-slate-700 hover:shadow-xl transition-all duration-200"
           >
             <div className="flex items-center justify-between">
               <div>
@@ -146,7 +146,7 @@ const DashboardOverview = () => {
                   {metric.change} from last month
                 </p>
               </div>
-              <div className={`w-12 h-12 rounded-xl bg-gradient-to-r ${getColorClasses(metric.color).split(' ')[0]} ${getColorClasses(metric.color).split(' ')[1]} flex items-center justify-center`}>
+              <div className={`w-12 h-12 rounded-2xl bg-gradient-to-r ${getColorClasses(metric.color).split(' ')[0]} ${getColorClasses(metric.color).split(' ')[1]} flex items-center justify-center shadow-lg`}>
                 <metric.icon className="w-6 h-6 text-white" />
               </div>
             </div>
@@ -161,7 +161,7 @@ const DashboardOverview = () => {
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.3 }}
-          className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-slate-700"
+          className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg border border-gray-100 dark:border-slate-700"
         >
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -172,7 +172,7 @@ const DashboardOverview = () => {
           <div className="space-y-4">
             {recentActivity.map((activity) => (
               <div key={activity.id} className="flex items-start space-x-3">
-                <div className="w-8 h-8 bg-gray-100 dark:bg-slate-700 rounded-full flex items-center justify-center flex-shrink-0">
+                <div className="w-8 h-8 bg-gray-100 dark:bg-slate-700 rounded-2xl flex items-center justify-center flex-shrink-0">
                   <activity.icon className="w-4 h-4 text-gray-600 dark:text-slate-400" />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -194,7 +194,7 @@ const DashboardOverview = () => {
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.4 }}
-          className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-slate-700"
+          className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg border border-gray-100 dark:border-slate-700"
         >
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -206,7 +206,7 @@ const DashboardOverview = () => {
           </div>
           <div className="space-y-4">
             {pendingApprovals.map((approval) => (
-              <div key={approval.id} className="border border-gray-200 dark:border-slate-700 rounded-lg p-4">
+              <div key={approval.id} className="border border-gray-200 dark:border-slate-700 rounded-2xl p-4 hover:bg-gray-50 dark:hover:bg-slate-700/30 transition-colors duration-200">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-900 dark:text-white">
@@ -232,10 +232,10 @@ const DashboardOverview = () => {
                     )}
                   </div>
                   <div className="flex space-x-2">
-                    <button className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white text-xs rounded-lg transition-colors">
+                    <button className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-xs rounded-2xl transition-all duration-200 shadow-md hover:shadow-lg">
                       Approve
                     </button>
-                    <button className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white text-xs rounded-lg transition-colors">
+                    <button className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-xs rounded-2xl transition-all duration-200 shadow-md hover:shadow-lg">
                       Reject
                     </button>
                   </div>

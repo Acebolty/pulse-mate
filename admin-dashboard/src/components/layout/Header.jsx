@@ -93,7 +93,7 @@ const Header = ({ onMenuClick, isCollapsed, user }) => {
         <div className="flex items-center space-x-6">
           <button
             onClick={onMenuClick}
-            className="lg:hidden p-2 rounded-xl text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 transition-all duration-200"
+            className="lg:hidden p-2 rounded-2xl text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 transition-all duration-200"
           >
             <Bars3Icon className="w-6 h-6" />
           </button>
@@ -120,7 +120,7 @@ const Header = ({ onMenuClick, isCollapsed, user }) => {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search patients, doctors..."
-                  className="w-64 px-4 py-2 text-sm bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="w-64 px-4 py-2 text-sm bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
                   autoFocus
                 />
                 <button
@@ -134,7 +134,7 @@ const Header = ({ onMenuClick, isCollapsed, user }) => {
             ) : (
               <button
                 onClick={() => setShowSearch(true)}
-                className="p-2 rounded-xl text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 transition-all duration-200"
+                className="p-2 rounded-2xl text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 transition-all duration-200"
               >
                 <MagnifyingGlassIcon className="w-5 h-5" />
               </button>
@@ -142,7 +142,7 @@ const Header = ({ onMenuClick, isCollapsed, user }) => {
           </div>
 
           {/* Notifications */}
-          <button className="relative p-2 rounded-xl text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 transition-all duration-200">
+          <button className="relative p-2 rounded-2xl text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 transition-all duration-200">
             <BellIcon className="w-5 h-5" />
             <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
               3
@@ -152,7 +152,7 @@ const Header = ({ onMenuClick, isCollapsed, user }) => {
           {/* Dark mode toggle */}
           <button
             onClick={toggleDarkMode}
-            className="p-2 rounded-xl text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 transition-all duration-200"
+            className="p-2 rounded-2xl text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 transition-all duration-200"
           >
             {isDarkMode ? (
               <SunIcon className="w-5 h-5" />
@@ -165,9 +165,9 @@ const Header = ({ onMenuClick, isCollapsed, user }) => {
           <div className="relative" ref={profileMenuRef}>
             <button
               onClick={() => setShowProfileMenu(!showProfileMenu)}
-              className="flex items-center space-x-3 p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-700 transition-all duration-200"
+              className="flex items-center space-x-3 p-2 rounded-2xl hover:bg-gray-100 dark:hover:bg-slate-700 transition-all duration-200"
             >
-              <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center">
+              <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg">
                 <span className="text-white font-medium text-sm">
                   {user?.firstName?.[0]}{user?.lastName?.[0]}
                 </span>
@@ -186,7 +186,7 @@ const Header = ({ onMenuClick, isCollapsed, user }) => {
 
             {/* Profile dropdown menu */}
             {showProfileMenu && (
-              <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 py-2 z-50">
+              <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-gray-200 dark:border-slate-700 py-2 z-50">
                 <div className="px-4 py-3 border-b border-gray-200 dark:border-slate-700">
                   <p className="text-sm font-medium text-gray-900 dark:text-white">
                     {getDisplayName()}

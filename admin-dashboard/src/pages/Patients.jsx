@@ -147,32 +147,32 @@ const Patients = () => {
             Monitor and manage all registered patients
           </p>
         </div>
-        <button className="mt-4 sm:mt-0 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors">
+        <button className="mt-4 sm:mt-0 px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-2xl transition-all duration-200 shadow-lg hover:shadow-xl">
           Add New Patient
         </button>
       </div>
 
       {/* Filters and Search */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-slate-700">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg border border-gray-100 dark:border-slate-700">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0 lg:space-x-4">
           {/* Search */}
           <div className="relative flex-1 max-w-md">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <MagnifyingGlassIcon className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
               placeholder="Search patients..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full pl-12 pr-4 py-3 border border-gray-200 dark:border-slate-600 rounded-2xl bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
             />
           </div>
 
           {/* Filters */}
-          <div className="flex space-x-4">
+          <div className="flex space-x-3">
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-3 py-2 border border-gray-200 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="px-4 py-3 border border-gray-200 dark:border-slate-600 rounded-2xl bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
             >
               <option value="all">All Status</option>
               <option value="healthy">Healthy</option>
@@ -184,7 +184,7 @@ const Patients = () => {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="px-3 py-2 border border-gray-200 dark:border-slate-600 rounded-lg bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="px-4 py-3 border border-gray-200 dark:border-slate-600 rounded-2xl bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
             >
               <option value="name">Sort by Name</option>
               <option value="age">Sort by Age</option>
@@ -195,115 +195,178 @@ const Patients = () => {
         </div>
       </div>
 
-      {/* Patients Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {sortedPatients.map((patient, index) => (
-          <motion.div
-            key={patient.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-            className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-slate-700 hover:shadow-md transition-shadow"
-          >
-            {/* Patient Header */}
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
-                  <span className="text-white font-medium">
-                    {patient.name.split(' ').map(n => n[0]).join('')}
-                  </span>
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-white">
-                    {patient.name}
-                  </h3>
-                  <p className="text-sm text-gray-500 dark:text-slate-400">
-                    ID: {patient.id}
-                  </p>
-                </div>
-              </div>
-              <span className={`px-2 py-1 rounded-full text-xs font-medium flex items-center space-x-1 ${getStatusColor(patient.status)}`}>
-                {getStatusIcon(patient.status)}
-                <span className="capitalize">{patient.status}</span>
-              </span>
-            </div>
+      {/* Patients Table */}
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-gray-100 dark:border-slate-700 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50 dark:bg-slate-700">
+              <tr>
+                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">
+                  Patient
+                </th>
+                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">
+                  Age/Gender
+                </th>
+                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">
+                  Doctor
+                </th>
+                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">
+                  Health Score
+                </th>
+                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">
+                  Last Visit
+                </th>
+                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">
+                  Conditions
+                </th>
+                <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200 dark:divide-slate-700">
+              {sortedPatients.map((patient, index) => (
+                <motion.tr
+                  key={patient.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  className="hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors duration-200"
+                >
+                  {/* Patient Info */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
+                        <span className="text-white font-semibold text-sm">
+                          {patient.name.split(' ').map(n => n[0]).join('')}
+                        </span>
+                      </div>
+                      <div>
+                        <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                          {patient.name}
+                        </div>
+                        <div className="text-sm text-gray-500 dark:text-slate-400">
+                          ID: {patient.id}
+                        </div>
+                        <div className="text-xs text-gray-400 dark:text-slate-500">
+                          {patient.email}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
 
-            {/* Patient Info */}
-            <div className="space-y-2 mb-4">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500 dark:text-slate-400">Age:</span>
-                <span className="text-gray-900 dark:text-white">{patient.age}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500 dark:text-slate-400">Gender:</span>
-                <span className="text-gray-900 dark:text-white">{patient.gender}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500 dark:text-slate-400">Doctor:</span>
-                <span className="text-gray-900 dark:text-white">{patient.doctor}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500 dark:text-slate-400">Health Score:</span>
-                <span className={`font-medium ${
-                  patient.healthScore >= 80 ? 'text-green-600 dark:text-green-400' :
-                  patient.healthScore >= 60 ? 'text-yellow-600 dark:text-yellow-400' :
-                  'text-red-600 dark:text-red-400'
-                }`}>
-                  {patient.healthScore}/100
-                </span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500 dark:text-slate-400">Last Visit:</span>
-                <span className="text-gray-900 dark:text-white">
-                  {new Date(patient.lastVisit).toLocaleDateString()}
-                </span>
-              </div>
-            </div>
-
-            {/* Conditions */}
-            {patient.conditions.length > 0 && (
-              <div className="mb-4">
-                <p className="text-xs text-gray-500 dark:text-slate-400 mb-2">Conditions:</p>
-                <div className="flex flex-wrap gap-1">
-                  {patient.conditions.map((condition, idx) => (
-                    <span
-                      key={idx}
-                      className="px-2 py-1 bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300 text-xs rounded-full"
-                    >
-                      {condition}
+                  {/* Status */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex items-center px-3 py-1 rounded-2xl text-xs font-medium ${getStatusColor(patient.status)}`}>
+                      {getStatusIcon(patient.status)}
+                      <span className="ml-1 capitalize">{patient.status}</span>
                     </span>
-                  ))}
-                </div>
-              </div>
-            )}
+                  </td>
 
-            {/* Actions */}
-            <div className="flex space-x-2">
-              <button className="flex-1 flex items-center justify-center px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded-lg transition-colors">
-                <EyeIcon className="w-4 h-4 mr-1" />
-                View
-              </button>
-              <button className="flex items-center justify-center px-3 py-2 bg-gray-500 hover:bg-gray-600 text-white text-sm rounded-lg transition-colors">
-                <PencilIcon className="w-4 h-4" />
-              </button>
-              <button className="flex items-center justify-center px-3 py-2 bg-red-500 hover:bg-red-600 text-white text-sm rounded-lg transition-colors">
-                <TrashIcon className="w-4 h-4" />
-              </button>
-            </div>
-          </motion.div>
-        ))}
+                  {/* Age/Gender */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900 dark:text-white font-medium">
+                      {patient.age} years
+                    </div>
+                    <div className="text-sm text-gray-500 dark:text-slate-400">
+                      {patient.gender}
+                    </div>
+                  </td>
+
+                  {/* Doctor */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900 dark:text-white font-medium">
+                      {patient.doctor}
+                    </div>
+                  </td>
+
+                  {/* Health Score */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center space-x-2">
+                      <div className={`text-sm font-bold ${
+                        patient.healthScore >= 80 ? 'text-green-600 dark:text-green-400' :
+                        patient.healthScore >= 60 ? 'text-yellow-600 dark:text-yellow-400' :
+                        'text-red-600 dark:text-red-400'
+                      }`}>
+                        {patient.healthScore}/100
+                      </div>
+                      <div className="w-16 bg-gray-200 dark:bg-slate-600 rounded-full h-2">
+                        <div
+                          className={`h-2 rounded-full ${
+                            patient.healthScore >= 80 ? 'bg-green-500' :
+                            patient.healthScore >= 60 ? 'bg-yellow-500' :
+                            'bg-red-500'
+                          }`}
+                          style={{ width: `${patient.healthScore}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  </td>
+
+                  {/* Last Visit */}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900 dark:text-white">
+                      {new Date(patient.lastVisit).toLocaleDateString()}
+                    </div>
+                  </td>
+
+                  {/* Conditions */}
+                  <td className="px-6 py-4">
+                    <div className="flex flex-wrap gap-1 max-w-32">
+                      {patient.conditions.length > 0 ? (
+                        patient.conditions.map((condition, idx) => (
+                          <span
+                            key={idx}
+                            className="inline-block px-2 py-1 bg-gray-100 dark:bg-slate-600 text-gray-700 dark:text-slate-300 text-xs rounded-xl"
+                          >
+                            {condition}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-xs text-gray-400 dark:text-slate-500">None</span>
+                      )}
+                    </div>
+                  </td>
+
+                  {/* Actions */}
+                  <td className="px-6 py-4 whitespace-nowrap text-right">
+                    <div className="flex items-center justify-end space-x-2">
+                      <button className="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xl transition-all duration-200 shadow-md hover:shadow-lg">
+                        <EyeIcon className="w-4 h-4" />
+                      </button>
+                      <button className="p-2 bg-gray-500 hover:bg-gray-600 text-white rounded-xl transition-all duration-200 shadow-md hover:shadow-lg">
+                        <PencilIcon className="w-4 h-4" />
+                      </button>
+                      <button className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-xl transition-all duration-200 shadow-md hover:shadow-lg">
+                        <TrashIcon className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </motion.tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Empty State */}
       {sortedPatients.length === 0 && (
-        <div className="text-center py-12">
-          <UserIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-gray-100 dark:border-slate-700 text-center py-16">
+          <div className="w-16 h-16 bg-gray-100 dark:bg-slate-700 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <UserIcon className="w-8 h-8 text-gray-400" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
             No patients found
           </h3>
-          <p className="text-gray-500 dark:text-slate-400">
+          <p className="text-gray-500 dark:text-slate-400 mb-6">
             Try adjusting your search or filter criteria
           </p>
+          <button className="px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-2xl transition-all duration-200 shadow-lg hover:shadow-xl">
+            Add First Patient
+          </button>
         </div>
       )}
     </div>

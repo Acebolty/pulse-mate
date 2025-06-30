@@ -43,7 +43,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse, user }) => {
         <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200 dark:border-slate-700">
           {!isCollapsed && (
             <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg">
                 <ShieldCheckIcon className="w-5 h-5 text-white" />
               </div>
               <div>
@@ -60,7 +60,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse, user }) => {
           {/* Mobile close button */}
           <button
             onClick={onClose}
-            className="lg:hidden p-2 rounded-xl text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 transition-all duration-200"
+            className="lg:hidden p-2 rounded-2xl text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 transition-all duration-200"
           >
             <XMarkIcon className="w-6 h-6" />
           </button>
@@ -68,7 +68,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse, user }) => {
           {/* Desktop collapse toggle */}
           <button
             onClick={onToggleCollapse}
-            className="hidden lg:flex p-2 rounded-xl text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 transition-all duration-200"
+            className="hidden lg:flex p-2 rounded-2xl text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 transition-all duration-200"
           >
             {isCollapsed ? (
               <ChevronRightIcon className="w-5 h-5" />
@@ -82,7 +82,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse, user }) => {
         {!isCollapsed && user && (
           <div className="p-4 border-b border-gray-200 dark:border-slate-700">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center">
+              <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg">
                 <span className="text-white font-medium text-sm">
                   {user.firstName?.[0]}{user.lastName?.[0]}
                 </span>
@@ -106,7 +106,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse, user }) => {
               key={item.name}
               to={item.href}
               className={({ isActive }) =>
-                `group flex items-center px-3 py-3 text-sm font-medium rounded-xl transition-all duration-200 relative ${
+                `group flex items-center px-3 py-3 text-sm font-medium rounded-2xl transition-all duration-200 relative ${
                   isActive
                     ? "bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 dark:text-green-400 shadow-sm border border-green-100 dark:border-green-800/50 dark:bg-gradient-to-r dark:from-green-700/20 dark:to-emerald-700/20"
                     : "text-gray-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-700 hover:text-gray-800 dark:hover:text-slate-200 hover:shadow-sm"
@@ -124,7 +124,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse, user }) => {
               
               {/* Tooltip for collapsed state */}
               {isCollapsed && (
-                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 dark:bg-slate-700 text-white text-xs rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
+                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-900 dark:bg-slate-700 text-white text-xs rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
                   {item.name}
                 </div>
               )}
