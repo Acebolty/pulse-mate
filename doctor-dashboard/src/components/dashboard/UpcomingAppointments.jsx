@@ -13,34 +13,48 @@ const UpcomingAppointments = () => {
     const fetchTodaysAppointments = async () => {
       try {
         setLoading(true);
-        console.log('📅 Fetching today\'s appointments...');
+        setError(null);
 
         // Get all doctor appointments
         const appointmentsRes = await api.get('/appointments/doctor');
-        const allAppointments = Array.isArray(appointmentsRes.data) ? appointmentsRes.data : [];
 
-        console.log('📋 All appointments found:', allAppointments.length);
+        // Handle different response structures
+        const allAppointments = appointmentsRes.data?.data || appointmentsRes.data || [];
+
+        if (!Array.isArray(allAppointments)) {
+          throw new Error('Invalid appointments data structure');
+        }
 
         // Filter for today's appointments
         const today = new Date().toDateString();
         const todaysAppointments = allAppointments.filter(apt => {
           const aptDate = new Date(apt.dateTime);
-          return aptDate.toDateString() === today;
+          return aptDate.toDateString() === today && apt.status === 'Confirmed';
         });
-
-        console.log('📅 Today\'s appointments:', todaysAppointments.length);
 
         // Format appointments for display
         const formattedAppointments = todaysAppointments.map(apt => {
           const aptDate = new Date(apt.dateTime);
-          const patientName = apt.originalData?.userId?.firstName && apt.originalData?.userId?.lastName
-            ? `${apt.originalData.userId.firstName} ${apt.originalData.userId.lastName}`
-            : apt.patient?.name || 'Unknown Patient';
+
+          // Handle different data structures - check both populated and direct fields
+          let patientName = 'Unknown Patient';
+          if (apt.userId?.firstName && apt.userId?.lastName) {
+            // Populated userId object
+            patientName = `${apt.userId.firstName} ${apt.userId.lastName}`;
+          } else if (apt.originalData?.userId?.firstName && apt.originalData?.userId?.lastName) {
+            // Nested originalData structure
+            patientName = `${apt.originalData.userId.firstName} ${apt.originalData.userId.lastName}`;
+          } else if (apt.patient?.name) {
+            // Direct patient name
+            patientName = apt.patient.name;
+          }
+
+
 
           return {
             id: apt._id,
             patientName: patientName,
-            reason: apt.reasonForVisit || 'General Consultation',
+            reason: apt.reason || apt.reasonForVisit || 'General Consultation',
             date: aptDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
             time: aptDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
             type: apt.appointmentType === 'virtual' || apt.appointmentType === 'chat' ? 'virtual' : 'in-person',
@@ -60,8 +74,12 @@ const UpcomingAppointments = () => {
         console.log('✅ Formatted today\'s appointments:', formattedAppointments);
 
       } catch (err) {
-        console.error('❌ Error fetching appointments:', err);
-        setError('Failed to load today\'s appointments');
+        if (err.response?.status === 401) {
+          setError('Please log in to view appointments');
+        } else {
+          setError('Failed to load today\'s appointments');
+        }
+        setAppointments([]);
       } finally {
         setLoading(false);
       }

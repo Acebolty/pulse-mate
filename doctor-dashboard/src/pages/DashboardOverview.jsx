@@ -29,23 +29,17 @@ const DashboardOverview = () => {
 
         // Check authentication first
         const token = localStorage.getItem('doctorAuthToken');
-        const user = localStorage.getItem('doctorAuthUser');
-        console.log('🔐 Auth check:', {
-          hasToken: !!token,
-          tokenLength: token?.length,
-          hasUser: !!user,
-          user: user ? JSON.parse(user) : null
-        });
+        if (!token) {
+          setError('Please log in to access the dashboard');
+          setLoading(false);
+          return;
+        }
 
         // Fetch multiple data sources in parallel
         const [appointmentsRes, alertsRes] = await Promise.allSettled([
           api.get('/appointments/doctor'),
           api.get('/alerts?limit=100') // Get recent alerts to count critical ones
         ]);
-
-        console.log('🔍 Dashboard API Responses:');
-        console.log('📅 Appointments response:', appointmentsRes);
-        console.log('🚨 Alerts response:', alertsRes);
 
         // Process appointments data with validation
         const appointmentsData = appointmentsRes.status === 'fulfilled' ? appointmentsRes.value.data : {};
@@ -55,10 +49,6 @@ const DashboardOverview = () => {
         const appointments = Array.isArray(appointmentsData.data) ? appointmentsData.data :
                            Array.isArray(appointmentsData) ? appointmentsData : [];
         const alerts = Array.isArray(alertsData.data) ? alertsData.data : Array.isArray(alertsData) ? alertsData : [];
-
-        console.log('📋 Processed appointments:', appointments);
-        console.log('📋 Appointments length:', appointments.length);
-        console.log('🚨 Processed alerts:', alerts);
 
         console.log('Appointments data:', appointments);
         console.log('Alerts data:', alerts);
@@ -87,16 +77,11 @@ const DashboardOverview = () => {
         const todayAppointments = appointments.filter(apt => {
           try {
             const aptDate = apt.dateTime || apt.date;
-            const isToday = aptDate && new Date(aptDate).toDateString() === today;
-            console.log(`📅 Appointment check: ${aptDate} -> ${new Date(aptDate).toDateString()} === ${today} ? ${isToday}`);
-            return isToday;
+            return aptDate && new Date(aptDate).toDateString() === today && apt.status === 'Confirmed';
           } catch (e) {
-            console.warn('Invalid date in appointment:', apt);
             return false;
           }
         });
-
-        console.log(`📊 Today's appointments found: ${todayAppointments.length}`, todayAppointments);
 
         // Completed today with safe date handling
         const completedToday = appointments.filter(apt => {
@@ -120,8 +105,6 @@ const DashboardOverview = () => {
           alert && (alert.type === 'critical' || alert.priority === 'high') && !alert.isRead
         ).length;
 
-        console.log('📋 Pending Reviews (Critical/High Priority Alerts):', pendingReviews);
-
         const dashboardStats = {
           totalPatients: uniquePatients || 0,
           messagesToday: 0, // Will be updated when messaging system is implemented
@@ -133,7 +116,6 @@ const DashboardOverview = () => {
           completedToday: completedToday || 0
         };
 
-        console.log('📊 Final Dashboard Stats:', dashboardStats);
         setDashboardData(dashboardStats);
 
       } catch (err) {

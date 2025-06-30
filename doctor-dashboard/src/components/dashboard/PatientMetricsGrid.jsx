@@ -234,60 +234,75 @@ const PatientMetricsGrid = () => {
     const fetchPatientsData = async () => {
       try {
         setLoading(true);
-
-        console.log('🏥 Fetching patients through appointments...');
+        setError(null);
 
         // Get patients through appointments (proper medical workflow)
         const appointmentsRes = await api.get('/appointments/doctor');
-        const appointments = Array.isArray(appointmentsRes.data) ? appointmentsRes.data : [];
 
-        console.log('� Appointments found:', appointments.length);
-        console.log('� Sample appointments:', appointments.slice(0, 2));
+        // Handle different response structures
+        const appointments = appointmentsRes.data?.data || appointmentsRes.data || [];
+
+        if (!Array.isArray(appointments)) {
+          throw new Error('Invalid appointments data structure');
+        }
 
         if (appointments.length === 0) {
-          console.log('❌ No appointments found - no patients to display');
           setPatientsData([]);
           return;
         }
 
         // Extract unique patients from appointments
-        appointments.forEach(appointment => {
-          const userId = appointment.userId || appointment.originalData?.userId?._id;
-          const patientData = appointment.originalData?.userId || appointment.patient;
+        const uniquePatients = new Map();
 
-          if (userId && patientData) {
-            const patientName = patientData.firstName && patientData.lastName
+        appointments.forEach(appointment => {
+          // Handle different data structures
+          let userId, patientData, patientName;
+
+          if (appointment.userId && typeof appointment.userId === 'object') {
+            // Populated userId object
+            userId = appointment.userId._id;
+            patientData = appointment.userId;
+            patientName = `${patientData.firstName || ''} ${patientData.lastName || ''}`.trim() || 'Unknown Patient';
+          } else if (appointment.userId) {
+            // Direct userId string
+            userId = appointment.userId;
+            patientData = { _id: userId };
+            patientName = 'Unknown Patient';
+          } else if (appointment.originalData?.userId) {
+            // Nested originalData structure
+            userId = appointment.originalData.userId._id || appointment.originalData.userId;
+            patientData = appointment.originalData.userId;
+            patientName = patientData.firstName && patientData.lastName
               ? `${patientData.firstName} ${patientData.lastName}`
               : 'Unknown Patient';
+          }
 
-            if (!uniquePatients.has(userId)) {
-              uniquePatients.set(userId, {
-                userId,
-                name: patientName,
-                patientData: patientData
-              });
-              console.log(`✅ Found patient from appointment: ${patientName}`);
-            }
+          if (userId && !uniquePatients.has(userId)) {
+            uniquePatients.set(userId, {
+              userId,
+              name: patientName,
+              patientData: patientData,
+              appointmentStatus: appointment.status
+            });
           }
         });
 
-        console.log(`👥 Total unique patients found: ${uniquePatients.size}`);
-
         if (uniquePatients.size === 0) {
-          console.log('❌ No patients found in appointments');
           setPatientsData([]);
           return;
         }
 
         // Fetch health data for each patient using the helper method
-        console.log('🩺 Fetching health data for patients...');
         const patientsWithHealth = await fetchHealthDataForPatients(Array.from(uniquePatients.values()));
-        console.log('✅ Patients with health data processed:', patientsWithHealth.length);
         setPatientsData(patientsWithHealth);
 
       } catch (err) {
-        console.error('Error fetching patients data:', err);
-        setError('Failed to load patient data');
+        if (err.response?.status === 401) {
+          setError('Please log in to view patient data');
+        } else {
+          setError('Failed to load patient data');
+        }
+        setPatientsData([]);
       } finally {
         setLoading(false);
       }

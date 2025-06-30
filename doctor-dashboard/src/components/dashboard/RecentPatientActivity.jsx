@@ -118,14 +118,19 @@ const RecentPatientActivity = () => {
     const fetchPatientActivity = async () => {
       try {
         setLoading(true);
-        console.log('📊 Fetching patient activity...');
+        setError(null);
 
         // Get doctor's appointments to find patients
         const appointmentsRes = await api.get('/appointments/doctor');
-        const appointments = Array.isArray(appointmentsRes.data) ? appointmentsRes.data : [];
+
+        // Handle different response structures
+        const appointments = appointmentsRes.data?.data || appointmentsRes.data || [];
+
+        if (!Array.isArray(appointments)) {
+          throw new Error('Invalid appointments data structure');
+        }
 
         if (appointments.length === 0) {
-          console.log('❌ No appointments found - no patient activity to show');
           setActivities([]);
           return;
         }
@@ -133,18 +138,30 @@ const RecentPatientActivity = () => {
         // Get unique patient IDs and their names
         const patientMap = new Map();
         appointments.forEach(apt => {
-          const userId = apt.userId || apt.originalData?.userId?._id;
-          const patientData = apt.originalData?.userId || apt.patient;
+          // Handle different data structures
+          let userId, patientName;
 
-          if (userId && patientData) {
-            const patientName = patientData.firstName && patientData.lastName
+          if (apt.userId && typeof apt.userId === 'object') {
+            // Populated userId object
+            userId = apt.userId._id;
+            patientName = `${apt.userId.firstName || ''} ${apt.userId.lastName || ''}`.trim() || 'Unknown Patient';
+          } else if (apt.userId) {
+            // Direct userId string
+            userId = apt.userId;
+            patientName = 'Unknown Patient';
+          } else if (apt.originalData?.userId) {
+            // Nested originalData structure
+            userId = apt.originalData.userId._id || apt.originalData.userId;
+            const patientData = apt.originalData.userId;
+            patientName = patientData.firstName && patientData.lastName
               ? `${patientData.firstName} ${patientData.lastName}`
               : 'Unknown Patient';
+          }
+
+          if (userId && !patientMap.has(userId)) {
             patientMap.set(userId, patientName);
           }
         });
-
-        console.log('👥 Found patients:', Array.from(patientMap.values()));
 
         // Fetch recent health data for all patients
         const allActivities = [];
@@ -157,7 +174,6 @@ const RecentPatientActivity = () => {
             });
 
             const healthData = Array.isArray(healthDataRes.data?.data) ? healthDataRes.data.data : [];
-            console.log(`📈 Health data for ${patientName}:`, healthData.length, 'entries');
 
             // Convert health data to activities
             healthData.forEach(data => {
@@ -166,7 +182,7 @@ const RecentPatientActivity = () => {
             });
 
           } catch (healthError) {
-            console.log(`⚠️ Could not fetch health data for ${patientName}:`, healthError.message);
+            // Skip patients with no health data
           }
         }
 
@@ -179,13 +195,15 @@ const RecentPatientActivity = () => {
 
         // Take only the most recent 10 activities
         const recentActivities = allActivities.slice(0, 10);
-
-        console.log('✅ Recent patient activities:', recentActivities.length);
         setActivities(recentActivities);
 
       } catch (err) {
-        console.error('❌ Error fetching patient activity:', err);
-        setError('Failed to load patient activity');
+        if (err.response?.status === 401) {
+          setError('Please log in to view patient activity');
+        } else {
+          setError('Failed to load patient activity');
+        }
+        setActivities([]);
       } finally {
         setLoading(false);
       }
