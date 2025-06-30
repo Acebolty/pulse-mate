@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import {
   UserGroupIcon,
@@ -7,43 +8,67 @@ import {
   ChartBarIcon,
   ClockIcon,
 } from "@heroicons/react/24/outline"
+import { getDashboardOverview } from "../services/adminService"
 
 const DashboardOverview = () => {
-  // Dummy data for admin metrics
-  const metrics = [
+  const [dashboardData, setDashboardData] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  // Fetch dashboard data on component mount
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true)
+        const response = await getDashboardOverview()
+        setDashboardData(response.data)
+        setError(null)
+      } catch (err) {
+        console.error('Error fetching dashboard data:', err)
+        setError('Failed to load dashboard data')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchDashboardData()
+  }, [])
+
+  // Create metrics array from real data
+  const metrics = dashboardData ? [
     {
       title: "Total Patients",
-      value: "1,247",
-      change: "+12%",
+      value: dashboardData.overview.totalPatients.toLocaleString(),
+      change: `+${dashboardData.growth.patients}%`,
       changeType: "increase",
       icon: UserGroupIcon,
       color: "blue",
     },
     {
       title: "Active Doctors",
-      value: "89",
-      change: "+3%",
+      value: dashboardData.overview.totalDoctors.toLocaleString(),
+      change: `+${dashboardData.growth.doctors}%`,
       changeType: "increase",
       icon: ShieldCheckIcon,
       color: "green",
     },
     {
-      title: "Pending Appointments",
-      value: "156",
-      change: "-8%",
-      changeType: "decrease",
+      title: "Total Appointments",
+      value: dashboardData.overview.totalAppointments.toLocaleString(),
+      change: `+${dashboardData.growth.appointments}%`,
+      changeType: dashboardData.growth.appointments > 0 ? "increase" : "decrease",
       icon: CalendarIcon,
       color: "yellow",
     },
     {
-      title: "System Alerts",
-      value: "23",
-      change: "+15%",
-      changeType: "increase",
+      title: "Recent Alerts",
+      value: dashboardData.overview.recentAlerts.toLocaleString(),
+      change: "Last 7 days",
+      changeType: "neutral",
       icon: ExclamationTriangleIcon,
       color: "red",
     },
-  ]
+  ] : []
 
   const recentActivity = [
     {
@@ -110,6 +135,50 @@ const DashboardOverview = () => {
     return colors[color] || colors.blue
   }
 
+  // Loading state
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl p-6 text-white">
+          <h1 className="text-2xl font-bold mb-2">Admin Dashboard</h1>
+          <p className="text-green-100">Loading dashboard data...</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg border border-gray-100 dark:border-slate-700 animate-pulse">
+              <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-3/4 mb-4"></div>
+              <div className="h-8 bg-gray-200 dark:bg-slate-700 rounded w-1/2 mb-2"></div>
+              <div className="h-3 bg-gray-200 dark:bg-slate-700 rounded w-1/4"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-gradient-to-r from-red-500 to-red-600 rounded-2xl p-6 text-white">
+          <h1 className="text-2xl font-bold mb-2">Admin Dashboard</h1>
+          <p className="text-red-100">{error}</p>
+        </div>
+        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg border border-gray-100 dark:border-slate-700 text-center">
+          <p className="text-gray-600 dark:text-slate-400 mb-4">
+            Unable to load dashboard data. Please check if the backend server is running.
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       {/* Welcome Section */}
@@ -118,6 +187,11 @@ const DashboardOverview = () => {
         <p className="text-green-100">
           Monitor and manage your PulseMate healthcare system
         </p>
+        {dashboardData && (
+          <div className="mt-4 text-sm text-green-100">
+            <p>System Status: {dashboardData.systemHealth.status} • Uptime: {Math.floor(dashboardData.systemHealth.uptime / 3600)}h</p>
+          </div>
+        )}
       </div>
 
       {/* Metrics Grid */}

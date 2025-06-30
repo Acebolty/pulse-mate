@@ -77,6 +77,31 @@ const userSchema = new Schema({
     default: 'English' // Default language
   },
 
+  // User role for access control and admin functionality
+  role: {
+    type: String,
+    enum: ['patient', 'doctor', 'admin'],
+    default: 'patient',
+    trim: true
+  },
+
+  // Doctor-specific information (only used when role is 'doctor')
+  doctorInfo: {
+    licenseNumber: { type: String, trim: true },
+    specialty: { type: String, trim: true },
+    experience: { type: Number }, // Years of experience
+    department: { type: String, trim: true },
+    approvalStatus: {
+      type: String,
+      enum: ['pending', 'approved', 'rejected'],
+      default: 'pending'
+    },
+    approvedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    approvedAt: { type: Date },
+    rejectedAt: { type: Date },
+    rejectionReason: { type: String, trim: true }
+  },
+
   medicalInfo: {
     bloodType: { type: String, trim: true },
     height: { type: String, trim: true }, // e.g., "5'10\"" or "178cm"

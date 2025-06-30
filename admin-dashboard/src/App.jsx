@@ -4,7 +4,6 @@ import DashboardOverview from "./pages/DashboardOverview"
 import Patients from "./pages/Patients"
 import Doctors from "./pages/Doctors"
 import Profile from "./pages/Profile"
-import Settings from "./pages/Settings"
 import LoginPage from "./pages/LoginPage"
 import SignupPage from "./pages/SignupPage"
 import ProtectedRoute from "./components/auth/ProtectedRoute"
@@ -34,7 +33,6 @@ function App() {
                 <Route path="patients" element={<Patients />} />
                 <Route path="doctors" element={<Doctors />} />
                 <Route path="profile" element={<Profile />} />
-                <Route path="settings" element={<Settings />} />
               </Routes>
             </DashboardLayout>
           </ProtectedRoute>
