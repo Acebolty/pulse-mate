@@ -219,11 +219,8 @@ const RecentPatientActivity = () => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.4, duration: 0.8 }} // Adjusted delay
     >
-      <div className="flex items-center justify-between mb-6">
+      <div className="mb-6">
         <h3 className="text-xl font-bold text-gray-900 dark:text-slate-100">Patient Activity Feed</h3>
-        <button className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 text-sm font-semibold hover:bg-blue-50 dark:hover:bg-blue-700/30 px-3 py-1 rounded-lg transition-colors">
-          Filter Activity
-        </button>
       </div>
 
       <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
@@ -280,11 +277,8 @@ const RecentPatientActivity = () => {
                     {activity.patientName} - <span className="font-medium text-gray-600 dark:text-slate-300">{activity.summary}</span>
                   </p>
                   <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5 truncate">{activity.details}</p>
-                  <div className="flex items-center justify-between mt-2">
+                  <div className="mt-2">
                     <span className="text-xs text-gray-400 dark:text-slate-500 font-medium">{activity.time}</span>
-                    <button className={`text-xs font-semibold ${activity.iconColor} hover:underline`}>
-                      {activity.type === 'message' ? 'View Message' : 'View Details'}
-                    </button>
                   </div>
                 </div>
               </div>
