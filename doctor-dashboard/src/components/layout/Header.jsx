@@ -10,10 +10,12 @@ import {
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { logout, getCurrentUser } from "../../services/authService"
+import api from "../../services/api"
 
 const Header = ({ onMenuClick, isCollapsed }) => {
   const [isDarkMode, setIsDarkMode] = useState(false)
   const [showProfileMenu, setShowProfileMenu] = useState(false)
+  const [showNotifications, setShowNotifications] = useState(false)
   const [currentUser, setCurrentUser] = useState(null)
   const navigate = useNavigate()
 
@@ -49,11 +51,136 @@ const Header = ({ onMenuClick, isCollapsed }) => {
     setShowProfileMenu(false)
   }
 
-  const notifications = [
-    { id: 1, text: "Lab results are ready", time: "5 min ago", type: "info" },
-    { id: 2, text: "Appointment reminder", time: "1 hour ago", type: "warning" },
-    { id: 3, text: "Medication refill due", time: "2 hours ago", type: "urgent" },
-  ]
+  const [notifications, setNotifications] = useState([])
+  const [notificationCount, setNotificationCount] = useState(0)
+  const [loading, setLoading] = useState(false)
+
+  // Fetch real notifications (appointments + health alerts)
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        setLoading(true)
+        console.log('📱 Fetching real notifications...')
+
+        // Fetch both alerts and appointments
+        const [alertsRes, appointmentsRes] = await Promise.allSettled([
+          api.get('/alerts?limit=10'),
+          api.get('/appointments/doctor')
+        ])
+
+        // Process health alerts
+        const alertsData = alertsRes.status === 'fulfilled' ? alertsRes.value.data : {}
+        const alerts = Array.isArray(alertsData.data) ? alertsData.data :
+                      Array.isArray(alertsData) ? alertsData : []
+
+        // Process appointments for notifications
+        const appointmentsData = appointmentsRes.status === 'fulfilled' ? appointmentsRes.value.data : {}
+        const appointments = Array.isArray(appointmentsData.data) ? appointmentsData.data :
+                           Array.isArray(appointmentsData) ? appointmentsData : []
+
+        console.log('📱 Found:', alerts.length, 'health alerts,', appointments.length, 'appointments')
+
+        // Create appointment notifications (today and tomorrow)
+        const today = new Date()
+        const tomorrow = new Date(today)
+        tomorrow.setDate(tomorrow.getDate() + 1)
+
+        const appointmentNotifications = appointments
+          .filter(apt => {
+            const aptDate = new Date(apt.dateTime)
+            return aptDate >= today && aptDate <= tomorrow && apt.status === 'Confirmed'
+          })
+          .map(apt => {
+            const aptDate = new Date(apt.dateTime)
+            const patientName = apt.userId?.firstName && apt.userId?.lastName
+              ? `${apt.userId.firstName} ${apt.userId.lastName}`
+              : 'Unknown Patient'
+
+            const isToday = aptDate.toDateString() === today.toDateString()
+            const timeStr = aptDate.toLocaleTimeString('en-US', {
+              hour: 'numeric',
+              minute: '2-digit',
+              hour12: true
+            })
+
+            return {
+              id: `apt-${apt._id}`,
+              title: isToday ? `Today's Appointment` : `Tomorrow's Appointment`,
+              message: `${patientName} - ${apt.reason || 'Consultation'} at ${timeStr}`,
+              timestamp: apt.dateTime,
+              isRead: false,
+              type: 'appointment',
+              priority: 'medium'
+            }
+          })
+
+        // Format health alerts
+        const healthNotifications = alerts.map(alert => ({
+          id: alert._id,
+          title: alert.title || 'Health Alert',
+          message: alert.message || alert.description || 'New health data',
+          timestamp: alert.createdAt || alert.timestamp,
+          isRead: alert.isRead || false,
+          type: alert.type || 'health',
+          priority: alert.priority || 'medium'
+        }))
+
+        // Combine all notifications
+        const allNotifications = [...appointmentNotifications, ...healthNotifications]
+
+        // Sort by timestamp (most recent first)
+        allNotifications.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+
+        // Count unread notifications
+        const unreadCount = allNotifications.filter(notif => !notif.isRead).length
+
+        console.log('📱 Total notifications:', allNotifications.length)
+        console.log('📱 Unread count:', unreadCount)
+        console.log('📱 Appointment notifications:', appointmentNotifications.length)
+        console.log('📱 Health notifications:', healthNotifications.length)
+
+        setNotifications(allNotifications)
+        setNotificationCount(unreadCount)
+
+      } catch (err) {
+        console.error('❌ Error fetching notifications:', err)
+        setNotificationCount(0)
+        setNotifications([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchNotifications()
+
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchNotifications, 30000)
+    return () => clearInterval(interval)
+  }, [])
+
+  // Mark all notifications as read
+  const markAllAsRead = async () => {
+    try {
+      await api.put('/alerts/read-all')
+      setNotifications(notifications.map(n => ({ ...n, isRead: true })))
+      setNotificationCount(0)
+      console.log('✅ Marked all notifications as read')
+    } catch (err) {
+      console.error('❌ Error marking all as read:', err)
+    }
+  }
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showNotifications && !event.target.closest('.notification-dropdown')) {
+        setShowNotifications(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showNotifications])
 
   return (
     <header className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md shadow-sm border-b border-gray-100 dark:border-slate-700 sticky top-0 z-30">
@@ -94,13 +221,109 @@ const Header = ({ onMenuClick, isCollapsed }) => {
           </button>
 
           {/* Notifications */}
-          <div className="relative">
-            <button className="relative p-2.5 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition-all duration-200 group">
+          <div className="relative notification-dropdown">
+            <button
+              onClick={() => setShowNotifications(!showNotifications)}
+              className="relative p-2.5 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition-all duration-200 group"
+            >
               <BellIcon className="w-5 h-5" />
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-medium animate-pulse">
-                3
-              </span>
+              {notificationCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-medium animate-pulse">
+                  {notificationCount}
+                </span>
+              )}
             </button>
+
+            {/* Notifications dropdown */}
+            {showNotifications && (
+              <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-gray-100 dark:border-slate-700 py-2 z-50 max-h-96 overflow-y-auto">
+                <div className="px-4 py-3 border-b border-gray-100 dark:border-slate-700">
+                  <h3 className="font-semibold text-gray-800 dark:text-slate-200">Notifications</h3>
+                  <p className="text-sm text-gray-500 dark:text-slate-400">
+                    {notificationCount} unread notifications
+                  </p>
+                </div>
+
+                <div className="max-h-64 overflow-y-auto">
+                  {loading ? (
+                    <div className="px-4 py-6 text-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
+                      <p className="text-gray-500 dark:text-slate-400 text-sm">Loading notifications...</p>
+                    </div>
+                  ) : notifications.length === 0 ? (
+                    <div className="px-4 py-6 text-center">
+                      <BellIcon className="w-12 h-12 text-gray-300 dark:text-slate-600 mx-auto mb-2" />
+                      <p className="text-gray-500 dark:text-slate-400 text-sm">No notifications</p>
+                    </div>
+                  ) : (
+                    notifications.slice(0, 5).map((notification) => {
+                      const timeAgo = notification.timestamp ?
+                        new Date(notification.timestamp).toLocaleTimeString('en-US', {
+                          hour: 'numeric',
+                          minute: '2-digit',
+                          hour12: true
+                        }) : 'Just now'
+
+                      return (
+                        <div key={notification.id} className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-slate-700 border-b border-gray-50 dark:border-slate-700 last:border-b-0 cursor-pointer transition-colors">
+                          <div className="flex items-start space-x-3">
+                            <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
+                              !notification.isRead ? 'bg-red-500 animate-pulse' : 'bg-gray-300 dark:bg-slate-600'
+                            }`}></div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between">
+                                <p className={`text-sm font-medium truncate ${
+                                  !notification.isRead ? 'text-gray-900 dark:text-slate-100' : 'text-gray-700 dark:text-slate-300'
+                                }`}>
+                                  {notification.title}
+                                </p>
+                                {notification.type === 'critical' && (
+                                  <span className="ml-2 px-1.5 py-0.5 text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 rounded-full flex-shrink-0">
+                                    Critical
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs text-gray-500 dark:text-slate-400 truncate mt-0.5">
+                                {notification.message}
+                              </p>
+                              <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">
+                                {timeAgo}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })
+                  )}
+                </div>
+
+                <div className="border-t border-gray-100 dark:border-slate-700 pt-2">
+                  <div className="flex space-x-2 px-4 py-2">
+                    {notificationCount > 0 && (
+                      <button
+                        onClick={() => {
+                          markAllAsRead()
+                          setShowNotifications(false)
+                        }}
+                        className="flex-1 text-center px-3 py-2 text-sm text-blue-600 dark:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-700/30 transition-colors rounded"
+                      >
+                        Mark All Read
+                      </button>
+                    )}
+                    <button
+                      onClick={() => {
+                        // Navigate to notifications page
+                        window.location.href = '/notifications'
+                        setShowNotifications(false)
+                      }}
+                      className="flex-1 text-center px-3 py-2 text-sm text-green-600 dark:text-green-500 hover:bg-green-50 dark:hover:bg-green-700/30 transition-colors rounded"
+                    >
+                      View All
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Profile dropdown */}

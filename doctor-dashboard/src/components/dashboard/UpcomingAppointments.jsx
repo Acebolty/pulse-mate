@@ -1,46 +1,74 @@
-import { CalendarDaysIcon, ClockIcon, UserIcon, VideoCameraIcon } from "@heroicons/react/24/outline" // Added UserIcon
+import { CalendarDaysIcon, ClockIcon, UserIcon, VideoCameraIcon } from "@heroicons/react/24/outline"
 import { motion } from 'framer-motion';
+import { useState, useEffect } from 'react';
+import api from '../../services/api';
 
 const UpcomingAppointments = () => {
-  // Placeholder data for doctor's appointments
-  const appointments = [
-    {
-      id: 1,
-      patientName: "Alice Johnson",
-      reason: "Follow-up Consultation",
-      date: "Jan 15",
-      time: "10:00 AM",
-      type: "virtual", // 'virtual' or 'in-person'
-      status: "confirmed", // 'confirmed', 'pending', 'cancelled'
-    },
-    {
-      id: 2,
-      patientName: "Robert Davis",
-      reason: "Annual Physical Exam",
-      date: "Jan 15",
-      time: "11:30 AM",
-      type: "in-person",
-      status: "confirmed",
-    },
-    {
-      id: 3,
-      patientName: "Maria Garcia",
-      reason: "Medication Review",
-      date: "Jan 16",
-      time: "2:00 PM",
-      type: "virtual",
-      status: "pending",
-    },
-     {
-      id: 4,
-      patientName: "John Doe",
-      reason: "New Patient Intake",
-      date: "Jan 16",
-      time: "03:30 PM",
-      type: "in-person",
-      status: "confirmed",
-    },
-  ];
+  const [appointments, setAppointments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Fetch real appointments for today
+  useEffect(() => {
+    const fetchTodaysAppointments = async () => {
+      try {
+        setLoading(true);
+        console.log('📅 Fetching today\'s appointments...');
+
+        // Get all doctor appointments
+        const appointmentsRes = await api.get('/appointments/doctor');
+        const allAppointments = Array.isArray(appointmentsRes.data) ? appointmentsRes.data : [];
+
+        console.log('📋 All appointments found:', allAppointments.length);
+
+        // Filter for today's appointments
+        const today = new Date().toDateString();
+        const todaysAppointments = allAppointments.filter(apt => {
+          const aptDate = new Date(apt.dateTime);
+          return aptDate.toDateString() === today;
+        });
+
+        console.log('📅 Today\'s appointments:', todaysAppointments.length);
+
+        // Format appointments for display
+        const formattedAppointments = todaysAppointments.map(apt => {
+          const aptDate = new Date(apt.dateTime);
+          const patientName = apt.originalData?.userId?.firstName && apt.originalData?.userId?.lastName
+            ? `${apt.originalData.userId.firstName} ${apt.originalData.userId.lastName}`
+            : apt.patient?.name || 'Unknown Patient';
+
+          return {
+            id: apt._id,
+            patientName: patientName,
+            reason: apt.reasonForVisit || 'General Consultation',
+            date: aptDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            time: aptDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }),
+            type: apt.appointmentType === 'virtual' || apt.appointmentType === 'chat' ? 'virtual' : 'in-person',
+            status: apt.status || 'confirmed',
+            originalData: apt
+          };
+        });
+
+        // Sort by time
+        formattedAppointments.sort((a, b) => {
+          const timeA = new Date(a.originalData.dateTime);
+          const timeB = new Date(b.originalData.dateTime);
+          return timeA - timeB;
+        });
+
+        setAppointments(formattedAppointments);
+        console.log('✅ Formatted today\'s appointments:', formattedAppointments);
+
+      } catch (err) {
+        console.error('❌ Error fetching appointments:', err);
+        setError('Failed to load today\'s appointments');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTodaysAppointments();
+  }, []);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -76,8 +104,38 @@ const UpcomingAppointments = () => {
         </button>
       </div>
 
-      <div className="space-y-4 max-h-96 overflow-y-auto pr-2"> {/* Added max height and scroll */}
-        {appointments.map((appointment, index) => (
+      <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
+        {loading ? (
+          // Loading skeleton
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="animate-pulse flex items-start space-x-4 p-4 bg-gray-50 dark:bg-slate-700/50 rounded-xl">
+                <div className="w-10 h-10 bg-gray-300 dark:bg-gray-600 rounded-xl"></div>
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-3/4"></div>
+                  <div className="h-3 bg-gray-300 dark:bg-gray-600 rounded w-1/2"></div>
+                  <div className="h-3 bg-gray-300 dark:bg-gray-600 rounded w-1/4"></div>
+                </div>
+                <div className="w-16 h-6 bg-gray-300 dark:bg-gray-600 rounded-full"></div>
+              </div>
+            ))}
+          </div>
+        ) : error ? (
+          // Error state
+          <div className="text-center py-8">
+            <p className="text-red-600 dark:text-red-400 font-medium">⚠️ {error}</p>
+            <p className="text-gray-500 dark:text-slate-400 text-sm mt-2">Please refresh the page or contact support.</p>
+          </div>
+        ) : appointments.length === 0 ? (
+          // No appointments state
+          <div className="text-center py-8">
+            <CalendarDaysIcon className="w-16 h-16 text-gray-400 dark:text-slate-500 mx-auto mb-4" />
+            <p className="text-gray-500 dark:text-slate-400 font-medium">No appointments scheduled for today</p>
+            <p className="text-gray-400 dark:text-slate-500 text-sm mt-1">Your schedule is clear!</p>
+          </div>
+        ) : (
+          // Appointments list
+          appointments.map((appointment, index) => (
           <motion.div
             key={appointment.id}
             className="group flex items-start space-x-4 p-4 bg-gradient-to-r from-gray-50 to-white dark:from-slate-700/50 dark:to-slate-800/70 rounded-xl hover:shadow-md transition-all duration-300 border border-gray-100 dark:border-slate-700"
@@ -113,9 +171,7 @@ const UpcomingAppointments = () => {
               </span>
             </div>
           </motion.div>
-        ))}
-        {appointments.length === 0 && (
-          <p className="text-center text-gray-500 dark:text-slate-400 py-4">No appointments scheduled for today.</p>
+          ))
         )}
       </div>
     </motion.div>
