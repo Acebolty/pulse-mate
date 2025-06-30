@@ -178,7 +178,7 @@ const Header = ({ onMenuClick, isCollapsed, user }) => {
                     {getDisplayName()}
                   </p>
                   <p className="text-xs text-gray-500 dark:text-slate-400">
-                    Administrator
+                    Admin
                   </p>
                 </div>
               )}
@@ -205,17 +205,6 @@ const Header = ({ onMenuClick, isCollapsed, user }) => {
                 >
                   <UserCircleIcon className="w-4 h-4 mr-3" />
                   View Profile
-                </button>
-                
-                <button
-                  onClick={() => {
-                    navigate('/admin/settings')
-                    setShowProfileMenu(false)
-                  }}
-                  className="w-full flex items-center px-4 py-2 text-sm text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors duration-200"
-                >
-                  <Cog6ToothIcon className="w-4 h-4 mr-3" />
-                  Settings
                 </button>
                 
                 <hr className="my-2 border-gray-200 dark:border-slate-700" />

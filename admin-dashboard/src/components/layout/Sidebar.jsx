@@ -17,7 +17,6 @@ const navigation = [
   { name: "Patients", href: "/admin/patients", icon: UserGroupIcon },
   { name: "Doctors", href: "/admin/doctors", icon: ShieldCheckIcon },
   { name: "Profile", href: "/admin/profile", icon: UserIcon },
-  { name: "Settings", href: "/admin/settings", icon: Cog6ToothIcon },
 ]
 
 const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse, user }) => {
@@ -92,7 +91,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse, user }) => {
                   {user.firstName} {user.lastName}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-slate-400 truncate">
-                  System Administrator
+                  Admin
                 </p>
               </div>
             </div>

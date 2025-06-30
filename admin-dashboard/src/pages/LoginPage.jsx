@@ -61,12 +61,25 @@ const LoginPage = () => {
         {/* Demo Credentials */}
         <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
           <h3 className="text-sm font-medium text-blue-800 dark:text-blue-300 mb-2">
-            Demo Credentials:
+            Admin Account
           </h3>
-          <p className="text-xs text-blue-600 dark:text-blue-400">
-            Email: admin@pulsemate.com<br />
-            Password: admin123
+          <p className="text-xs text-blue-700 dark:text-blue-300 mb-2">
+            For the admin dashboard, use these credentials:
           </p>
+          <div className="text-xs text-blue-600 dark:text-blue-400 space-y-1">
+            <p><strong>Email:</strong> admin@pulsemate.com</p>
+            <p><strong>Password:</strong> admin123</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setEmail('admin@pulsemate.com');
+              setPassword('admin123');
+            }}
+            className="mt-2 text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 font-medium"
+          >
+            Fill credentials
+          </button>
         </div>
 
         {/* Login Form */}
@@ -111,25 +124,6 @@ const LoginPage = () => {
               </button>
             </div>
           </div>
-
-          <div className="flex items-center justify-between">
-            <label className="flex items-center">
-              <input
-                type="checkbox"
-                className="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500 dark:focus:ring-green-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-              />
-              <span className="ml-2 text-sm text-gray-600 dark:text-slate-400">
-                Remember me
-              </span>
-            </label>
-            <a
-              href="#"
-              className="text-sm text-green-600 dark:text-green-400 hover:text-green-500 dark:hover:text-green-300"
-            >
-              Forgot password?
-            </a>
-          </div>
-
           <button
             type="submit"
             disabled={isLoading}
