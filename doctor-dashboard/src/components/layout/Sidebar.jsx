@@ -1,6 +1,7 @@
 "use client"
 
 import { NavLink } from "react-router-dom"
+import { useState, useEffect } from "react"
 import {
   HomeIcon,
   HeartIcon,
@@ -14,17 +15,96 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
 } from "@heroicons/react/24/outline"
-
-const navigation = [
-  { name: "Dashboard", href: "/", icon: HomeIcon },
-  { name: "Your Appointments", href: "/your_appointments", icon: CalendarIcon },
-  { name: "Notifications", href: "/notifications", icon: BellIcon, badge: 2 },
-  { name: "Messages", href: "/messages", icon: ChatBubbleLeftIcon, badge: 3 },
-  { name: "Profile", href: "/profile", icon: UserIcon },
-  { name: "Settings", href: "/settings", icon: Cog6ToothIcon },
-]
+import api from "../../services/api"
 
 const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
+  const [notificationCount, setNotificationCount] = useState(0)
+  const [appointmentCount, setAppointmentCount] = useState(0)
+
+  // Fetch real notification and appointment counts
+  useEffect(() => {
+    const fetchCounts = async () => {
+      try {
+        console.log('📋 Sidebar: Fetching counts...')
+
+        // Fetch both alerts and appointments
+        const [alertsRes, appointmentsRes] = await Promise.allSettled([
+          api.get('/alerts?limit=50'),
+          api.get('/appointments/doctor')
+        ])
+
+        // Process health alerts
+        const alertsData = alertsRes.status === 'fulfilled' ? alertsRes.value.data : {}
+        const alerts = Array.isArray(alertsData.data) ? alertsData.data :
+                      Array.isArray(alertsData) ? alertsData : []
+
+        // Process appointments
+        const appointmentsData = appointmentsRes.status === 'fulfilled' ? appointmentsRes.value.data : {}
+        const appointments = Array.isArray(appointmentsData.data) ? appointmentsData.data :
+                           Array.isArray(appointmentsData) ? appointmentsData : []
+
+        // Count today's appointments
+        const today = new Date().toDateString()
+        const todayAppointments = appointments.filter(apt => {
+          const aptDate = new Date(apt.dateTime)
+          return aptDate.toDateString() === today && apt.status === 'Confirmed'
+        }).length
+
+        // Count appointment notifications (today + tomorrow)
+        const tomorrow = new Date()
+        tomorrow.setDate(tomorrow.getDate() + 1)
+
+        const appointmentNotifications = appointments.filter(apt => {
+          const aptDate = new Date(apt.dateTime)
+          return aptDate >= new Date() && aptDate <= tomorrow && apt.status === 'Confirmed'
+        }).length
+
+        // Count unread health alerts
+        const unreadHealthAlerts = alerts.filter(alert => !alert.isRead).length
+
+        // Total notification count = appointment notifications + unread health alerts
+        const totalNotifications = appointmentNotifications + unreadHealthAlerts
+
+        console.log('📋 Sidebar counts:')
+        console.log('  - Health alerts:', alerts.length, '(', unreadHealthAlerts, 'unread)')
+        console.log('  - Total appointments:', appointments.length)
+        console.log('  - Today appointments:', todayAppointments)
+        console.log('  - Appointment notifications:', appointmentNotifications)
+        console.log('  - Total notifications:', totalNotifications)
+
+        setNotificationCount(totalNotifications)
+        setAppointmentCount(todayAppointments)
+
+      } catch (err) {
+        console.error('❌ Error fetching sidebar counts:', err)
+        setNotificationCount(0)
+        setAppointmentCount(0)
+      }
+    }
+
+    fetchCounts()
+
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchCounts, 30000)
+    return () => clearInterval(interval)
+  }, [])
+
+  // Dynamic navigation with real counts
+  const navigation = [
+    { name: "Dashboard", href: "/", icon: HomeIcon },
+    { name: "Your Appointments", href: "/your_appointments", icon: CalendarIcon, badge: appointmentCount > 0 ? appointmentCount : null },
+    { name: "Notifications", href: "/notifications", icon: BellIcon, badge: notificationCount > 0 ? notificationCount : null },
+    { name: "Messages", href: "/messages", icon: ChatBubbleLeftIcon }, // Remove dummy badge
+    { name: "Profile", href: "/profile", icon: UserIcon },
+    { name: "Settings", href: "/settings", icon: Cog6ToothIcon },
+  ]
+
+  console.log('📋 Sidebar counts:', { notificationCount, appointmentCount })
+  console.log('📋 Sidebar navigation with badges:', navigation.map(item => ({
+    name: item.name,
+    badge: item.badge
+  })))
+
   return (
     <>
       {/* Mobile backdrop */}

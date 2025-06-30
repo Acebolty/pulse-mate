@@ -27,19 +27,38 @@ const DashboardOverview = () => {
       try {
         setLoading(true);
 
+        // Check authentication first
+        const token = localStorage.getItem('doctorAuthToken');
+        const user = localStorage.getItem('doctorAuthUser');
+        console.log('🔐 Auth check:', {
+          hasToken: !!token,
+          tokenLength: token?.length,
+          hasUser: !!user,
+          user: user ? JSON.parse(user) : null
+        });
+
         // Fetch multiple data sources in parallel
         const [appointmentsRes, alertsRes] = await Promise.allSettled([
           api.get('/appointments/doctor'),
           api.get('/alerts?limit=100') // Get recent alerts to count critical ones
         ]);
 
+        console.log('🔍 Dashboard API Responses:');
+        console.log('📅 Appointments response:', appointmentsRes);
+        console.log('🚨 Alerts response:', alertsRes);
+
         // Process appointments data with validation
-        const appointmentsData = appointmentsRes.status === 'fulfilled' ? appointmentsRes.value.data : [];
+        const appointmentsData = appointmentsRes.status === 'fulfilled' ? appointmentsRes.value.data : {};
         const alertsData = alertsRes.status === 'fulfilled' ? alertsRes.value.data : {};
 
-        // Ensure appointments is an array
-        const appointments = Array.isArray(appointmentsData) ? appointmentsData : [];
+        // The backend returns { data: [...], totalPages, currentPage, totalAppointments }
+        const appointments = Array.isArray(appointmentsData.data) ? appointmentsData.data :
+                           Array.isArray(appointmentsData) ? appointmentsData : [];
         const alerts = Array.isArray(alertsData.data) ? alertsData.data : Array.isArray(alertsData) ? alertsData : [];
+
+        console.log('📋 Processed appointments:', appointments);
+        console.log('📋 Appointments length:', appointments.length);
+        console.log('🚨 Processed alerts:', alerts);
 
         console.log('Appointments data:', appointments);
         console.log('Alerts data:', alerts);
@@ -47,19 +66,37 @@ const DashboardOverview = () => {
         // Calculate real statistics
         const today = new Date().toDateString();
 
-        // Get unique patients under doctor's care
-        const uniquePatients = new Set(appointments.map(apt => apt.userId || apt.patient?.id || apt.patientId)).size;
+        // Get unique patients under doctor's care (count unique patient IDs, not appointments)
+        const patientIds = appointments.map(apt => {
+          // Extract patient ID from different possible locations
+          const patientId = apt.userId?._id || apt.userId || apt.patient?.id || apt.patientId;
+          console.log('🔍 Extracting patient ID from appointment:', {
+            appointmentId: apt._id,
+            userId: apt.userId,
+            patientId: patientId,
+            patientName: apt.userId?.firstName ? `${apt.userId.firstName} ${apt.userId.lastName}` : 'Unknown'
+          });
+          return patientId;
+        }).filter(Boolean); // Remove null/undefined values
+
+        const uniquePatients = new Set(patientIds).size;
+        console.log('👥 Unique patient IDs:', Array.from(new Set(patientIds)));
+        console.log('👥 Total unique patients:', uniquePatients);
 
         // Today's appointments with safe date handling
         const todayAppointments = appointments.filter(apt => {
           try {
             const aptDate = apt.dateTime || apt.date;
-            return aptDate && new Date(aptDate).toDateString() === today;
+            const isToday = aptDate && new Date(aptDate).toDateString() === today;
+            console.log(`📅 Appointment check: ${aptDate} -> ${new Date(aptDate).toDateString()} === ${today} ? ${isToday}`);
+            return isToday;
           } catch (e) {
             console.warn('Invalid date in appointment:', apt);
             return false;
           }
         });
+
+        console.log(`📊 Today's appointments found: ${todayAppointments.length}`, todayAppointments);
 
         // Completed today with safe date handling
         const completedToday = appointments.filter(apt => {
@@ -78,25 +115,40 @@ const DashboardOverview = () => {
           alert && alert.type === 'critical' && !alert.isRead
         ).length;
 
-        // Pending lab reviews (appointments needing confirmation)
-        const pendingReviews = appointments.filter(apt =>
-          apt && apt.status === 'scheduled'
+        // Pending reviews: Critical health alerts + unread health data requiring medical attention
+        const pendingReviews = alerts.filter(alert =>
+          alert && (alert.type === 'critical' || alert.priority === 'high') && !alert.isRead
         ).length;
 
-        setDashboardData({
+        console.log('📋 Pending Reviews (Critical/High Priority Alerts):', pendingReviews);
+
+        const dashboardStats = {
           totalPatients: uniquePatients || 0,
           messagesToday: 0, // Will be updated when messaging system is implemented
           newMessages: 0,
-          pendingLabReviews: pendingReviews || 0,
+          pendingLabReviews: pendingReviews || 0, // Critical health alerts requiring doctor review
           systemStatus: appointments.length > 0 ? 'All Systems Operational' : 'No Data Available',
           criticalAlertsCount: criticalAlerts || 0,
           appointmentsToday: todayAppointments.length || 0,
           completedToday: completedToday || 0
-        });
+        };
+
+        console.log('📊 Final Dashboard Stats:', dashboardStats);
+        setDashboardData(dashboardStats);
 
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
-        setError(`Failed to load dashboard data: ${err.message || 'Unknown error'}`);
+
+        // Check if it's an authentication error
+        if (err.response?.status === 401) {
+          setError('Please log in to access the dashboard');
+          // Redirect to login if not authenticated
+          if (!window.location.pathname.includes('/login')) {
+            window.location.href = '/login';
+          }
+        } else {
+          setError(`Failed to load dashboard data: ${err.message || 'Unknown error'}`);
+        }
 
         // Set fallback data
         setDashboardData({

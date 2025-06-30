@@ -17,9 +17,10 @@ import {
   EnvelopeIcon, // For new message
 } from "@heroicons/react/24/outline"
 import { motion } from "framer-motion"
+import api from '../services/api'
 
-// Dummy notifications data for Doctor's View
-const notificationsData = [
+// Real notifications will be fetched from API
+const dummyNotificationsData = [
   {
     id: 1,
     type: "critical_alert", // health_metric, appointment, message, critical_alert, document_upload
@@ -120,6 +121,8 @@ const getNotificationIconAndColor = (type) => {
     case "appointment_confirmation":
     case "appointment_cancelled_patient":
       return { icon: <CalendarDaysIcon className="w-5 h-5 text-blue-500 dark:text-blue-400" />, color: "blue" };
+    case "appointment_reminder":
+      return { icon: <CalendarDaysIcon className="w-5 h-5 text-purple-500 dark:text-purple-400" />, color: "purple" };
     case "new_message":
       return { icon: <EnvelopeIcon className="w-5 h-5 text-purple-500 dark:text-purple-400" />, color: "purple" };
     case "health_metric_update":
@@ -174,15 +177,110 @@ const cardVariants = {
 };
 
 const Notifications = () => {
-  const [notifications, setNotifications] = useState(notificationsData);
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [filter, setFilter] = useState("all"); // all, unread, critical_alert, appointment, message, health_metric
   const [showSettings, setShowSettings] = useState(false); // Placeholder for future settings
   const [isDarkMode, setIsDarkMode] = useState(false);
 
+  // Fetch real notifications/alerts from API
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        setLoading(true);
+        console.log('🔔 Fetching notifications/alerts...');
+
+        // Fetch alerts and appointments
+        const [alertsRes, appointmentsRes] = await Promise.allSettled([
+          api.get('/alerts?limit=50'),
+          api.get('/appointments/doctor')
+        ]);
+
+        // Process alerts
+        const alertsData = alertsRes.status === 'fulfilled' ? alertsRes.value.data : {};
+        const alerts = Array.isArray(alertsData.data) ? alertsData.data : Array.isArray(alertsData) ? alertsData : [];
+
+        // Process appointments for notifications
+        const appointmentsData = appointmentsRes.status === 'fulfilled' ? appointmentsRes.value.data : {};
+        const appointments = Array.isArray(appointmentsData.data) ? appointmentsData.data : Array.isArray(appointmentsData) ? appointmentsData : [];
+
+        console.log('🚨 Alerts fetched:', alerts.length);
+        console.log('📅 Appointments fetched:', appointments.length);
+
+        // Convert alerts to notification format
+        const alertNotifications = alerts.map(alert => ({
+          id: alert._id,
+          type: alert.type === 'critical' ? 'critical_alert' : 'health_metric_warning',
+          patientName: alert.patientName || 'Unknown Patient',
+          title: alert.type === 'critical' ? `Critical: ${alert.title || 'Health Alert'}` : `Warning: ${alert.title || 'Health Alert'}`,
+          message: alert.message || alert.description || 'Health data requires review',
+          timestamp: alert.createdAt || alert.timestamp,
+          isRead: alert.isRead || false,
+          source: alert.source || 'Health Monitor',
+          actions: ["View Details", "Mark as Read", "Contact Patient"],
+          priority: alert.priority || (alert.type === 'critical' ? 'high' : 'medium')
+        }));
+
+        // Convert upcoming appointments to notifications
+        const today = new Date();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        const appointmentNotifications = appointments
+          .filter(apt => {
+            const aptDate = new Date(apt.dateTime);
+            return aptDate >= today && aptDate <= tomorrow && apt.status === 'Confirmed';
+          })
+          .map(apt => {
+            const aptDate = new Date(apt.dateTime);
+            const patientName = apt.userId?.firstName && apt.userId?.lastName
+              ? `${apt.userId.firstName} ${apt.userId.lastName}`
+              : 'Unknown Patient';
+
+            const isToday = aptDate.toDateString() === today.toDateString();
+            const timeStr = aptDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+
+            return {
+              id: `apt-${apt._id}`,
+              type: 'appointment_reminder',
+              patientName: patientName,
+              title: isToday ? `Today's Appointment` : `Tomorrow's Appointment`,
+              message: `${patientName} - ${apt.reasonForVisit || 'Consultation'} at ${timeStr}`,
+              timestamp: apt.dateTime,
+              isRead: false, // Appointment reminders are always unread initially
+              source: 'Appointment System',
+              actions: ["View Details", "Reschedule", "Contact Patient"],
+              priority: 'medium'
+            };
+          });
+
+        // Combine all notifications
+        const formattedNotifications = [...alertNotifications, ...appointmentNotifications];
+
+        // Sort by most recent first
+        formattedNotifications.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+        console.log('✅ Formatted notifications:', formattedNotifications.length);
+        setNotifications(formattedNotifications);
+
+      } catch (err) {
+        console.error('❌ Error fetching notifications:', err);
+        setError('Failed to load notifications');
+        // Fallback to dummy data if API fails
+        setNotifications(dummyNotificationsData);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchNotifications();
+  }, []);
+
    useEffect(() => {
     const prefersDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
     setIsDarkMode(document.documentElement.classList.contains('dark') || (!('theme' in localStorage) && prefersDarkMode));
-    
+
     const observer = new MutationObserver(() => {
       setIsDarkMode(document.documentElement.classList.contains('dark'));
     });
@@ -202,12 +300,34 @@ const Notifications = () => {
   const unreadCount = notifications.filter((n) => !n.isRead).length;
   const criticalUnreadCount = notifications.filter((n) => (n.type === "critical_alert" || n.type === "health_metric_warning") && !n.isRead).length;
 
-  const markAsRead = (notificationId) => {
-    setNotifications(notifications.map((n) => (n.id === notificationId ? { ...n, isRead: true } : n)));
+  const markAsRead = async (notificationId) => {
+    try {
+      // Update in backend
+      await api.put(`/alerts/${notificationId}/read`);
+
+      // Update in frontend
+      setNotifications(notifications.map((n) => (n.id === notificationId ? { ...n, isRead: true } : n)));
+      console.log('✅ Marked notification as read:', notificationId);
+    } catch (err) {
+      console.error('❌ Error marking notification as read:', err);
+      // Still update frontend even if backend fails
+      setNotifications(notifications.map((n) => (n.id === notificationId ? { ...n, isRead: true } : n)));
+    }
   };
 
-  const markAllAsRead = () => {
-    setNotifications(notifications.map((n) => ({ ...n, isRead: true })));
+  const markAllAsRead = async () => {
+    try {
+      // Update all in backend
+      await api.put('/alerts/read-all');
+
+      // Update in frontend
+      setNotifications(notifications.map((n) => ({ ...n, isRead: true })));
+      console.log('✅ Marked all notifications as read');
+    } catch (err) {
+      console.error('❌ Error marking all notifications as read:', err);
+      // Still update frontend even if backend fails
+      setNotifications(notifications.map((n) => ({ ...n, isRead: true })));
+    }
   };
 
   const deleteNotification = (notificationId) => {
