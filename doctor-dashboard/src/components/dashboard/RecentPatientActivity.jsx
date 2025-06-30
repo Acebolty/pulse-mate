@@ -188,9 +188,9 @@ const RecentPatientActivity = () => {
 
         // Sort activities by timestamp (most recent first)
         allActivities.sort((a, b) => {
-          // Extract timestamp from the activity (we need to get it from the original data)
-          // For now, sort by the time string (this is approximate)
-          return a.time.localeCompare(b.time);
+          const timeA = new Date(a.timestamp);
+          const timeB = new Date(b.timestamp);
+          return timeB - timeA; // Most recent first (descending order)
         });
 
         // Take only the most recent 10 activities
