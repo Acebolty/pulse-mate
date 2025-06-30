@@ -1,16 +1,17 @@
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { motion } from "framer-motion"
 import {
   MagnifyingGlassIcon,
   ShieldCheckIcon,
   UserGroupIcon,
-  StarIcon,
   ClockIcon,
   CheckCircleIcon,
   XCircleIcon,
   EyeIcon,
   PencilIcon,
   TrashIcon,
+  DocumentCheckIcon,
+  ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline"
 
 const Doctors = () => {
@@ -18,6 +19,22 @@ const Doctors = () => {
   const [filterSpecialty, setFilterSpecialty] = useState("all")
   const [filterStatus, setFilterStatus] = useState("all")
   const [sortBy, setSortBy] = useState("name")
+  const [openDropdown, setOpenDropdown] = useState(null)
+  const dropdownRef = useRef(null)
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setOpenDropdown(null)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
 
   // Dummy doctor data
   const doctors = [
@@ -31,7 +48,7 @@ const Doctors = () => {
       status: "active",
       availability: "available",
       patients: 45,
-      rating: 4.8,
+      approvalStatus: "approved",
       totalAppointments: 1250,
       joinDate: "2020-03-15",
       license: "MD12345",
@@ -47,7 +64,7 @@ const Doctors = () => {
       status: "active",
       availability: "busy",
       patients: 32,
-      rating: 4.6,
+      approvalStatus: "approved",
       totalAppointments: 890,
       joinDate: "2021-07-20",
       license: "MD23456",
@@ -63,7 +80,7 @@ const Doctors = () => {
       status: "active",
       availability: "available",
       patients: 67,
-      rating: 4.9,
+      approvalStatus: "approved",
       totalAppointments: 1580,
       joinDate: "2019-01-10",
       license: "MD34567",
@@ -79,7 +96,7 @@ const Doctors = () => {
       status: "inactive",
       availability: "unavailable",
       patients: 28,
-      rating: 4.7,
+      approvalStatus: "pending",
       totalAppointments: 2100,
       joinDate: "2015-09-05",
       license: "MD45678",
@@ -95,7 +112,7 @@ const Doctors = () => {
       status: "active",
       availability: "available",
       patients: 38,
-      rating: 4.5,
+      approvalStatus: "rejected",
       totalAppointments: 950,
       joinDate: "2022-02-14",
       license: "MD56789",
@@ -133,6 +150,37 @@ const Doctors = () => {
     return <Icon className="w-4 h-4" />
   }
 
+  const getApprovalStatusColor = (status) => {
+    const colors = {
+      approved: "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300",
+      pending: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300",
+      rejected: "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300",
+    }
+    return colors[status] || colors.pending
+  }
+
+  const getApprovalStatusIcon = (status) => {
+    const icons = {
+      approved: CheckCircleIcon,
+      pending: ClockIcon,
+      rejected: XCircleIcon,
+    }
+    const Icon = icons[status] || ClockIcon
+    return <Icon className="w-4 h-4" />
+  }
+
+  const handleApprovalChange = (doctorId, newStatus) => {
+    // In a real app, this would make an API call to update the doctor's approval status
+    console.log(`Updating doctor ${doctorId} approval status to: ${newStatus}`)
+    // For demo purposes, you could update local state here
+    alert(`Doctor approval status updated to: ${newStatus}`)
+    setOpenDropdown(null) // Close dropdown after action
+  }
+
+  const toggleDropdown = (doctorId) => {
+    setOpenDropdown(openDropdown === doctorId ? null : doctorId)
+  }
+
   const filteredDoctors = doctors.filter((doctor) => {
     const matchesSearch = doctor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          doctor.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -149,8 +197,10 @@ const Doctors = () => {
         return a.name.localeCompare(b.name)
       case "experience":
         return b.experience - a.experience
-      case "rating":
-        return b.rating - a.rating
+      case "approvalStatus":
+        // Sort by approval status: pending first, then approved, then rejected
+        const statusOrder = { pending: 0, approved: 1, rejected: 2 }
+        return statusOrder[a.approvalStatus] - statusOrder[b.approvalStatus]
       case "patients":
         return b.patients - a.patients
       default:
@@ -161,18 +211,13 @@ const Doctors = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Doctor Management
-          </h1>
-          <p className="text-gray-600 dark:text-slate-400 mt-1">
-            Monitor and manage all registered doctors
-          </p>
-        </div>
-        <button className="mt-4 sm:mt-0 px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-2xl transition-all duration-200 shadow-lg hover:shadow-xl">
-          Add New Doctor
-        </button>
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+          Doctor Management
+        </h1>
+        <p className="text-gray-600 dark:text-slate-400 mt-1">
+          Monitor and manage all registered doctors
+        </p>
       </div>
 
       {/* Filters and Search */}
@@ -222,7 +267,7 @@ const Doctors = () => {
             >
               <option value="name">Sort by Name</option>
               <option value="experience">Sort by Experience</option>
-              <option value="rating">Sort by Rating</option>
+              <option value="approvalStatus">Sort by Approval Status</option>
               <option value="patients">Sort by Patients</option>
             </select>
           </div>
@@ -251,7 +296,7 @@ const Doctors = () => {
                   Patients
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">
-                  Rating
+                  Approval Status
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">
                   Availability
@@ -332,25 +377,56 @@ const Doctors = () => {
                     </div>
                   </td>
 
-                  {/* Rating */}
+                  {/* Approval Status */}
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center space-x-2">
-                      <StarIcon className="w-4 h-4 text-yellow-500" />
-                      <span className="text-sm font-medium text-gray-900 dark:text-white">
-                        {doctor.rating}
-                      </span>
-                    </div>
-                    <div className="flex items-center mt-1">
-                      {[...Array(5)].map((_, i) => (
-                        <StarIcon
-                          key={i}
-                          className={`w-3 h-3 ${
-                            i < Math.floor(doctor.rating)
-                              ? 'text-yellow-400 fill-current'
-                              : 'text-gray-300 dark:text-slate-600'
-                          }`}
-                        />
-                      ))}
+                    <div className="relative" ref={openDropdown === doctor.id ? dropdownRef : null}>
+                      <button
+                        onClick={() => toggleDropdown(doctor.id)}
+                        className={`inline-flex items-center px-3 py-1 rounded-2xl text-xs font-medium cursor-pointer hover:opacity-80 transition-opacity ${getApprovalStatusColor(doctor.approvalStatus)}`}
+                      >
+                        {getApprovalStatusIcon(doctor.approvalStatus)}
+                        <span className="ml-1 capitalize">{doctor.approvalStatus}</span>
+                        <svg className="ml-1 w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+
+                      {/* Dropdown Menu */}
+                      {openDropdown === doctor.id && (
+                        <div className="absolute top-full left-0 mt-1 w-32 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-gray-200 dark:border-slate-700 z-50">
+                          <div className="py-1">
+                            {doctor.approvalStatus !== 'approved' && (
+                              <button
+                                onClick={() => handleApprovalChange(doctor.id, 'approved')}
+                                className="w-full text-left px-3 py-2 text-xs text-green-700 dark:text-green-300 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors flex items-center space-x-2"
+                              >
+                                <CheckCircleIcon className="w-3 h-3" />
+                                <span>Approve</span>
+                              </button>
+                            )}
+
+                            {doctor.approvalStatus !== 'pending' && (
+                              <button
+                                onClick={() => handleApprovalChange(doctor.id, 'pending')}
+                                className="w-full text-left px-3 py-2 text-xs text-yellow-700 dark:text-yellow-300 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-colors flex items-center space-x-2"
+                              >
+                                <ClockIcon className="w-3 h-3" />
+                                <span>Set Pending</span>
+                              </button>
+                            )}
+
+                            {doctor.approvalStatus !== 'rejected' && (
+                              <button
+                                onClick={() => handleApprovalChange(doctor.id, 'rejected')}
+                                className="w-full text-left px-3 py-2 text-xs text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex items-center space-x-2"
+                              >
+                                <XCircleIcon className="w-3 h-3" />
+                                <span>Reject</span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </td>
 
@@ -392,12 +468,9 @@ const Doctors = () => {
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
             No doctors found
           </h3>
-          <p className="text-gray-500 dark:text-slate-400 mb-6">
+          <p className="text-gray-500 dark:text-slate-400">
             Try adjusting your search or filter criteria
           </p>
-          <button className="px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-2xl transition-all duration-200 shadow-lg hover:shadow-xl">
-            Add First Doctor
-          </button>
         </div>
       )}
     </div>
