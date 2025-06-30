@@ -3,13 +3,14 @@ import { motion } from 'framer-motion';
 import { CalendarIcon, UsersIcon, BellAlertIcon } from "@heroicons/react/24/outline"; // Changed ClockIcon to UsersIcon and added BellAlertIcon
 import { getCurrentUser } from '../../services/authService';
 
-const WelcomeCard = () => {
+const WelcomeCard = ({ dashboardData = {}, loading = false }) => {
   const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
     const user = getCurrentUser();
     setCurrentUser(user);
   }, []);
+
   const currentDate = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     year: "numeric",
@@ -17,9 +18,11 @@ const WelcomeCard = () => {
     day: "numeric",
   });
 
-  // Placeholder data for doctor
-  const pendingReviews = 5;
-  const upcomingAppointments = 3;
+  // Real data from props (with fallbacks for loading state)
+  const pendingReviews = loading ? '...' : (dashboardData.pendingLabReviews || 0);
+  const upcomingAppointments = loading ? '...' : (dashboardData.appointmentsToday || 0);
+  const criticalAlerts = loading ? '...' : (dashboardData.criticalAlertsCount || 0);
+  const completedToday = loading ? '...' : (dashboardData.completedToday || 0);
 
   return (
     <motion.div 
@@ -43,13 +46,24 @@ const WelcomeCard = () => {
           >
             Hello, Dr. {currentUser?.firstName || 'Doctor'}!
           </motion.h1>
-          <motion.p 
+          <motion.p
             className="text-sky-100 dark:text-white mb-6 text-lg" // Adjusted text color
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.3, duration: 0.6 }}
           >
-            You have {pendingReviews} patient reports to review and {upcomingAppointments} appointments today.
+            {loading ? (
+              'Loading your daily summary...'
+            ) : (
+              <>
+                You have {pendingReviews} patient report{pendingReviews !== 1 ? 's' : ''} to review and {upcomingAppointments} appointment{upcomingAppointments !== 1 ? 's' : ''} today.
+                {completedToday > 0 && (
+                  <span className="block text-sm text-sky-200 dark:text-slate-300 mt-1">
+                    ({completedToday} already completed)
+                  </span>
+                )}
+              </>
+            )}
           </motion.p>
           <motion.div 
             className="flex items-center space-x-6 text-sm text-sky-100 dark:text-slate-200" // Adjusted text color
@@ -62,12 +76,14 @@ const WelcomeCard = () => {
               <span>{currentDate}</span>
             </div>
             <div className="flex items-center space-x-2">
-              <UsersIcon className="w-4 h-4" /> 
-              <span>{pendingReviews} Pending Reviews</span>
+              <UsersIcon className="w-4 h-4" />
+              <span>{pendingReviews} Pending Review{pendingReviews !== 1 ? 's' : ''}</span>
             </div>
             <div className="flex items-center space-x-2">
-              <BellAlertIcon className="w-4 h-4 text-yellow-300 dark:text-yellow-200" /> 
-              <span>2 Critical Alerts</span>
+              <BellAlertIcon className={`w-4 h-4 ${criticalAlerts > 0 ? 'text-red-300 dark:text-red-200' : 'text-green-300 dark:text-green-200'}`} />
+              <span className={criticalAlerts > 0 ? 'text-red-200' : 'text-green-200'}>
+                {criticalAlerts > 0 ? `${criticalAlerts} Critical Alert${criticalAlerts !== 1 ? 's' : ''}` : 'No Critical Alerts'}
+              </span>
             </div>
           </motion.div>
         </div>
