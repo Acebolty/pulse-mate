@@ -21,6 +21,7 @@ import {
   BriefcaseIcon, // For specialties or general doctor icon
 } from "@heroicons/react/24/outline"
 import { motion } from "framer-motion"
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
 import api from "../services/api"
 import { getCurrentUser } from "../services/authService"
 
@@ -526,6 +527,40 @@ const YourAppointments = () => {
     };
   };
 
+  // Helper function to prepare chart data for 7-day trends
+  const prepareChartData = (healthData) => {
+    if (!healthData) return [];
+
+    // Create a map of dates to health readings
+    const dateMap = new Map();
+
+    // Process each health data type
+    ['heartRate', 'bloodPressure', 'bodyTemperature', 'glucoseLevel'].forEach(dataType => {
+      if (healthData[dataType]) {
+        healthData[dataType].forEach(reading => {
+          const date = new Date(reading.timestamp).toLocaleDateString();
+          if (!dateMap.has(date)) {
+            dateMap.set(date, { date });
+          }
+
+          const entry = dateMap.get(date);
+          if (dataType === 'heartRate') {
+            entry.heartRate = reading.value;
+          } else if (dataType === 'bloodPressure') {
+            entry.systolic = reading.value.systolic;
+            entry.diastolic = reading.value.diastolic;
+          } else if (dataType === 'bodyTemperature') {
+            entry.temperature = reading.value;
+          } else if (dataType === 'glucoseLevel') {
+            entry.glucose = reading.value;
+          }
+        });
+      }
+    });
+
+    // Convert to array and sort by date
+    return Array.from(dateMap.values()).sort((a, b) => new Date(a.date) - new Date(b.date));
+  };
 
   // Show loading state
   if (loading) {
@@ -1559,226 +1594,71 @@ const YourAppointments = () => {
                   </div>
                 </div>
 
-                {/* Simple 7-Day Health Trends */}
-                <div className="mt-4 space-y-6">
-                  {/* Heart Rate Trend */}
-                  {patientHealthData?.heartRate?.length > 0 && (() => {
-                    const trendData = process7DayTrend(patientHealthData.heartRate);
-                    const trend = getTrendDirection(trendData);
-                    const validPoints = trendData?.filter(d => d.value !== null) || [];
-
-                    return (
-                      <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-gray-200 dark:border-slate-700 shadow-sm">
-                        {/* Header */}
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="flex items-center space-x-3">
-                            <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                            <h4 className="text-lg font-medium text-gray-800 dark:text-slate-100">Heart Rate</h4>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-2xl font-bold text-gray-800 dark:text-slate-100">
-                              {patientHealthData.latest?.heartRate?.value || '--'} <span className="text-sm font-normal text-gray-500">bpm</span>
-                            </div>
-                            <div className={`text-sm flex items-center ${
-                              trend.direction === 'increasing' ? 'text-red-600' :
-                              trend.direction === 'decreasing' ? 'text-green-600' :
-                              'text-gray-500'
-                            }`}>
-                              {trend.direction === 'increasing' ? '↗' : trend.direction === 'decreasing' ? '↘' : '→'}
-                              {Math.abs(trend.change)}% this week
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Simple Line Chart */}
-                        <div className="h-24 flex items-end space-x-2">
-                          {validPoints.map((point, index) => {
-                            const maxVal = Math.max(...validPoints.map(p => p.value));
-                            const minVal = Math.min(...validPoints.map(p => p.value));
-                            const range = maxVal - minVal || 1;
-                            const height = ((point.value - minVal) / range) * 80 + 10;
-                            const isNormal = point.value >= 60 && point.value <= 100;
-
-                            return (
-                              <div key={index} className="flex-1 flex flex-col items-center">
-                                <div
-                                  className={`w-full rounded-t-sm transition-all duration-500 ${
-                                    isNormal ? 'bg-green-400' : 'bg-red-400'
-                                  }`}
-                                  style={{ height: `${height}px` }}
-                                  title={`${point.value} bpm`}
-                                ></div>
-                                <div className="text-xs text-gray-500 dark:text-slate-400 mt-2">
-                                  {point.date.toLocaleDateString('en', { weekday: 'short' })}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-
-                        {/* Summary */}
-                        <div className="mt-4 text-center">
-                          <span className="text-sm text-gray-600 dark:text-slate-400">
-                            Average: {patientHealthData.averages?.heartRate ? Math.round(patientHealthData.averages.heartRate) : 'N/A'} bpm
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })()}
-
-                  {/* Blood Pressure Trend */}
-                  {patientHealthData?.bloodPressure?.length > 0 && (() => {
-                    const trendData = process7DayTrend(patientHealthData.bloodPressure);
-                    const systolicTrend = getTrendDirection(trendData, 'systolic');
-                    const validPoints = trendData?.filter(d => d.value !== null) || [];
-
-                    return (
-                      <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-gray-200 dark:border-slate-700 shadow-sm">
-                        {/* Header */}
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="flex items-center space-x-3">
-                            <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                            <h4 className="text-lg font-medium text-gray-800 dark:text-slate-100">Blood Pressure</h4>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-2xl font-bold text-gray-800 dark:text-slate-100">
-                              {patientHealthData.latest?.bloodPressure?.value ?
-                                `${patientHealthData.latest.bloodPressure.value.systolic}/${patientHealthData.latest.bloodPressure.value.diastolic}` : '--'}
-                              <span className="text-sm font-normal text-gray-500">mmHg</span>
-                            </div>
-                            <div className={`text-sm flex items-center ${
-                              systolicTrend.direction === 'increasing' ? 'text-red-600' :
-                              systolicTrend.direction === 'decreasing' ? 'text-green-600' :
-                              'text-gray-500'
-                            }`}>
-                              {systolicTrend.direction === 'increasing' ? '↗' : systolicTrend.direction === 'decreasing' ? '↘' : '→'}
-                              {Math.abs(systolicTrend.change)}% this week
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Simple Dual Bar Chart */}
-                        <div className="h-24 flex items-end space-x-2">
-                          {validPoints.map((point, index) => {
-                            const systolicMax = Math.max(...validPoints.map(p => p.value.systolic));
-                            const systolicMin = Math.min(...validPoints.map(p => p.value.systolic));
-                            const diastolicMax = Math.max(...validPoints.map(p => p.value.diastolic));
-                            const diastolicMin = Math.min(...validPoints.map(p => p.value.diastolic));
-
-                            const sysRange = systolicMax - systolicMin || 1;
-                            const diaRange = diastolicMax - diastolicMin || 1;
-
-                            const sysHeight = ((point.value.systolic - systolicMin) / sysRange) * 60 + 15;
-                            const diaHeight = ((point.value.diastolic - diastolicMin) / diaRange) * 40 + 10;
-
-                            const isNormal = point.value.systolic < 120 && point.value.diastolic < 80;
-
-                            return (
-                              <div key={index} className="flex-1 flex flex-col items-center">
-                                <div className="w-full flex space-x-1">
-                                  <div
-                                    className={`flex-1 rounded-t-sm transition-all duration-500 ${
-                                      isNormal ? 'bg-blue-400' : 'bg-red-400'
-                                    }`}
-                                    style={{ height: `${sysHeight}px` }}
-                                    title={`${point.value.systolic} mmHg (Systolic)`}
-                                  ></div>
-                                  <div
-                                    className={`flex-1 rounded-t-sm transition-all duration-500 ${
-                                      isNormal ? 'bg-blue-300' : 'bg-red-300'
-                                    }`}
-                                    style={{ height: `${diaHeight}px` }}
-                                    title={`${point.value.diastolic} mmHg (Diastolic)`}
-                                  ></div>
-                                </div>
-                                <div className="text-xs text-gray-500 dark:text-slate-400 mt-2">
-                                  {point.date.toLocaleDateString('en', { weekday: 'short' })}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-
-                        {/* Summary */}
-                        <div className="mt-4 flex justify-between text-sm text-gray-600 dark:text-slate-400">
-                          <span>Average: {patientHealthData.averages?.bloodPressure ?
-                            `${patientHealthData.averages.bloodPressure.systolic}/${patientHealthData.averages.bloodPressure.diastolic}` : 'N/A'} mmHg</span>
-                          <div className="flex items-center space-x-3">
-                            <span className="flex items-center"><span className="w-3 h-2 bg-blue-400 mr-1"></span>Systolic</span>
-                            <span className="flex items-center"><span className="w-3 h-2 bg-blue-300 mr-1"></span>Diastolic</span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })()}
-
-                  {/* Blood Sugar Trend */}
-                  {patientHealthData?.glucoseLevel?.length > 0 && (() => {
-                    const trendData = process7DayTrend(patientHealthData.glucoseLevel);
-                    const trend = getTrendDirection(trendData);
-                    const validPoints = trendData?.filter(d => d.value !== null) || [];
-
-                    return (
-                      <div className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-gray-200 dark:border-slate-700 shadow-sm">
-                        {/* Header */}
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="flex items-center space-x-3">
-                            <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
-                            <h4 className="text-lg font-medium text-gray-800 dark:text-slate-100">Blood Sugar</h4>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-2xl font-bold text-gray-800 dark:text-slate-100">
-                              {patientHealthData.latest?.glucoseLevel?.value || '--'} <span className="text-sm font-normal text-gray-500">mg/dL</span>
-                            </div>
-                            <div className={`text-sm flex items-center ${
-                              trend.direction === 'increasing' ? 'text-red-600' :
-                              trend.direction === 'decreasing' ? 'text-green-600' :
-                              'text-gray-500'
-                            }`}>
-                              {trend.direction === 'increasing' ? '↗' : trend.direction === 'decreasing' ? '↘' : '→'}
-                              {Math.abs(trend.change)}% this week
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Simple Line Chart */}
-                        <div className="h-24 flex items-end space-x-2">
-                          {validPoints.map((point, index) => {
-                            const maxVal = Math.max(...validPoints.map(p => p.value));
-                            const minVal = Math.min(...validPoints.map(p => p.value));
-                            const range = maxVal - minVal || 1;
-                            const height = ((point.value - minVal) / range) * 80 + 10;
-                            const isNormal = point.value >= 70 && point.value <= 140;
-
-                            return (
-                              <div key={index} className="flex-1 flex flex-col items-center">
-                                <div
-                                  className={`w-full rounded-t-sm transition-all duration-500 ${
-                                    isNormal ? 'bg-purple-400' : 'bg-red-400'
-                                  }`}
-                                  style={{ height: `${height}px` }}
-                                  title={`${point.value} mg/dL`}
-                                ></div>
-                                <div className="text-xs text-gray-500 dark:text-slate-400 mt-2">
-                                  {point.date.toLocaleDateString('en', { weekday: 'short' })}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-
-                        {/* Summary */}
-                        <div className="mt-4 text-center">
-                          <span className="text-sm text-gray-600 dark:text-slate-400">
-                            Average: {patientHealthData.averages?.glucoseLevel ? Math.round(patientHealthData.averages.glucoseLevel) : 'N/A'} mg/dL
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })()}
+                {/* Interactive 7-Day Health Trends Chart */}
+                <div className="mt-4">
+                  {patientHealthData && (
+                    <div className="bg-gray-50 dark:bg-slate-700/50 p-4 rounded-xl">
+                      <ResponsiveContainer width="100%" height={300}>
+                        <LineChart data={prepareChartData(patientHealthData)}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                          <XAxis
+                            dataKey="date"
+                            stroke="#6b7280"
+                            fontSize={12}
+                          />
+                          <YAxis stroke="#6b7280" fontSize={12} />
+                          <Tooltip
+                            contentStyle={{
+                              backgroundColor: '#ffffff',
+                              border: '1px solid #e5e7eb',
+                              borderRadius: '8px',
+                              color: '#1f2937'
+                            }}
+                          />
+                          <Legend />
+                          {patientHealthData.heartRate?.length > 0 && (
+                            <Line
+                              type="monotone"
+                              dataKey="heartRate"
+                              stroke="#ef4444"
+                              strokeWidth={2}
+                              name="Heart Rate (bpm)"
+                            />
+                          )}
+                          {patientHealthData.bloodPressure?.length > 0 && (
+                            <Line
+                              type="monotone"
+                              dataKey="systolic"
+                              stroke="#3b82f6"
+                              strokeWidth={2}
+                              name="Systolic BP"
+                            />
+                          )}
+                          {patientHealthData.bodyTemperature?.length > 0 && (
+                            <Line
+                              type="monotone"
+                              dataKey="temperature"
+                              stroke="#f97316"
+                              strokeWidth={2}
+                              name="Temperature (°F)"
+                            />
+                          )}
+                          {patientHealthData.glucoseLevel?.length > 0 && (
+                            <Line
+                              type="monotone"
+                              dataKey="glucose"
+                              stroke="#22c55e"
+                              strokeWidth={2}
+                              name="Glucose (mg/dL)"
+                            />
+                          )}
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
 
                   {/* No Data Message */}
-                  {(!patientHealthData?.heartRate?.length && !patientHealthData?.bloodPressure?.length && !patientHealthData?.glucoseLevel?.length) && (
+                  {(!patientHealthData?.heartRate?.length && !patientHealthData?.bloodPressure?.length && !patientHealthData?.glucoseLevel?.length && !patientHealthData?.bodyTemperature?.length) && (
                     <div className="bg-gray-50 dark:bg-slate-700/50 rounded-lg p-8 text-center">
                       <div className="text-gray-500 dark:text-slate-400">
                         {healthDataLoading ? (
