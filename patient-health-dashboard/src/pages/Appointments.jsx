@@ -654,14 +654,16 @@ const Appointments = () => {
                     <div className="flex flex-col sm:flex-row items-start justify-between">
                       <div className="flex items-start space-x-3 sm:space-x-4 flex-1">
                         <img
-                          src={appointment.doctor.image || "/placeholder.svg"}
-                          alt={appointment.doctor.name}
+                          src={appointment.doctor?.image || "/placeholder.svg"}
+                          alt={appointment.doctor?.name || appointment.providerName || "Doctor"}
                           className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover"
                         />
 
                         <div className="flex-1 min-w-0">
                           <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2 mb-1 sm:mb-2">
-                            <h3 className="text-base md:text-lg font-semibold text-gray-900 dark:text-slate-100">{appointment.title}</h3>
+                            <h3 className="text-base md:text-lg font-semibold text-gray-900 dark:text-slate-100">
+                              {appointment.title || appointment.reason}
+                            </h3>
                             <span
                               className={`px-2 py-0.5 sm:py-1 text-xs font-medium rounded-full ${getStatusColor(appointment.status)} self-start sm:self-center`}
                             >
@@ -670,18 +672,23 @@ const Appointments = () => {
                           </div>
 
                           <p className="text-sm text-gray-600 dark:text-slate-300 mb-1 sm:mb-2">
-                            {appointment.doctor.name} • {appointment.doctor.specialty}
+                            {appointment.doctor?.name || appointment.providerName || "Doctor"}
+                            {appointment.doctor?.specialty && ` • ${appointment.doctor.specialty}`}
                           </p>
 
                           <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-3 md:space-x-4 text-xs sm:text-sm text-gray-500 dark:text-slate-400 mb-2 md:mb-3">
                             <div className="flex items-center space-x-1">
                               <CalendarIcon className="w-3 h-3 sm:w-4 sm:h-4" />
-                              <span>{formatDate(appointment.date)}</span>
+                              <span>
+                                {appointment.date ? formatDate(appointment.date) :
+                                 appointment.dateTime ? formatDate(appointment.dateTime) : 'Date TBD'}
+                              </span>
                             </div>
                             <div className="flex items-center space-x-1 mt-1 sm:mt-0">
                               <ClockIcon className="w-3 h-3 sm:w-4 sm:h-4" />
                               <span>
-                                {appointment.time} ({appointment.duration})
+                                {appointment.time ? `${appointment.time} ${appointment.duration ? `(${appointment.duration})` : ''}` :
+                                 appointment.dateTime ? new Date(appointment.dateTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Time TBD'}
                               </span>
                             </div>
                             <div className="flex items-center space-x-1 mt-1 sm:mt-0">
@@ -945,13 +952,17 @@ const Appointments = () => {
               {/* Doctor Info */}
               <div className="flex items-center space-x-3 sm:space-x-4">
                 <img
-                  src={selectedAppointment.doctor.image || "/placeholder.svg"}
-                  alt={selectedAppointment.doctor.name}
+                  src={selectedAppointment.doctor?.image || "/placeholder.svg"}
+                  alt={selectedAppointment.doctor?.name || selectedAppointment.providerName || "Doctor"}
                   className="w-12 h-12 sm:w-16 sm:h-16 rounded-full object-cover"
                 />
                 <div>
-                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100">{selectedAppointment.doctor.name}</h3>
-                  <p className="text-sm text-gray-600 dark:text-slate-300">{selectedAppointment.doctor.specialty}</p>
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100">
+                    {selectedAppointment.doctor?.name || selectedAppointment.providerName || "Doctor"}
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-slate-300">
+                    {selectedAppointment.doctor?.specialty || "Healthcare Provider"}
+                  </p>
                   <div className="flex items-center space-x-2 mt-1">
                     <span
                       className={`px-2 py-0.5 sm:py-1 text-xs font-medium rounded-full ${getStatusColor(selectedAppointment.status)}`}
@@ -969,12 +980,16 @@ const Appointments = () => {
                   <div className="space-y-1 text-xs sm:text-sm text-gray-600 dark:text-slate-300">
                     <div className="flex items-center space-x-2">
                       <CalendarIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                      <span>{formatDate(selectedAppointment.date)}</span>
+                      <span>
+                        {selectedAppointment.date ? formatDate(selectedAppointment.date) :
+                         selectedAppointment.dateTime ? formatDate(selectedAppointment.dateTime) : 'Date TBD'}
+                      </span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <ClockIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                       <span>
-                        {selectedAppointment.time} ({selectedAppointment.duration})
+                        {selectedAppointment.time ? `${selectedAppointment.time} ${selectedAppointment.duration ? `(${selectedAppointment.duration})` : ''}` :
+                         selectedAppointment.dateTime ? new Date(selectedAppointment.dateTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Time TBD'}
                       </span>
                     </div>
                   </div>
