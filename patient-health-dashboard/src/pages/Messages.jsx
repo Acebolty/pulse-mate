@@ -253,6 +253,11 @@ const Messages = () => {
   const [isTyping, setIsTyping] = useState(false); // Placeholder for typing indicator
   const [showChatList, setShowChatList] = useState(true); // Show chat list by default on mobile if no chat selected
 
+  // Appointment session states
+  const [appointmentSessions, setAppointmentSessions] = useState([]); // Active appointment sessions
+  const [sessionTimers, setSessionTimers] = useState({}); // Timer for each session
+  const [sessionStatus, setSessionStatus] = useState({}); // Status of each session
+
   const [loadingChats, setLoadingChats] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [error, setError] = useState(null); // General error for the page
@@ -302,8 +307,191 @@ const Messages = () => {
         setLoadingChats(false);
       }
     };
-    if(currentUser?.id) fetchChats();
+    if(currentUser?.id) {
+      fetchChats();
+      fetchAppointmentSessions();
+    }
   }, [currentUser?.id]); // Re-fetch if user changes (though unlikely in this component's lifecycle)
+
+  // Fetch active appointment sessions
+  const fetchAppointmentSessions = async () => {
+    try {
+      const response = await api.get('/appointments/active-sessions');
+      const sessions = response.data.data || [];
+      setAppointmentSessions(sessions);
+
+      // Initialize session timers and status
+      const timers = {};
+      const status = {};
+
+      sessions.forEach(session => {
+        if (session.status === 'Approved' && session.chatEnabled) {
+          // For school project demo: Create a 30-minute session starting from now
+          const now = new Date();
+          const sessionDuration = session.sessionDuration || 30; // Default 30 minutes
+
+          // Check if we already have a timer running for this session
+          const existingTimer = sessionTimers[session._id];
+          if (existingTimer && existingTimer > 0) {
+            // Keep existing timer
+            timers[session._id] = existingTimer;
+            status[session._id] = 'active';
+          } else {
+            // Start a new 30-minute session
+            const remainingTime = sessionDuration * 60 * 1000; // 30 minutes in milliseconds
+            timers[session._id] = remainingTime;
+            status[session._id] = 'active';
+          }
+        }
+      });
+
+      setSessionTimers(timers);
+      setSessionStatus(status);
+    } catch (error) {
+      console.error('Failed to fetch appointment sessions:', error);
+    }
+  };
+
+  // Session timer countdown effect
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setSessionTimers(prevTimers => {
+        const updatedTimers = { ...prevTimers };
+        let hasChanges = false;
+
+        Object.keys(updatedTimers).forEach(sessionId => {
+          if (updatedTimers[sessionId] > 0) {
+            updatedTimers[sessionId] = Math.max(0, updatedTimers[sessionId] - 1000);
+            hasChanges = true;
+
+            // Update session status when timer expires
+            if (updatedTimers[sessionId] === 0) {
+              setSessionStatus(prevStatus => ({
+                ...prevStatus,
+                [sessionId]: 'expired'
+              }));
+            }
+          }
+        });
+
+        return hasChanges ? updatedTimers : prevTimers;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Helper function to format remaining time
+  const formatRemainingTime = (milliseconds) => {
+    const totalSeconds = Math.floor(milliseconds / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+
+    // For school project: Show cleaner format
+    if (minutes > 60) {
+      // If more than 1 hour, something is wrong - show just minutes
+      return `${minutes} min`;
+    } else if (minutes > 5) {
+      // If more than 5 minutes, show just minutes
+      return `${minutes} min`;
+    } else {
+      // If 5 minutes or less, show minutes:seconds for precision
+      return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    }
+  };
+
+  // Check if current chat is an appointment session
+  const getCurrentSessionInfo = () => {
+    if (!selectedChat?._rawChat?._id) return null;
+
+    const session = appointmentSessions.find(s =>
+      s.chatRoomId === selectedChat._rawChat._id
+    );
+
+    if (session) {
+      return {
+        ...session,
+        remainingTime: sessionTimers[session._id] || 0,
+        status: sessionStatus[session._id] || 'expired',
+        isActive: sessionStatus[session._id] === 'active'
+      };
+    }
+
+    return null;
+  };
+
+  // Render message input area
+  const renderMessageInput = () => {
+    const sessionInfo = getCurrentSessionInfo();
+    const isSessionExpired = sessionInfo && !sessionInfo.isActive;
+
+    if (isSessionExpired) {
+      return (
+        <div className="flex items-center justify-center p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800">
+          <div className="flex items-center space-x-2 text-red-700 dark:text-red-400">
+            <ExclamationTriangleIcon className="w-5 h-5" />
+            <span className="text-sm font-medium">Appointment session has ended. Chat is now disabled.</span>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex items-end space-x-1.5 sm:space-x-3">
+        <button
+          onClick={handleFileUpload}
+          disabled={isSessionExpired}
+          className={`p-1.5 sm:p-2 rounded-lg transition-colors ${
+            isSessionExpired
+              ? 'text-gray-300 dark:text-slate-600 cursor-not-allowed'
+              : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700'
+          }`}
+        >
+          <PaperClipIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+        </button>
+
+        <div className="flex-1 relative">
+          <textarea
+            value={messageInput}
+            onChange={(e) => setMessageInput(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder={isSessionExpired ? "Session ended" : "Type your message..."}
+            rows={1}
+            disabled={isSessionExpired}
+            className={`w-full px-3 py-2 sm:px-4 sm:py-3 border rounded-xl sm:rounded-2xl resize-none text-xs sm:text-sm focus:ring-1 sm:focus:ring-2 focus:border-transparent ${
+              isSessionExpired
+                ? 'border-gray-200 dark:border-slate-700 bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-slate-500 cursor-not-allowed'
+                : 'border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 dark:placeholder-slate-400 focus:ring-green-500 dark:focus:ring-green-600'
+            }`}
+            style={{ minHeight: "38px", maxHeight: "100px" }}
+          />
+        </div>
+
+        <button
+          disabled={isSessionExpired}
+          className={`p-1.5 sm:p-2 rounded-lg transition-colors ${
+            isSessionExpired
+              ? 'text-gray-300 dark:text-slate-600 cursor-not-allowed'
+              : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700'
+          }`}
+        >
+          <FaceSmileIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+        </button>
+
+        <button
+          onClick={handleSendMessage}
+          disabled={!messageInput.trim() || isSessionExpired}
+          className={`p-1.5 sm:p-2 rounded-lg transition-colors ${
+            messageInput.trim() && !isSessionExpired
+              ? "bg-green-500 text-white hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700"
+              : "bg-gray-200 text-gray-400 dark:bg-slate-600 dark:text-slate-500 cursor-not-allowed"
+          }`}
+        >
+          <PaperAirplaneIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+        </button>
+      </div>
+    );
+  };
 
   // Fetch Messages for Selected Chat
   useEffect(() => {
@@ -536,15 +724,38 @@ const Messages = () => {
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-0.5 sm:mb-1">
-                      <h3 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-slate-100 truncate">{chat.providerName}</h3>
-                      <div className="flex items-center space-x-0.5 sm:space-x-1">
-                        {chat.isUrgent && <ExclamationTriangleIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-red-500" />}
-                        <span className="text-2xs sm:text-xs text-gray-500 dark:text-slate-400">{formatTime(chat.lastMessageTime)}</span>
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center space-x-2">
+                        <h3 className="text-sm font-semibold text-gray-900 dark:text-slate-100 truncate">Dr. {chat.providerName}</h3>
+                        {chat.isOnline && (
+                          <span className="px-1.5 py-0.5 bg-green-100 text-green-700 dark:bg-green-700/30 dark:text-green-400 text-2xs rounded-full font-medium">
+                            Online
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        {chat.isUrgent && <ExclamationTriangleIcon className="w-3 h-3 text-red-500" />}
+                        <span className="text-xs text-gray-500 dark:text-slate-400">{formatTime(chat.lastMessageTime)}</span>
                       </div>
                     </div>
 
-                    <p className="text-2xs sm:text-xs text-gray-600 dark:text-slate-300 mb-0.5 sm:mb-1">{chat.specialty}</p>
+                    <div className="flex items-center space-x-2 mb-1">
+                      <span className="px-2 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-700/30 dark:text-blue-400 text-2xs rounded-md font-medium">
+                        {chat.specialty || 'General Medicine'}
+                      </span>
+                      {(() => {
+                        const sessionInfo = appointmentSessions.find(s => s.chatRoomId === chat._rawChat?._id);
+                        if (sessionInfo && sessionStatus[sessionInfo._id] === 'active') {
+                          return (
+                            <span className="px-2 py-0.5 bg-green-100 text-green-700 dark:bg-green-700/30 dark:text-green-400 text-2xs rounded-md font-medium flex items-center space-x-1">
+                              <ClockIcon className="w-2.5 h-2.5" />
+                              <span>Session Active</span>
+                            </span>
+                          );
+                        }
+                        return null;
+                      })()}
+                    </div>
 
                     <div className="flex items-center justify-between">
                       <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-300 truncate flex-1">{chat.lastMessage}</p>
@@ -555,7 +766,19 @@ const Messages = () => {
                       )}
                     </div>
 
-                    <p className="text-2xs sm:text-xs text-gray-400 dark:text-slate-500 mt-0.5 sm:mt-1">{chat.lastSeen}</p>
+                    <p className="text-2xs sm:text-xs text-gray-400 dark:text-slate-500 mt-0.5 sm:mt-1">
+                      {(() => {
+                        const sessionInfo = appointmentSessions.find(s => s.chatRoomId === chat._rawChat?._id);
+                        if (sessionInfo && sessionStatus[sessionInfo._id] === 'active') {
+                          const timeLeft = formatRemainingTime(sessionTimers[sessionInfo._id] || 0);
+                          return `${timeLeft} left`;
+                        }
+                        if (chat.isOnline) {
+                          return 'Active now';
+                        }
+                        return 'Available for consultation';
+                      })()}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -596,14 +819,53 @@ const Messages = () => {
                     )}
                   </div>
                   <div>
-                    <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100">{selectedChat.providerName}</h2>
-                    <div className="flex items-center space-x-1 sm:space-x-2">
-                      <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-300">{selectedChat.specialty}</p>
-                      {selectedChat.isUrgent && (
-                        <span className="px-1.5 sm:px-2 py-0.5 bg-red-100 text-red-700 dark:bg-red-700/30 dark:text-red-400 text-2xs sm:text-xs rounded-full">Urgent</span>
+                    <div className="flex items-center space-x-2">
+                      <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100">Dr. {selectedChat.providerName}</h2>
+                      {selectedChat.isOnline && (
+                        <span className="px-2 py-0.5 bg-green-100 text-green-700 dark:bg-green-700/30 dark:text-green-400 text-2xs rounded-full font-medium">
+                          Online
+                        </span>
                       )}
                     </div>
-                    <p className="text-xs sm:text-sm text-gray-500 dark:text-slate-400">{selectedChat.lastSeen}</p>
+                    <div className="flex items-center space-x-2 flex-wrap">
+                      <span className="px-2 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-700/30 dark:text-blue-400 text-2xs rounded-md font-medium">
+                        {selectedChat.specialty || 'General Medicine'}
+                      </span>
+                      {selectedChat.isUrgent && (
+                        <span className="px-2 py-0.5 bg-red-100 text-red-700 dark:bg-red-700/30 dark:text-red-400 text-2xs rounded-full">Urgent</span>
+                      )}
+                      {/* Session Timer for Appointment Chats */}
+                      {(() => {
+                        const sessionInfo = getCurrentSessionInfo();
+                        if (sessionInfo) {
+                          return (
+                            <span className={`px-2 py-0.5 text-2xs sm:text-xs rounded-full font-medium flex items-center space-x-1 ${
+                              sessionInfo.isActive
+                                ? 'bg-green-100 text-green-700 dark:bg-green-700/30 dark:text-green-400'
+                                : 'bg-red-100 text-red-700 dark:bg-red-700/30 dark:text-red-400'
+                            }`}>
+                              <ClockIcon className="w-3 h-3" />
+                              <span>
+                                {sessionInfo.isActive
+                                  ? `${formatRemainingTime(sessionInfo.remainingTime)} left`
+                                  : 'Session Expired'
+                                }
+                              </span>
+                            </span>
+                          );
+                        }
+                        return null;
+                      })()}
+                    </div>
+                    <p className="text-xs sm:text-sm text-gray-500 dark:text-slate-400">
+                      {(() => {
+                        const sessionInfo = getCurrentSessionInfo();
+                        if (sessionInfo) {
+                          return sessionInfo.isActive ? 'Appointment Session Active' : 'Appointment Session Ended';
+                        }
+                        return selectedChat.lastSeen;
+                      })()}
+                    </p>
                   </div>
                 </div>
 
@@ -627,7 +889,7 @@ const Messages = () => {
             {/* Messages Area */}
             <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4 bg-gray-50 dark:bg-slate-900">
               {currentMessages.map((message, index) => {
-                const isPatient = message.senderId === "patient"
+                const isPatient = message.senderId === currentUser?.id // Check if sender is current user (patient)
                 const showAvatar =
                   index === 0 ||
                   currentMessages[index - 1].senderId !== message.senderId ||
@@ -638,6 +900,7 @@ const Messages = () => {
                     <div
                       className={`flex items-end space-x-1.5 sm:space-x-2 max-w-[80%] sm:max-w-xs lg:max-w-md ${isPatient ? "flex-row-reverse space-x-reverse" : ""}`}
                     >
+                      {/* Doctor Avatar (left side) */}
                       {!isPatient && showAvatar && (
                         <img
                           src={selectedChat.avatar || "/placeholder.svg"}
@@ -646,6 +909,14 @@ const Messages = () => {
                         />
                       )}
                       {!isPatient && !showAvatar && <div className="w-6 sm:w-8"></div>}
+
+                      {/* Patient Avatar (right side) */}
+                      {isPatient && showAvatar && (
+                        <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-xs sm:text-sm font-medium text-white flex-shrink-0">
+                          {(currentUser?.firstName?.[0] || 'P') + (currentUser?.lastName?.[0] || '')}
+                        </div>
+                      )}
+                      {isPatient && !showAvatar && <div className="w-6 sm:w-8"></div>}
 
                       <div className={`flex flex-col ${isPatient ? "items-end" : "items-start"}`}>
                         {showAvatar && (
@@ -661,7 +932,7 @@ const Messages = () => {
                               : message.type === "file"
                                 ? "bg-blue-50 dark:bg-blue-700/20 border border-blue-200 dark:border-blue-600/40" // File messages from provider
                                 : "bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600" // Text messages from provider
-                          }`}
+                          }`}_
                         >
                           {message.type === "text" ? (
                             <p className={`text-xs sm:text-sm ${isPatient ? 'text-white' : 'text-gray-800 dark:text-slate-200'}`}>{message.message}</p>
@@ -720,42 +991,7 @@ const Messages = () => {
 
             {/* Message Input */}
             <div className="p-2 sm:p-4 border-t border-gray-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
-              <div className="flex items-end space-x-1.5 sm:space-x-3">
-                <button
-                  onClick={handleFileUpload}
-                  className="p-1.5 sm:p-2 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
-                >
-                  <PaperClipIcon className="w-4 h-4 sm:w-5 sm:h-5" />
-                </button>
-
-                <div className="flex-1 relative">
-                  <textarea
-                    value={messageInput}
-                    onChange={(e) => setMessageInput(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    placeholder="Type your message..."
-                    rows={1}
-                    className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 dark:border-slate-600 rounded-xl sm:rounded-2xl resize-none text-xs sm:text-sm dark:bg-slate-700 dark:text-slate-200 dark:placeholder-slate-400 focus:ring-1 sm:focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
-                    style={{ minHeight: "38px", maxHeight: "100px" }} // Adjusted height for mobile
-                  />
-                </div>
-
-                <button className="p-1.5 sm:p-2 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
-                  <FaceSmileIcon className="w-4 h-4 sm:w-5 sm:h-5" />
-                </button>
-
-                <button
-                  onClick={handleSendMessage}
-                  disabled={!messageInput.trim()}
-                  className={`p-1.5 sm:p-2 rounded-lg transition-colors ${
-                    messageInput.trim()
-                      ? "bg-green-500 text-white hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700"
-                      : "bg-gray-200 text-gray-400 dark:bg-slate-600 dark:text-slate-500 cursor-not-allowed"
-                  }`}
-                >
-                  <PaperAirplaneIcon className="w-4 h-4 sm:w-5 sm:h-5" />
-                </button>
-              </div>
+              {renderMessageInput()}
 
               <input
                 ref={fileInputRef}

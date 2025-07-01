@@ -86,6 +86,55 @@ export const deleteUser = async (userId) => {
 };
 
 // ==========================================
+// APPOINTMENT APPROVAL MANAGEMENT
+// ==========================================
+
+/**
+ * Get all pending appointments for approval
+ * @returns {Promise<object>} Pending appointments data
+ */
+export const getPendingAppointments = async () => {
+  try {
+    const response = await api.get('/admin/appointments/pending');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching pending appointments:', error);
+    throw error;
+  }
+};
+
+/**
+ * Approve an appointment
+ * @param {string} appointmentId - Appointment ID to approve
+ * @returns {Promise<object>} Approval result
+ */
+export const approveAppointment = async (appointmentId) => {
+  try {
+    const response = await api.post(`/admin/appointments/${appointmentId}/approve`);
+    return response.data;
+  } catch (error) {
+    console.error('Error approving appointment:', error);
+    throw error;
+  }
+};
+
+/**
+ * Reject an appointment
+ * @param {string} appointmentId - Appointment ID to reject
+ * @param {string} reason - Rejection reason (optional)
+ * @returns {Promise<object>} Rejection result
+ */
+export const rejectAppointment = async (appointmentId, reason = '') => {
+  try {
+    const response = await api.post(`/admin/appointments/${appointmentId}/reject`, { reason });
+    return response.data;
+  } catch (error) {
+    console.error('Error rejecting appointment:', error);
+    throw error;
+  }
+};
+
+// ==========================================
 // DOCTOR APPROVAL MANAGEMENT
 // ==========================================
 

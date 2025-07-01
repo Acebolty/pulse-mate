@@ -3,6 +3,7 @@ import DashboardLayout from "./components/layout/DashboardLayout"
 import DashboardOverview from "./pages/DashboardOverview"
 import Patients from "./pages/Patients"
 import Doctors from "./pages/Doctors"
+import Appointments from "./pages/Appointments"
 import Profile from "./pages/Profile"
 import LoginPage from "./pages/LoginPage"
 import SignupPage from "./pages/SignupPage"
@@ -32,6 +33,7 @@ function App() {
                 <Route path="dashboard" element={<DashboardOverview />} />
                 <Route path="patients" element={<Patients />} />
                 <Route path="doctors" element={<Doctors />} />
+                <Route path="appointments" element={<Appointments />} />
                 <Route path="profile" element={<Profile />} />
               </Routes>
             </DashboardLayout>

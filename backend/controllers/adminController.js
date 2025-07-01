@@ -4,6 +4,7 @@ const User = require('../models/User');
 const HealthData = require('../models/HealthData');
 const Alert = require('../models/Alert');
 const Appointment = require('../models/Appointment');
+const Chat = require('../models/Chat');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -374,6 +375,136 @@ const getDashboardOverview = async (req, res) => {
   }
 };
 
+// ==========================================
+// APPOINTMENT APPROVAL MANAGEMENT
+// ==========================================
+
+/**
+ * @desc    Get all pending appointments for admin approval
+ * @route   GET /api/admin/appointments/pending
+ * @access  Private (Admin only)
+ */
+const getPendingAppointments = async (req, res) => {
+  try {
+    const pendingAppointments = await Appointment.getPendingAppointments();
+
+    res.json({
+      success: true,
+      appointments: pendingAppointments,
+      count: pendingAppointments.length
+    });
+
+  } catch (error) {
+    console.error('Get pending appointments error:', error.message);
+    res.status(500).json({
+      message: 'Server error fetching pending appointments'
+    });
+  }
+};
+
+/**
+ * @desc    Approve an appointment and create chat room
+ * @route   POST /api/admin/appointments/:appointmentId/approve
+ * @access  Private (Admin only)
+ */
+const approveAppointment = async (req, res) => {
+  try {
+    const { appointmentId } = req.params;
+    const adminId = req.adminUser._id;
+
+    // Find the appointment
+    const appointment = await Appointment.findById(appointmentId).populate('userId');
+    if (!appointment) {
+      return res.status(404).json({ message: 'Appointment not found' });
+    }
+
+    if (appointment.status !== 'Pending') {
+      return res.status(400).json({ message: 'Appointment is not pending approval' });
+    }
+
+    // Find the doctor (assuming providerName matches doctor's name)
+    const doctor = await User.findOne({
+      role: 'doctor',
+      $or: [
+        { firstName: { $regex: appointment.providerName, $options: 'i' } },
+        { lastName: { $regex: appointment.providerName, $options: 'i' } },
+        { $expr: { $regexMatch: { input: { $concat: ['$firstName', ' ', '$lastName'] }, regex: appointment.providerName, options: 'i' } } }
+      ]
+    });
+
+    if (!doctor) {
+      return res.status(404).json({ message: 'Doctor not found for this appointment' });
+    }
+
+    // Create chat room between patient and doctor
+    const chatRoom = await Chat.findOrCreateChat(appointment.userId._id, doctor._id);
+
+    // Update appointment status
+    appointment.status = 'Approved';
+    appointment.approvedBy = adminId;
+    appointment.approvedAt = new Date();
+    appointment.chatRoomId = chatRoom._id;
+
+    await appointment.save();
+
+    res.json({
+      success: true,
+      message: 'Appointment approved successfully',
+      appointment: appointment,
+      chatRoomId: chatRoom._id
+    });
+
+  } catch (error) {
+    console.error('Approve appointment error:', error.message);
+    res.status(500).json({
+      message: 'Server error approving appointment'
+    });
+  }
+};
+
+/**
+ * @desc    Reject an appointment
+ * @route   POST /api/admin/appointments/:appointmentId/reject
+ * @access  Private (Admin only)
+ */
+const rejectAppointment = async (req, res) => {
+  try {
+    const { appointmentId } = req.params;
+    const { reason } = req.body;
+    const adminId = req.adminUser._id;
+
+    // Find the appointment
+    const appointment = await Appointment.findById(appointmentId);
+    if (!appointment) {
+      return res.status(404).json({ message: 'Appointment not found' });
+    }
+
+    if (appointment.status !== 'Pending') {
+      return res.status(400).json({ message: 'Appointment is not pending approval' });
+    }
+
+    // Update appointment status
+    appointment.status = 'Cancelled';
+    appointment.approvedBy = adminId;
+    appointment.rejectedAt = new Date();
+    appointment.rejectionReason = reason || 'Rejected by admin';
+
+    await appointment.save();
+
+    res.json({
+      success: true,
+      message: 'Appointment rejected successfully',
+      appointment: appointment
+    });
+
+  } catch (error) {
+    console.error('Reject appointment error:', error.message);
+    res.status(500).json({
+      message: 'Server error rejecting appointment'
+    });
+  }
+};
+
 // Export all functions
 module.exports = {
   adminLogin,
@@ -381,6 +512,9 @@ module.exports = {
   getAllPatients,
   getAllDoctors,
   getDashboardOverview,
+  getPendingAppointments,
+  approveAppointment,
+  rejectAppointment,
   // Add other functions as we implement them
   updateUserStatus: (req, res) => res.status(501).json({ message: 'Not implemented yet' }),
   deleteUser: (req, res) => res.status(501).json({ message: 'Not implemented yet' }),

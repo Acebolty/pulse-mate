@@ -5,6 +5,7 @@ import {
   HomeIcon,
   UserGroupIcon,
   UserIcon,
+  CalendarIcon,
   Cog6ToothIcon,
   XMarkIcon,
   ChevronLeftIcon,
@@ -16,6 +17,7 @@ const navigation = [
   { name: "Dashboard", href: "/admin/dashboard", icon: HomeIcon },
   { name: "Patients", href: "/admin/patients", icon: UserGroupIcon },
   { name: "Doctors", href: "/admin/doctors", icon: ShieldCheckIcon },
+  { name: "Appointments", href: "/admin/appointments", icon: CalendarIcon },
   { name: "Profile", href: "/admin/profile", icon: UserIcon },
 ]
 

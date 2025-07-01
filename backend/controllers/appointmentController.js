@@ -258,10 +258,41 @@ const getDoctorAppointments = async (req, res) => {
   }
 };
 
+// @desc    Get active appointment sessions for the logged-in user
+// @route   GET api/appointments/active-sessions
+// @access  Private
+const getActiveSessions = async (req, res) => {
+  try {
+    console.log('🔍 Fetching active sessions for user:', req.user.id);
+
+    const activeSessions = await Appointment.find({
+      userId: req.user.id,
+      status: 'Approved',
+      chatEnabled: true
+    }).populate('userId', 'firstName lastName email');
+
+    console.log('📋 Found active sessions:', activeSessions.length);
+
+    res.json({
+      success: true,
+      data: activeSessions,
+      message: 'Active sessions retrieved successfully'
+    });
+  } catch (error) {
+    console.error('Error fetching active sessions:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   createAppointment,
   getAppointments,
   updateAppointment,
   deleteAppointment,
   getDoctorAppointments,
+  getActiveSessions,
 };

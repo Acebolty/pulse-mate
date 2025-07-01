@@ -17,6 +17,11 @@ const {
   approveDoctorRegistration,
   rejectDoctorRegistration,
   getPendingDoctors,
+
+  // Appointment approval controllers
+  getPendingAppointments,
+  approveAppointment,
+  rejectAppointment,
   
   // System analytics controllers
   getDashboardOverview,
@@ -86,6 +91,25 @@ router.post('/doctors/:doctorId/approve', authMiddleware, adminMiddleware, appro
 // @desc    Reject doctor registration
 // @access  Private (Admin only)
 router.post('/doctors/:doctorId/reject', authMiddleware, adminMiddleware, rejectDoctorRegistration);
+
+// ==========================================
+// APPOINTMENT APPROVAL ROUTES
+// ==========================================
+
+// @route   GET /api/admin/appointments/pending
+// @desc    Get all pending appointments for approval
+// @access  Private (Admin only)
+router.get('/appointments/pending', authMiddleware, adminMiddleware, getPendingAppointments);
+
+// @route   POST /api/admin/appointments/:appointmentId/approve
+// @desc    Approve an appointment and create chat room
+// @access  Private (Admin only)
+router.post('/appointments/:appointmentId/approve', authMiddleware, adminMiddleware, approveAppointment);
+
+// @route   POST /api/admin/appointments/:appointmentId/reject
+// @desc    Reject an appointment
+// @access  Private (Admin only)
+router.post('/appointments/:appointmentId/reject', authMiddleware, adminMiddleware, rejectAppointment);
 
 // ==========================================
 // ANALYTICS & DASHBOARD ROUTES
