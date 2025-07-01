@@ -296,17 +296,20 @@ const Appointments = () => {
 
   const [fetchedUpcomingAppointments, setFetchedUpcomingAppointments] = useState([]);
   const [fetchedPastAppointments, setFetchedPastAppointments] = useState([]);
+  const [availableDoctors, setAvailableDoctors] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [doctorsLoading, setDoctorsLoading] = useState(false);
   const [error, setError] = useState(null);
 
   // Form state for new/editing appointment
   const initialAppointmentFormState = {
-    providerName: "",
+    providerId: "", // Doctor ID
+    providerName: "", // Doctor name (auto-filled when doctor is selected)
     dateTime: "", // Should be ISO string or Date object for backend
     reason: "",
     type: "Consultation", // Default
     notes: "",
-    virtualLink: "" 
+    virtualLink: ""
   };
   const [newAppointmentData, setNewAppointmentData] = useState(initialAppointmentFormState);
   const [isEditingModal, setIsEditingModal] = useState(false); // To differentiate create/edit in modal
@@ -345,6 +348,20 @@ const Appointments = () => {
     }
   };
 
+  const fetchAvailableDoctors = async () => {
+    setDoctorsLoading(true);
+    try {
+      const response = await api.get('/appointments/available-doctors');
+      console.log('Fetched available doctors:', response.data);
+      setAvailableDoctors(response.data.doctors || []);
+    } catch (error) {
+      console.error('Error fetching available doctors:', error);
+      setError('Failed to load available doctors. Please try again.');
+    } finally {
+      setDoctorsLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (activeTab === "upcoming" || activeTab === "past") {
       fetchAppointments();
@@ -355,6 +372,13 @@ const Appointments = () => {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, filterStatus, filterType]); // Re-fetch when these change
+
+  // Fetch available doctors when booking modal is opened
+  useEffect(() => {
+    if (showBookingModal) {
+      fetchAvailableDoctors();
+    }
+  }, [showBookingModal]);
 
 
   const tabs = [
@@ -408,6 +432,14 @@ const Appointments = () => {
   const handleModalFormChange = (e) => {
     const { name, value } = e.target;
     setNewAppointmentData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleDoctorSelection = (doctor) => {
+    setNewAppointmentData(prev => ({
+      ...prev,
+      providerId: doctor._id,
+      providerName: `Dr. ${doctor.firstName} ${doctor.lastName}`
+    }));
   };
 
   const handleBookingSubmit = async (e) => {
@@ -776,27 +808,41 @@ const Appointments = () => {
               {/* Available Doctors */}
               <div>
                 <h3 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-slate-100 mb-4">Choose Your Healthcare Provider</h3>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4">
-                  {doctors.map((doctor) => (
+
+                {doctorsLoading ? (
+                  <div className="flex justify-center items-center py-8">
+                    <ArrowPathIcon className="w-6 h-6 animate-spin text-green-600" />
+                    <span className="ml-2 text-gray-600 dark:text-slate-300">Loading available doctors...</span>
+                  </div>
+                ) : availableDoctors.length === 0 ? (
+                  <div className="text-center py-8">
+                    <UserIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600 dark:text-slate-300">No doctors available at the moment.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4">
+                    {availableDoctors.map((doctor) => (
                     <div
-                      key={doctor.id}
-                      className="border border-gray-200 dark:border-slate-700 dark:bg-slate-800 rounded-xl md:rounded-2xl p-3 md:p-4 hover:shadow-md transition-shadow cursor-pointer"
+                      key={doctor._id}
+                      className="border border-gray-200 dark:border-slate-700 dark:bg-slate-800 rounded-xl md:rounded-2xl p-3 md:p-4 hover:shadow-md transition-shadow"
                     >
                       <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-3 sm:space-y-0 sm:space-x-3 mb-3">
                         <img
-                          src={doctor.image || "/placeholder.svg"}
-                          alt={doctor.name}
+                          src={doctor.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(`${doctor.firstName} ${doctor.lastName}`)}&background=random`}
+                          alt={`Dr. ${doctor.firstName} ${doctor.lastName}`}
                           className="w-12 h-12 rounded-full object-cover"
                         />
                         <div className="flex-1">
-                          <h4 className="font-semibold text-gray-900 dark:text-slate-100 text-base md:text-lg">{doctor.name}</h4>
-                          <p className="text-sm text-gray-600 dark:text-slate-300">{doctor.specialty}</p>
-                          {doctor.chatAvailable && (
-                            <div className="flex items-center space-x-1 mt-1">
-                              <ChatBubbleLeftRightIcon className="w-3 h-3 text-purple-500 dark:text-purple-400" />
-                              <span className="text-xs text-purple-600 dark:text-purple-300">Chat Available</span>
-                            </div>
-                          )}
+                          <h4 className="font-semibold text-gray-900 dark:text-slate-100 text-base md:text-lg">
+                            Dr. {doctor.firstName} {doctor.lastName}
+                          </h4>
+                          <p className="text-sm text-gray-600 dark:text-slate-300">
+                            {doctor.doctorInfo?.specialty || 'General Medicine'}
+                          </p>
+                          <div className="flex items-center space-x-1 mt-1">
+                            <ChatBubbleLeftRightIcon className="w-3 h-3 text-purple-500 dark:text-purple-400" />
+                            <span className="text-xs text-purple-600 dark:text-purple-300">Chat Available</span>
+                          </div>
                         </div>
                       </div>
 
@@ -804,28 +850,118 @@ const Appointments = () => {
                         <div className="flex items-center justify-between text-xs sm:text-sm">
                           <div className="flex items-center space-x-1">
                             <span className="text-yellow-500">★</span>
-                            <span className="text-gray-600 dark:text-slate-300">{doctor.rating}</span>
+                            <span className="text-gray-600 dark:text-slate-300">4.8</span>
                           </div>
-                          <span className="text-green-600 dark:text-green-400">Next: {doctor.nextAvailable}</span>
+                          <span className="text-green-600 dark:text-green-400">Available Today</span>
                         </div>
-                        {doctor.responseTime && <p className="text-xs text-gray-500 dark:text-slate-400">{doctor.responseTime}</p>}
+                        <p className="text-xs text-gray-500 dark:text-slate-400">
+                          {doctor.doctorInfo?.experience || 0} years experience
+                        </p>
                       </div>
 
                       <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-                        <button className="flex-1 px-3 py-2 bg-green-600 dark:bg-green-500 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 transition-colors text-xs sm:text-sm">
-                          Book In-Person
+                        <button
+                          onClick={() => handleDoctorSelection(doctor)}
+                          className="flex-1 px-3 py-2 bg-green-600 dark:bg-green-500 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 transition-colors text-xs sm:text-sm"
+                        >
+                          Book Appointment
                         </button>
-                        {doctor.chatAvailable && (
-                          <button className="flex-1 px-3 py-2 bg-purple-600 dark:bg-purple-500 text-white rounded-lg hover:bg-purple-700 dark:hover:bg-purple-600 transition-colors text-xs sm:text-sm flex items-center justify-center space-x-1">
-                            <ChatBubbleLeftRightIcon className="w-3 h-3" />
-                            <span>Book Chat</span>
-                          </button>
-                        )}
                       </div>
                     </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
+
+              {/* Appointment Booking Form */}
+              {newAppointmentData.providerId && (
+                <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-4">
+                    Book Appointment with {newAppointmentData.providerName}
+                  </h3>
+
+                  <form onSubmit={handleBookingSubmit} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
+                          Appointment Date & Time
+                        </label>
+                        <input
+                          type="datetime-local"
+                          name="dateTime"
+                          value={newAppointmentData.dateTime}
+                          onChange={handleModalFormChange}
+                          required
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:text-slate-100"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
+                          Appointment Type
+                        </label>
+                        <select
+                          name="type"
+                          value={newAppointmentData.type}
+                          onChange={handleModalFormChange}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:text-slate-100"
+                        >
+                          <option value="Consultation">Consultation</option>
+                          <option value="Follow-up">Follow-up</option>
+                          <option value="Check-up">Check-up</option>
+                          <option value="Emergency">Emergency</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
+                        Reason for Visit
+                      </label>
+                      <input
+                        type="text"
+                        name="reason"
+                        value={newAppointmentData.reason}
+                        onChange={handleModalFormChange}
+                        required
+                        placeholder="Brief description of your concern"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:text-slate-100"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
+                        Additional Notes (Optional)
+                      </label>
+                      <textarea
+                        name="notes"
+                        value={newAppointmentData.notes}
+                        onChange={handleModalFormChange}
+                        rows={3}
+                        placeholder="Any additional information you'd like to share"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:text-slate-100"
+                      />
+                    </div>
+
+                    <div className="flex space-x-3">
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        {loading ? 'Booking...' : 'Book Appointment'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setNewAppointmentData(initialAppointmentFormState)}
+                        className="px-4 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
 
               {/* Quick Booking Options */}
               <div>

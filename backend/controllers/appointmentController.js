@@ -1,11 +1,12 @@
 const Appointment = require('../models/Appointment');
+const User = require('../models/User');
 
 // @desc    Create a new appointment for the logged-in user
 // @route   POST api/appointments
 // @access  Private
 const createAppointment = async (req, res) => {
   try {
-    const { providerName, dateTime, reason, type, notes, virtualLink } = req.body;
+    const { providerId, providerName, dateTime, reason, type, notes, virtualLink } = req.body;
 
     if (!providerName || !dateTime || !reason) {
       return res.status(400).json({ message: 'Please provide provider name, date/time, and reason for the appointment.' });
@@ -18,13 +19,14 @@ const createAppointment = async (req, res) => {
 
     const newAppointment = new Appointment({
       userId: req.user.id,
+      providerId: providerId || null,
       providerName,
       dateTime: appointmentDate,
       reason,
-      type: type || 'Consultation',
+      type: type || 'Chat', // Default to Chat for school project
       notes,
       virtualLink,
-      status: 'Scheduled'
+      status: 'Pending' // Set to Pending for admin approval
     });
 
     await newAppointment.save();
@@ -288,6 +290,34 @@ const getActiveSessions = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Get available doctors for appointment booking
+ * @route   GET /api/appointments/available-doctors
+ * @access  Private
+ */
+const getAvailableDoctors = async (req, res) => {
+  try {
+    // Get all approved doctors with their basic info and doctorInfo
+    const doctors = await User.find({
+      role: 'doctor',
+      'doctorInfo.approvalStatus': 'approved'
+    })
+    .select('firstName lastName email profilePicture doctorInfo')
+    .sort({ 'doctorInfo.specialty': 1, firstName: 1 });
+
+    res.json({
+      success: true,
+      doctors
+    });
+
+  } catch (error) {
+    console.error('Get available doctors error:', error.message);
+    res.status(500).json({
+      message: 'Server error fetching available doctors'
+    });
+  }
+};
+
 module.exports = {
   createAppointment,
   getAppointments,
@@ -295,4 +325,5 @@ module.exports = {
   deleteAppointment,
   getDoctorAppointments,
   getActiveSessions,
+  getAvailableDoctors
 };

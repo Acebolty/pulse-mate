@@ -23,7 +23,7 @@ const initiateChat = async (req, res) => {
     }
 
     const chat = await Chat.findOrCreateChat(senderId, receiverId);
-    await chat.populate('participants', 'firstName lastName email profilePicture');
+    await chat.populate('participants', 'firstName lastName email profilePicture role doctorInfo');
     res.status(200).json(chat);
   } catch (error) {
     console.error('Error initiating chat:', error);
@@ -37,7 +37,7 @@ const initiateChat = async (req, res) => {
 const getChats = async (req, res) => {
   try {
     const chats = await Chat.find({ participants: req.user.id })
-      .populate('participants', 'firstName lastName email profilePicture')
+      .populate('participants', 'firstName lastName email profilePicture role doctorInfo')
       .populate({
         path: 'lastMessage',
         select: 'messageContent timestamp senderId status',

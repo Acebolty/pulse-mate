@@ -7,7 +7,8 @@ const {
     updateAppointment,
     deleteAppointment,
     getDoctorAppointments,
-    getActiveSessions
+    getActiveSessions,
+    getAvailableDoctors
 } = require('../controllers/appointmentController');
 
 // @route   POST api/appointments
@@ -29,6 +30,11 @@ router.get('/doctor', authMiddleware, getDoctorAppointments);
 // @desc    Get active appointment sessions for the logged-in user
 // @access  Private
 router.get('/active-sessions', authMiddleware, getActiveSessions);
+
+// @route   GET api/appointments/available-doctors
+// @desc    Get available doctors for appointment booking
+// @access  Private
+router.get('/available-doctors', authMiddleware, getAvailableDoctors);
 
 // @route   PUT api/appointments/:appointmentId
 // @desc    Update an appointment (e.g., status, notes, reschedule)

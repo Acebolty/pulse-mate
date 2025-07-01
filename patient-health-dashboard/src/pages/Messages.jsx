@@ -10,11 +10,6 @@ import {
   PaperClipIcon,
   FaceSmileIcon,
   MagnifyingGlassIcon,
-  PhoneIcon,
-  VideoCameraIcon,
-  InformationCircleIcon,
-  EllipsisVerticalIcon,
-  DocumentIcon,
   XMarkIcon,
   CheckIcon,
   ClockIcon,
@@ -249,7 +244,7 @@ const Messages = () => {
   const [currentMessages, setCurrentMessages] = useState([]); // Messages for the selected chat
   const [messageInput, setMessageInput] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [showChatInfo, setShowChatInfo] = useState(false); // For the right sidebar
+
   const [isTyping, setIsTyping] = useState(false); // Placeholder for typing indicator
   const [showChatList, setShowChatList] = useState(true); // Show chat list by default on mobile if no chat selected
 
@@ -274,16 +269,39 @@ const Messages = () => {
       try {
         const response = await api.get('/chats');
         // Transform backend chat data to match frontend structure if needed
-        const transformedChats = response.data.map(chat => {
+        // Transform chats and fetch doctor details for each
+        const transformedChats = await Promise.all(response.data.map(async (chat) => {
           // Assuming chat.participants has at least two users, and one is not current user
           const otherParticipant = chat.participants.find(p => p._id !== currentUser?.id);
+
+          // Doctor details are now included in the backend response
+          console.log('Participant data:', {
+            otherParticipant,
+            role: otherParticipant?.role,
+            doctorInfo: otherParticipant?.doctorInfo
+          });
+
           return {
             // Frontend dummy data structure: id, providerId, providerName, specialty, avatar, lastMessage, lastMessageTime, unreadCount, isOnline, lastSeen, isUrgent
             // Backend chat structure: _id, participants, lastMessage (object), lastMessageTimestamp
             id: chat._id, // Use chat._id as the unique id
             providerId: otherParticipant?._id, // Use other participant's ID
             providerName: otherParticipant ? `${otherParticipant.firstName} ${otherParticipant.lastName}` : "Unknown User",
-            specialty: otherParticipant?.specialty || "User", // Backend User model doesn't have specialty by default
+            specialty: (() => {
+              // Use doctor info directly from backend response
+              let specialty;
+              if (otherParticipant?.doctorInfo?.specialty) {
+                specialty = otherParticipant.doctorInfo.specialty;
+              } else if (otherParticipant?.role === 'doctor') {
+                specialty = 'General Medicine'; // Default for doctors without specialty
+              } else if (otherParticipant?.email?.includes('doctor')) {
+                specialty = 'General Medicine'; // Fallback for doctor emails
+              } else {
+                specialty = 'General Medicine'; // Default for all chats in appointment system
+              }
+              console.log('Final specialty value:', specialty);
+              return specialty;
+            })(), // Show specialty for medical chats
             avatar: otherParticipant?.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(otherParticipant ? `${otherParticipant.firstName} ${otherParticipant.lastName}` : 'U')}&background=random`, // Placeholder avatar
             lastMessage: chat.lastMessage?.messageContent || "No messages yet...",
             lastMessageTime: chat.lastMessageTimestamp || chat.updatedAt,
@@ -292,9 +310,9 @@ const Messages = () => {
             lastSeen: otherParticipant?.lastSeen || "N/A", // Backend User model doesn't have lastSeen
             isUrgent: false, // This logic would need to be determined (e.g., based on keywords, sender role)
             // Store the full chat object from backend if needed for more details
-            _rawChat: chat 
+            _rawChat: chat
           };
-        });
+        }));
         setChatList(transformedChats);
         if (transformedChats.length > 0 && !selectedChat) {
           // Optionally select the first chat by default on desktop
@@ -326,21 +344,49 @@ const Messages = () => {
 
       sessions.forEach(session => {
         if (session.status === 'Approved' && session.chatEnabled) {
-          // For school project demo: Create a 30-minute session starting from now
-          const now = new Date();
+          // Calculate session time based on actual approval time
           const sessionDuration = session.sessionDuration || 30; // Default 30 minutes
+          const now = new Date();
 
-          // Check if we already have a timer running for this session
-          const existingTimer = sessionTimers[session._id];
-          if (existingTimer && existingTimer > 0) {
-            // Keep existing timer
-            timers[session._id] = existingTimer;
-            status[session._id] = 'active';
+          // Debug: Log session data to see what we have
+          console.log('Session data:', {
+            id: session._id,
+            status: session.status,
+            approvedAt: session.approvedAt,
+            updatedAt: session.updatedAt,
+            createdAt: session.createdAt
+          });
+
+          // Use the approval time as session start
+          let sessionStart;
+          if (session.approvedAt) {
+            sessionStart = new Date(session.approvedAt);
+            console.log('Using approvedAt:', sessionStart);
+          } else if (session.updatedAt && session.status === 'Approved') {
+            // If no approvedAt field, use updatedAt when status is Approved
+            sessionStart = new Date(session.updatedAt);
+            console.log('Using updatedAt:', sessionStart);
           } else {
-            // Start a new 30-minute session
-            const remainingTime = sessionDuration * 60 * 1000; // 30 minutes in milliseconds
+            // Fallback: use current time (for newly approved sessions)
+            sessionStart = now;
+            console.log('Using current time as fallback:', sessionStart);
+          }
+
+          const sessionEnd = new Date(sessionStart.getTime() + (sessionDuration * 60 * 1000));
+          console.log('Session end time:', sessionEnd);
+
+          if (now < sessionEnd) {
+            // Session is still active
+            const remainingTime = Math.max(0, sessionEnd.getTime() - now.getTime());
+            const remainingMinutes = Math.floor(remainingTime / (1000 * 60));
+            console.log(`Session ${session._id} active: ${remainingMinutes} minutes left`);
             timers[session._id] = remainingTime;
-            status[session._id] = 'active';
+            status[session._id] = remainingTime > 0 ? 'active' : 'expired';
+          } else {
+            // Session has expired
+            console.log(`Session ${session._id} expired`);
+            timers[session._id] = 0;
+            status[session._id] = 'expired';
           }
         }
       });
@@ -673,9 +719,6 @@ const Messages = () => {
               {totalUnreadCount > 0 && (
                 <span className="bg-red-500 text-white text-xs rounded-full px-1.5 sm:px-2 py-0.5 sm:py-1">{totalUnreadCount}</span>
               )}
-              <button className="p-1 sm:p-2 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
-                <EllipsisVerticalIcon className="w-4 h-4 sm:w-5 sm:h-5" />
-              </button>
             </div>
           </div>
 
@@ -869,20 +912,7 @@ const Messages = () => {
                   </div>
                 </div>
 
-                <div className="flex items-center space-x-1 sm:space-x-2">
-                  <button className="p-1 sm:p-2 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
-                    <PhoneIcon className="w-4 h-4 sm:w-5 sm:h-5" />
-                  </button>
-                  <button className="p-1 sm:p-2 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
-                    <VideoCameraIcon className="w-4 h-4 sm:w-5 sm:h-5" />
-                  </button>
-                  <button
-                    onClick={() => setShowChatInfo(!showChatInfo)}
-                    className="p-1 sm:p-2 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
-                  >
-                    <InformationCircleIcon className="w-4 h-4 sm:w-5 sm:h-5" />
-                  </button>
-                </div>
+
               </div>
             </div>
 
@@ -932,7 +962,7 @@ const Messages = () => {
                               : message.type === "file"
                                 ? "bg-blue-50 dark:bg-blue-700/20 border border-blue-200 dark:border-blue-600/40" // File messages from provider
                                 : "bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600" // Text messages from provider
-                          }`}_
+                          }`}
                         >
                           {message.type === "text" ? (
                             <p className={`text-xs sm:text-sm ${isPatient ? 'text-white' : 'text-gray-800 dark:text-slate-200'}`}>{message.message}</p>
@@ -1015,84 +1045,7 @@ const Messages = () => {
         )}
       </div>
 
-      {/* Chat Info Sidebar */}
-      {showChatInfo && selectedChat && (
-        <div className="hidden md:block w-80 border-l border-gray-200 dark:border-slate-700 bg-white/90 dark:bg-slate-800/90 p-6 overflow-y-auto rounded-tr-2xl rounded-br-2xl shadow-lg">
-          {/* On mobile, this could be a modal or a separate screen */}
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Chat Info</h3>
-            <button onClick={() => setShowChatInfo(false)} className="text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300">
-              <XMarkIcon className="w-5 h-5" />
-            </button>
-          </div>
 
-          <div className="text-center mb-6">
-            <img
-              src={selectedChat.avatar || "/placeholder.svg"}
-              alt={selectedChat.providerName}
-              className="w-20 h-20 rounded-full object-cover mx-auto mb-3"
-            />
-            <h4 className="text-lg font-semibold text-gray-900 dark:text-slate-100">{selectedChat.providerName}</h4>
-            <p className="text-gray-600 dark:text-slate-300">{selectedChat.specialty}</p>
-            <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">{selectedChat.lastSeen}</p>
-          </div>
-
-          <div className="space-y-4">
-            <div>
-              <h5 className="font-medium text-gray-900 dark:text-slate-100 mb-2">Quick Actions</h5>
-              <div className="space-y-2">
-                <button className="w-full flex items-center space-x-3 p-3 text-left hover:bg-gray-50 dark:hover:bg-slate-700 rounded-lg transition-colors">
-                  <PhoneIcon className="w-5 h-5 text-gray-500 dark:text-slate-400" />
-                  <span className="text-gray-700 dark:text-slate-300">Schedule Call</span>
-                </button>
-                <button className="w-full flex items-center space-x-3 p-3 text-left hover:bg-gray-50 dark:hover:bg-slate-700 rounded-lg transition-colors">
-                  <VideoCameraIcon className="w-5 h-5 text-gray-500 dark:text-slate-400" />
-                  <span className="text-gray-700 dark:text-slate-300">Video Consultation</span>
-                </button>
-                <button className="w-full flex items-center space-x-3 p-3 text-left hover:bg-gray-50 dark:hover:bg-slate-700 rounded-lg transition-colors">
-                  <DocumentIcon className="w-5 h-5 text-gray-500 dark:text-slate-400" />
-                  <span className="text-gray-700 dark:text-slate-300">Share Documents</span>
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <h5 className="font-medium text-gray-900 dark:text-slate-100 mb-2">Shared Files</h5>
-              <div className="space-y-2">
-                <div className="flex items-center space-x-3 p-2 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-lg">
-                  <DocumentIcon className="w-5 h-5 text-blue-500 dark:text-blue-400" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 dark:text-slate-100 truncate">blood-test-results-jan-2024.pdf</p>
-                    <p className="text-xs text-gray-500 dark:text-slate-400">245 KB • 2 hours ago</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <h5 className="font-medium text-gray-900 dark:text-slate-100 mb-2">Settings</h5>
-              <div className="space-y-2">
-                <label className="flex items-center justify-between">
-                  <span className="text-sm text-gray-700 dark:text-slate-300">Notifications</span>
-                  <input
-                    type="checkbox"
-                    defaultChecked
-                    className="rounded border-gray-300 dark:border-slate-600 text-green-600 dark:text-green-500 focus:ring-green-500 dark:focus:ring-green-600 dark:bg-slate-700 dark:checked:bg-green-500"
-                  />
-                </label>
-                <label className="flex items-center justify-between">
-                  <span className="text-sm text-gray-700 dark:text-slate-300">Read Receipts</span>
-                  <input
-                    type="checkbox"
-                    defaultChecked
-                    className="rounded border-gray-300 dark:border-slate-600 text-green-600 dark:text-green-500 focus:ring-green-500 dark:focus:ring-green-600 dark:bg-slate-700 dark:checked:bg-green-500"
-                  />
-                </label>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
