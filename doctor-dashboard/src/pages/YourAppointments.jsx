@@ -612,17 +612,14 @@ const YourAppointments = () => {
         </div>
         <div className="bg-white dark:bg-slate-800 rounded-xl md:rounded-2xl p-3 md:p-4 border border-gray-200 dark:border-slate-700">
           <div className="flex items-center space-x-2 md:space-x-3">
-            <div className="p-1.5 md:p-2 bg-purple-100 dark:bg-purple-700/30 rounded-xl md:rounded-xl">
-              <ChatBubbleLeftRightIcon className="w-5 h-5 md:w-6 md:h-6 text-purple-600 dark:text-purple-400" />
+            <div className="p-1.5 md:p-2 bg-green-100 dark:bg-green-700/30 rounded-xl md:rounded-xl">
+              <CheckCircleIcon className="w-5 h-5 md:w-6 md:h-6 text-green-600 dark:text-green-400" />
             </div>
             <div>
               <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-slate-100">
-                {upcomingAppointments.filter(a =>
-                  a.type === "chat" &&
-                  new Date(a.originalData.dateTime).toDateString() === new Date().toDateString()
-                ).length}
+                {appointments.filter(a => a.status === "completed").length}
               </p>
-              <p className="text-xs md:text-sm text-gray-600 dark:text-slate-300">Active Chats</p>
+              <p className="text-xs md:text-sm text-gray-600 dark:text-slate-300">Total Completed</p>
             </div>
           </div>
         </div>

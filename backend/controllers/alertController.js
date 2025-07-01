@@ -98,9 +98,58 @@ const deleteAlert = async (req, res) => {
   }
 };
 
+// @desc    Get alerts for a specific patient (for doctors)
+// @route   GET api/alerts/patient/:patientId
+// @access  Private (Doctor only)
+const getPatientAlerts = async (req, res) => {
+  try {
+    const { patientId } = req.params;
+    const { limit = 10, type } = req.query;
+    const doctorId = req.user.id;
+
+    // Verify the doctor has access to this patient (through appointments)
+    const Appointment = require('../models/Appointment');
+    const hasAccess = await Appointment.findOne({
+      userId: patientId,
+      providerId: doctorId
+    });
+
+    if (!hasAccess) {
+      return res.status(403).json({ message: 'Access denied. No appointment relationship with this patient.' });
+    }
+
+    const query = { userId: patientId };
+
+    // Filter by alert type if specified
+    if (type && ['critical', 'warning', 'info', 'success'].includes(type)) {
+      query.type = type;
+    }
+
+    const options = {
+      sort: { timestamp: -1 },
+      limit: parseInt(limit)
+    };
+
+    const alerts = await Alert.find(query, null, options);
+    const totalAlerts = await Alert.countDocuments(query);
+    const unreadCount = await Alert.countDocuments({ ...query, isRead: false });
+
+    res.json({
+      data: alerts,
+      totalAlerts,
+      unreadCount
+    });
+
+  } catch (error) {
+    console.error('Error fetching patient alerts:', error);
+    res.status(500).json({ message: 'Server error while fetching patient alerts.' });
+  }
+};
+
 module.exports = {
   getAlerts,
   markAlertAsRead,
   markAllAlertsAsRead,
   deleteAlert,
+  getPatientAlerts
 };

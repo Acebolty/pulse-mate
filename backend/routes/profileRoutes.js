@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware');
-const { getUserProfile, updateUserProfile } = require('../controllers/profileController');
+const { getUserProfile, updateUserProfile, getPatientProfile } = require('../controllers/profileController');
 
 // @route   GET api/profile/me
 // @desc    Get current logged-in user's profile
@@ -23,5 +23,9 @@ const { uploadProfileAvatar } = require('../controllers/profileController');
 // @access  Private
 router.post('/me/avatar', authMiddleware, uploadProfilePicture, uploadProfileAvatar);
 
+// @route   GET api/profile/patient/:patientId
+// @desc    Get patient profile for doctors
+// @access  Private (Doctor only)
+router.get('/patient/:patientId', authMiddleware, getPatientProfile);
 
 module.exports = router;

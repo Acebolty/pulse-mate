@@ -84,11 +84,37 @@ const getAppointments = async (req, res) => {
 // @route   PUT api/appointments/:appointmentId
 // @access  Private
 const updateAppointment = async (req, res) => {
-  const { providerName, dateTime, reason, type, status, notes, virtualLink } = req.body;
+  const {
+    providerName,
+    dateTime,
+    reason,
+    type,
+    status,
+    notes,
+    virtualLink,
+    // Additional fields for doctor status management
+    completionSummary,
+    followUpNeeded,
+    followUpDate,
+    recommendations,
+    completedAt,
+    cancellationReason,
+    notifyPatient,
+    refundRequested,
+    cancelledAt,
+    rescheduleReason
+  } = req.body;
   const { appointmentId } = req.params;
 
   try {
-    let appointment = await Appointment.findOne({ _id: appointmentId, userId: req.user.id });
+    // Check if user is the patient (original logic) or the doctor/provider
+    let appointment = await Appointment.findOne({
+      _id: appointmentId,
+      $or: [
+        { userId: req.user.id }, // User is the patient
+        { providerId: req.user.id } // User is the doctor/provider
+      ]
+    });
 
     if (!appointment) {
       return res.status(404).json({ message: 'Appointment not found or user not authorized.' });
@@ -105,6 +131,18 @@ const updateAppointment = async (req, res) => {
     if (status) appointment.status = status;
     if (notes !== undefined) appointment.notes = notes;
     if (virtualLink !== undefined) appointment.virtualLink = virtualLink;
+
+    // Handle additional doctor status management fields
+    if (completionSummary !== undefined) appointment.completionSummary = completionSummary;
+    if (followUpNeeded !== undefined) appointment.followUpNeeded = followUpNeeded;
+    if (followUpDate) appointment.followUpDate = new Date(followUpDate);
+    if (recommendations !== undefined) appointment.recommendations = recommendations;
+    if (completedAt) appointment.completedAt = new Date(completedAt);
+    if (cancellationReason !== undefined) appointment.cancellationReason = cancellationReason;
+    if (notifyPatient !== undefined) appointment.notifyPatient = notifyPatient;
+    if (refundRequested !== undefined) appointment.refundRequested = refundRequested;
+    if (cancelledAt) appointment.cancelledAt = new Date(cancelledAt);
+    if (rescheduleReason !== undefined) appointment.rescheduleReason = rescheduleReason;
 
     await appointment.save();
     res.json(appointment);
@@ -153,17 +191,26 @@ const getDoctorAppointments = async (req, res) => {
   try {
     const { status, upcoming, past, limit = 10, page = 1, sortBy = 'dateTime', order = 'asc' } = req.query;
 
+    console.log('🩺 getDoctorAppointments called for user:', req.user.id);
+
     // Get the current doctor's info
     const User = require('../models/User');
     const doctor = await User.findById(req.user.id);
     if (!doctor) {
+      console.log('❌ Doctor not found for ID:', req.user.id);
       return res.status(404).json({ message: 'Doctor not found' });
     }
+
+    console.log('✅ Doctor found:', doctor.firstName, doctor.lastName);
 
     // Build the query to find appointments where this doctor is the provider
     const doctorName = `Dr. ${doctor.firstName} ${doctor.lastName}`;
     const query = {
-      providerName: { $regex: doctorName, $options: 'i' }
+      $or: [
+        { providerName: { $regex: doctorName, $options: 'i' } },
+        { providerId: req.user.id },
+        { providerId: req.user.id.toString() }
+      ]
     };
 
     if (status) query.status = status;
@@ -183,9 +230,21 @@ const getDoctorAppointments = async (req, res) => {
       skip: (parseInt(page) - 1) * parseInt(limit)
     };
 
+    console.log('🔍 Query for doctor appointments:', JSON.stringify(query, null, 2));
+
     // Populate patient information
     const appointments = await Appointment.find(query, null, options).populate('userId', 'firstName lastName email dateOfBirth gender profilePicture');
     const totalAppointments = await Appointment.countDocuments(query);
+
+    console.log('📅 Found appointments:', appointments.length);
+    console.log('📋 Appointment details:', appointments.map(apt => ({
+      id: apt._id,
+      patient: apt.userId ? `${apt.userId.firstName} ${apt.userId.lastName}` : 'Unknown',
+      date: apt.dateTime,
+      status: apt.status,
+      providerName: apt.providerName,
+      providerId: apt.providerId
+    })));
 
     res.json({
       data: appointments,

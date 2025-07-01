@@ -1,11 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware');
-const { 
-    getAlerts, 
-    markAlertAsRead, 
-    markAllAlertsAsRead, 
-    deleteAlert 
+const {
+    getAlerts,
+    markAlertAsRead,
+    markAllAlertsAsRead,
+    deleteAlert,
+    getPatientAlerts
 } = require('../controllers/alertController');
 
 // @route   GET api/alerts
@@ -27,5 +28,10 @@ router.put('/read-all/action', authMiddleware, markAllAlertsAsRead);
 // @desc    Delete a specific alert
 // @access  Private
 router.delete('/:alertId', authMiddleware, deleteAlert);
+
+// @route   GET api/alerts/patient/:patientId
+// @desc    Get alerts for a specific patient (for doctors)
+// @access  Private (Doctor only)
+router.get('/patient/:patientId', authMiddleware, getPatientAlerts);
 
 module.exports = router;

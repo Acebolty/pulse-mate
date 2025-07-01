@@ -184,7 +184,65 @@ const getHealthData = async (req, res) => {
   }
 };
 
+// @desc    Get health data for a specific patient (for doctors)
+// @route   GET api/health-data/patient/:patientId
+// @access  Private (Doctor only)
+const getPatientHealthData = async (req, res) => {
+  try {
+    const { patientId } = req.params;
+    const { dataType, startDate, endDate, limit = 20, page = 1 } = req.query;
+
+    // Verify the doctor has access to this patient (through appointments)
+    const Appointment = require('../models/Appointment');
+    const doctorId = req.user.id;
+
+    // Check if doctor has any appointments with this patient
+    const hasAccess = await Appointment.findOne({
+      userId: patientId,
+      providerId: doctorId
+    });
+
+    if (!hasAccess) {
+      return res.status(403).json({ message: 'Access denied. No appointment relationship with this patient.' });
+    }
+
+    const query = { userId: patientId };
+
+    if (dataType) query.dataType = dataType;
+    if (startDate || endDate) {
+      query.timestamp = {};
+      if (startDate) query.timestamp.$gte = new Date(startDate);
+      if (endDate) {
+        let endOfDay = new Date(endDate);
+        endOfDay.setHours(23, 59, 59, 999);
+        query.timestamp.$lte = endOfDay;
+      }
+    }
+
+    const options = {
+      sort: { timestamp: -1 },
+      limit: parseInt(limit),
+      skip: (parseInt(page) - 1) * parseInt(limit)
+    };
+
+    const healthDataEntries = await HealthData.find(query, null, options);
+    const totalEntries = await HealthData.countDocuments(query);
+
+    res.json({
+      data: healthDataEntries,
+      totalPages: Math.ceil(totalEntries / limit),
+      currentPage: parseInt(page),
+      totalEntries
+    });
+
+  } catch (error) {
+    console.error('Error fetching patient health data:', error);
+    res.status(500).json({ message: 'Server error while fetching patient health data.' });
+  }
+};
+
 module.exports = {
   addHealthData,
   getHealthData,
+  getPatientHealthData
 };

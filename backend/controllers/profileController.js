@@ -251,8 +251,42 @@ const uploadProfileAvatar = async (req, res) => {
 };
 
 
+// @desc    Get patient profile for doctors
+// @route   GET api/profile/patient/:patientId
+// @access  Private (Doctor only)
+const getPatientProfile = async (req, res) => {
+  try {
+    const { patientId } = req.params;
+    const doctorId = req.user.id;
+
+    // Verify the doctor has access to this patient (through appointments)
+    const Appointment = require('../models/Appointment');
+    const hasAccess = await Appointment.findOne({
+      userId: patientId,
+      providerId: doctorId
+    });
+
+    if (!hasAccess) {
+      return res.status(403).json({ message: 'Access denied. No appointment relationship with this patient.' });
+    }
+
+    // Get patient profile
+    const patientProfile = await User.findById(patientId).select('-passwordHash');
+
+    if (!patientProfile) {
+      return res.status(404).json({ message: 'Patient profile not found' });
+    }
+
+    res.json(patientProfile);
+  } catch (err) {
+    console.error('Error fetching patient profile:', err.message);
+    res.status(500).send('Server Error');
+  }
+};
+
 module.exports = {
   getUserProfile,
   updateUserProfile,
-  uploadProfileAvatar, // Export the new function
+  uploadProfileAvatar,
+  getPatientProfile
 };
