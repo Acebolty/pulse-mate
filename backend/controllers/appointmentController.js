@@ -297,6 +297,19 @@ const getActiveSessions = async (req, res) => {
  */
 const getAvailableDoctors = async (req, res) => {
   try {
+    console.log('🔍 Fetching available doctors...');
+
+    // First, let's see all doctors
+    const allDoctors = await User.find({ role: 'doctor' })
+      .select('firstName lastName email profilePicture doctorInfo');
+
+    console.log('👨‍⚕️ All doctors found:', allDoctors.length);
+    allDoctors.forEach(doctor => {
+      console.log(`- ${doctor.firstName} ${doctor.lastName} (${doctor.email})`);
+      console.log(`  doctorInfo:`, doctor.doctorInfo);
+      console.log(`  approvalStatus:`, doctor.doctorInfo?.approvalStatus);
+    });
+
     // Get all approved doctors with their basic info and doctorInfo
     const doctors = await User.find({
       role: 'doctor',
@@ -304,6 +317,11 @@ const getAvailableDoctors = async (req, res) => {
     })
     .select('firstName lastName email profilePicture doctorInfo')
     .sort({ 'doctorInfo.specialty': 1, firstName: 1 });
+
+    console.log('✅ Approved doctors found:', doctors.length);
+    doctors.forEach(doctor => {
+      console.log(`- Approved: ${doctor.firstName} ${doctor.lastName} - ${doctor.doctorInfo?.specialty}`);
+    });
 
     res.json({
       success: true,

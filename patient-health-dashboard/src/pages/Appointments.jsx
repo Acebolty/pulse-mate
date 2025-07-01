@@ -351,12 +351,27 @@ const Appointments = () => {
   const fetchAvailableDoctors = async () => {
     setDoctorsLoading(true);
     try {
+      console.log('🔍 Fetching available doctors...');
+      console.log('🔑 Auth token:', localStorage.getItem('authToken') ? 'Present' : 'Missing');
+
       const response = await api.get('/appointments/available-doctors');
-      console.log('Fetched available doctors:', response.data);
+      console.log('✅ Fetched available doctors response:', response.data);
+      console.log('📋 Doctors array:', response.data.doctors);
+      console.log('📊 Number of doctors:', response.data.doctors?.length || 0);
       setAvailableDoctors(response.data.doctors || []);
     } catch (error) {
-      console.error('Error fetching available doctors:', error);
-      setError('Failed to load available doctors. Please try again.');
+      console.error('❌ Error fetching available doctors:', error);
+      console.error('❌ Error response:', error.response?.data);
+      console.error('❌ Error status:', error.response?.status);
+      console.error('❌ Error message:', error.message);
+
+      if (error.response?.status === 401) {
+        setError('Authentication required. Please log in again.');
+      } else if (error.response?.status === 404) {
+        setError('Endpoint not found. Please check server configuration.');
+      } else {
+        setError(`Failed to load available doctors: ${error.response?.data?.message || error.message}`);
+      }
     } finally {
       setDoctorsLoading(false);
     }
@@ -373,12 +388,14 @@ const Appointments = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, filterStatus, filterType]); // Re-fetch when these change
 
-  // Fetch available doctors when booking modal is opened
+  // Fetch available doctors when "book" tab is active
   useEffect(() => {
-    if (showBookingModal) {
+    console.log('📋 Active tab changed to:', activeTab);
+    if (activeTab === "book") {
+      console.log('📅 Book tab activated, fetching doctors...');
       fetchAvailableDoctors();
     }
-  }, [showBookingModal]);
+  }, [activeTab]);
 
 
   const tabs = [
@@ -674,7 +691,7 @@ const Appointments = () => {
               ) : (
                 filteredAppointments.map((appointment, i) => (
                   <motion.div
-                    key={appointment.id}
+                    key={appointment._id || appointment.id}
                     custom={i}
                     initial="hidden"
                     animate="visible"

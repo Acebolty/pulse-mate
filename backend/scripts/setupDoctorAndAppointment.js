@@ -29,14 +29,18 @@ const setupDoctorAndAppointment = async () => {
 
       doctor = new User({
         patientId: 'DOC001', // Required field for doctor
-        firstName: 'Dr. John',
+        firstName: 'John',
         lastName: 'Smith',
         email: 'doctor@pulsemate.com',
         passwordHash: hashedPassword, // Use passwordHash instead of password
         role: 'doctor',
-        specialization: 'General Medicine',
-        licenseNumber: 'MD12345',
-        isVerified: true
+        doctorInfo: {
+          specialty: 'Cardiology',
+          licenseNumber: 'MD12345',
+          experience: 10,
+          department: 'Cardiology',
+          approvalStatus: 'approved'
+        }
       });
 
       await doctor.save();
