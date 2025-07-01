@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { UserGroupIcon, HeartIcon, ShieldCheckIcon, ArrowTrendingUpIcon, BeakerIcon, FireIcon } from "@heroicons/react/24/outline";
+import { UserGroupIcon, HeartIcon, ShieldCheckIcon, ArrowTrendingUpIcon, BeakerIcon, FireIcon, XMarkIcon } from "@heroicons/react/24/outline";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import api from '../../services/api';
 
 // Helper functions for health status calculation
@@ -90,6 +91,80 @@ const PatientMetricsGrid = () => {
   const [patientsData, setPatientsData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Modal state for patient details
+  const [showPatientModal, setShowPatientModal] = useState(false);
+  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [patientHealthData, setPatientHealthData] = useState(null);
+  const [healthDataLoading, setHealthDataLoading] = useState(false);
+
+  // Function to fetch detailed health data for a specific patient
+  const fetchPatientDetailedHealthData = async (patient) => {
+    try {
+      setHealthDataLoading(true);
+
+      // Get last 7 days of health data
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(endDate.getDate() - 7);
+
+      const [heartRateRes, bloodPressureRes, temperatureRes, glucoseRes] = await Promise.allSettled([
+        api.get(`/health-data/patient/${patient.id}`, {
+          params: {
+            dataType: 'heartRate',
+            startDate: startDate.toISOString(),
+            endDate: endDate.toISOString(),
+            limit: 50
+          }
+        }),
+        api.get(`/health-data/patient/${patient.id}`, {
+          params: {
+            dataType: 'bloodPressure',
+            startDate: startDate.toISOString(),
+            endDate: endDate.toISOString(),
+            limit: 50
+          }
+        }),
+        api.get(`/health-data/patient/${patient.id}`, {
+          params: {
+            dataType: 'bodyTemperature',
+            startDate: startDate.toISOString(),
+            endDate: endDate.toISOString(),
+            limit: 50
+          }
+        }),
+        api.get(`/health-data/patient/${patient.id}`, {
+          params: {
+            dataType: 'glucoseLevel',
+            startDate: startDate.toISOString(),
+            endDate: endDate.toISOString(),
+            limit: 50
+          }
+        })
+      ]);
+
+      const healthData = {
+        heartRate: heartRateRes.status === 'fulfilled' ? heartRateRes.value.data?.data || [] : [],
+        bloodPressure: bloodPressureRes.status === 'fulfilled' ? bloodPressureRes.value.data?.data || [] : [],
+        bodyTemperature: temperatureRes.status === 'fulfilled' ? temperatureRes.value.data?.data || [] : [],
+        glucoseLevel: glucoseRes.status === 'fulfilled' ? glucoseRes.value.data?.data || [] : []
+      };
+
+      setPatientHealthData(healthData);
+    } catch (error) {
+      console.error('Error fetching patient health data:', error);
+      setPatientHealthData(null);
+    } finally {
+      setHealthDataLoading(false);
+    }
+  };
+
+  // Function to handle View Details click
+  const handleViewDetails = async (patient) => {
+    setSelectedPatient(patient);
+    setShowPatientModal(true);
+    await fetchPatientDetailedHealthData(patient);
+  };
 
   // Helper method to fetch health data for patients
   const fetchHealthDataForPatients = async (patients) => {
@@ -311,6 +386,41 @@ const PatientMetricsGrid = () => {
     fetchPatientsData();
   }, []);
 
+  // Helper function to prepare chart data
+  const prepareChartData = (healthData) => {
+    if (!healthData) return [];
+
+    // Create a map of dates to health readings
+    const dateMap = new Map();
+
+    // Process each health data type
+    ['heartRate', 'bloodPressure', 'bodyTemperature', 'glucoseLevel'].forEach(dataType => {
+      if (healthData[dataType]) {
+        healthData[dataType].forEach(reading => {
+          const date = new Date(reading.timestamp).toLocaleDateString();
+          if (!dateMap.has(date)) {
+            dateMap.set(date, { date });
+          }
+
+          const entry = dateMap.get(date);
+          if (dataType === 'heartRate') {
+            entry.heartRate = reading.value;
+          } else if (dataType === 'bloodPressure') {
+            entry.systolic = reading.value.systolic;
+            entry.diastolic = reading.value.diastolic;
+          } else if (dataType === 'bodyTemperature') {
+            entry.temperature = reading.value;
+          } else if (dataType === 'glucoseLevel') {
+            entry.glucose = reading.value;
+          }
+        });
+      }
+    });
+
+    // Convert to array and sort by date
+    return Array.from(dateMap.values()).sort((a, b) => new Date(a.date) - new Date(b.date));
+  };
+
   // Loading state
   if (loading) {
     return (
@@ -358,8 +468,9 @@ const PatientMetricsGrid = () => {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-6">
-      {patientsData.map((patient, index) => {
+    <>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-6">
+        {patientsData.map((patient, index) => {
         const statusInfo = getStatusStyles(patient.status);
         const PatientIcon = statusInfo.icon || patient.icon; // Use status-specific icon or default
 
@@ -398,7 +509,10 @@ const PatientMetricsGrid = () => {
               </p>
 
               <div className="flex items-center justify-between text-xs">
-                <button className={`font-semibold px-3 py-1.5 rounded-lg transition-colors text-sm ${statusInfo.iconColor} hover:bg-gray-100 dark:hover:bg-slate-700/50`}>
+                <button
+                  onClick={() => handleViewDetails(patient)}
+                  className={`font-semibold px-3 py-1.5 rounded-lg transition-colors text-sm ${statusInfo.iconColor} hover:bg-gray-100 dark:hover:bg-slate-700/50`}
+                >
                   View Details
                 </button>
                 <span className="text-gray-500 dark:text-slate-400 font-medium">{patient.lastUpdate}</span>
@@ -407,8 +521,187 @@ const PatientMetricsGrid = () => {
             <div className="absolute inset-0 rounded-2xl border border-transparent group-hover:border-white/30 dark:group-hover:border-slate-600/50 transition-colors duration-300 pointer-events-none"></div>
           </motion.div>
         );
-      })}
-    </div>
+        })}
+      </div>
+
+      {/* Patient Details Modal */}
+    {showPatientModal && selectedPatient && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          {/* Modal Header */}
+          <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-slate-700">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-slate-100">
+                {selectedPatient.name} - Health Details
+              </h2>
+              <p className="text-gray-600 dark:text-slate-400 mt-1">
+                Last 7 days health data and trends
+              </p>
+            </div>
+            <button
+              onClick={() => setShowPatientModal(false)}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+            >
+              <XMarkIcon className="w-6 h-6 text-gray-500 dark:text-slate-400" />
+            </button>
+          </div>
+
+          {/* Modal Content */}
+          <div className="p-6">
+            {healthDataLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                <span className="ml-3 text-gray-600 dark:text-slate-400">Loading health data...</span>
+              </div>
+            ) : patientHealthData ? (
+              <div className="space-y-8">
+                {/* Recent Health Readings */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-4">
+                    Recent Health Readings
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* Heart Rate */}
+                    {patientHealthData.heartRate.length > 0 && (
+                      <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-xl">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <HeartIcon className="w-5 h-5 text-red-600 dark:text-red-400" />
+                          <span className="font-medium text-gray-900 dark:text-slate-100">Heart Rate</span>
+                        </div>
+                        <p className="text-2xl font-bold text-red-600 dark:text-red-400">
+                          {patientHealthData.heartRate[0].value} bpm
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
+                          {formatTimestamp(patientHealthData.heartRate[0].timestamp)}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Blood Pressure */}
+                    {patientHealthData.bloodPressure.length > 0 && (
+                      <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <ArrowTrendingUpIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                          <span className="font-medium text-gray-900 dark:text-slate-100">Blood Pressure</span>
+                        </div>
+                        <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                          {patientHealthData.bloodPressure[0].value.systolic}/{patientHealthData.bloodPressure[0].value.diastolic}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
+                          {formatTimestamp(patientHealthData.bloodPressure[0].timestamp)}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Temperature */}
+                    {patientHealthData.bodyTemperature.length > 0 && (
+                      <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-xl">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <FireIcon className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                          <span className="font-medium text-gray-900 dark:text-slate-100">Temperature</span>
+                        </div>
+                        <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">
+                          {patientHealthData.bodyTemperature[0].value}°F
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
+                          {formatTimestamp(patientHealthData.bodyTemperature[0].timestamp)}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Glucose */}
+                    {patientHealthData.glucoseLevel.length > 0 && (
+                      <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-xl">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <BeakerIcon className="w-5 h-5 text-green-600 dark:text-green-400" />
+                          <span className="font-medium text-gray-900 dark:text-slate-100">Glucose</span>
+                        </div>
+                        <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                          {patientHealthData.glucoseLevel[0].value} mg/dL
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
+                          {formatTimestamp(patientHealthData.glucoseLevel[0].timestamp)}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* 7-Day Health Chart */}
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-4">
+                    7-Day Health Trends
+                  </h3>
+                  <div className="bg-gray-50 dark:bg-slate-700/50 p-4 rounded-xl">
+                    <ResponsiveContainer width="100%" height={300}>
+                      <LineChart data={prepareChartData(patientHealthData)}>
+                        <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? "#374151" : "#e5e7eb"} />
+                        <XAxis
+                          dataKey="date"
+                          stroke={isDarkMode ? "#9ca3af" : "#6b7280"}
+                          fontSize={12}
+                        />
+                        <YAxis stroke={isDarkMode ? "#9ca3af" : "#6b7280"} fontSize={12} />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: isDarkMode ? '#1e293b' : '#ffffff',
+                            border: `1px solid ${isDarkMode ? '#475569' : '#e5e7eb'}`,
+                            borderRadius: '8px',
+                            color: isDarkMode ? '#f1f5f9' : '#1f2937'
+                          }}
+                        />
+                        <Legend />
+                        {patientHealthData.heartRate.length > 0 && (
+                          <Line
+                            type="monotone"
+                            dataKey="heartRate"
+                            stroke="#ef4444"
+                            strokeWidth={2}
+                            name="Heart Rate (bpm)"
+                          />
+                        )}
+                        {patientHealthData.bloodPressure.length > 0 && (
+                          <Line
+                            type="monotone"
+                            dataKey="systolic"
+                            stroke="#3b82f6"
+                            strokeWidth={2}
+                            name="Systolic BP"
+                          />
+                        )}
+                        {patientHealthData.bodyTemperature.length > 0 && (
+                          <Line
+                            type="monotone"
+                            dataKey="temperature"
+                            stroke="#f97316"
+                            strokeWidth={2}
+                            name="Temperature (°F)"
+                          />
+                        )}
+                        {patientHealthData.glucoseLevel.length > 0 && (
+                          <Line
+                            type="monotone"
+                            dataKey="glucose"
+                            stroke="#22c55e"
+                            strokeWidth={2}
+                            name="Glucose (mg/dL)"
+                          />
+                        )}
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-gray-500 dark:text-slate-400">No health data available for this patient.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 };
 
