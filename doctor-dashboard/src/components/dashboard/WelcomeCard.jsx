@@ -77,7 +77,7 @@ const WelcomeCard = ({ dashboardData = {}, loading = false }) => {
             </div>
             <div className="flex items-center space-x-2">
               <UsersIcon className="w-4 h-4" />
-              <span>{pendingReviews} Pending Review{pendingReviews !== 1 ? 's' : ''}</span>
+              <span>{pendingReviews} Pending Alert{pendingReviews !== 1 ? 's' : ''}</span>
             </div>
             <div className="flex items-center space-x-2">
               <BellAlertIcon className={`w-4 h-4 ${criticalAlerts > 0 ? 'text-red-300 dark:text-red-200' : 'text-green-300 dark:text-green-200'}`} />

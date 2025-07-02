@@ -6,7 +6,10 @@ const {
     markAlertAsRead,
     markAllAlertsAsRead,
     deleteAlert,
-    getPatientAlerts
+    getPatientAlerts,
+    getDoctorNotifications,
+    markPatientAlertAsRead,
+    markAllPatientAlertsAsRead
 } = require('../controllers/alertController');
 
 // @route   GET api/alerts
@@ -33,5 +36,20 @@ router.delete('/:alertId', authMiddleware, deleteAlert);
 // @desc    Get alerts for a specific patient (for doctors)
 // @access  Private (Doctor only)
 router.get('/patient/:patientId', authMiddleware, getPatientAlerts);
+
+// @route   GET api/alerts/doctor/notifications
+// @desc    Get alerts for doctor's patients with patient names (for doctor notifications)
+// @access  Private (Doctor only)
+router.get('/doctor/notifications', authMiddleware, getDoctorNotifications);
+
+// @route   PUT api/alerts/doctor/:alertId/read
+// @desc    Mark a patient alert as read by doctor
+// @access  Private (Doctor only)
+router.put('/doctor/:alertId/read', authMiddleware, markPatientAlertAsRead);
+
+// @route   PUT api/alerts/doctor/read-all
+// @desc    Mark all patient alerts as read by doctor
+// @access  Private (Doctor only)
+router.put('/doctor/read-all', authMiddleware, markAllPatientAlertsAsRead);
 
 module.exports = router;

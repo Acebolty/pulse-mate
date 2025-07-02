@@ -296,7 +296,7 @@ const VitalSignsChart = () => {
             </div>
             <div className="text-center">
               <p className="text-2xl font-bold text-gray-600 dark:text-slate-300">{stats.readingsCount}</p>
-              <p className="text-xs text-gray-500 dark:text-slate-400 font-medium">Readings Today</p>
+              <p className="text-xs text-gray-500 dark:text-slate-400 font-medium">Readings</p>
             </div>
           </motion.div>
         )}

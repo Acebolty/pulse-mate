@@ -264,9 +264,9 @@ const MedicationReminders = () => {
             </span>
           )}
         </div>
-        <div className="text-sm text-gray-500 dark:text-slate-400">
+        {/* <div className="text-sm text-gray-500 dark:text-slate-400">
           {medicationData.totalMedications} medication{medicationData.totalMedications > 1 ? 's' : ''}
-        </div>
+        </div> */}
       </div>
 
       {/* Overdue Medications */}

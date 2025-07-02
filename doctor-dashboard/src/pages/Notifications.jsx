@@ -191,9 +191,9 @@ const Notifications = () => {
         setLoading(true);
         console.log('🔔 Fetching notifications/alerts...');
 
-        // Fetch alerts and appointments
+        // Fetch doctor notifications (alerts with patient names) and appointments
         const [alertsRes, appointmentsRes] = await Promise.allSettled([
-          api.get('/alerts?limit=50'),
+          api.get('/alerts/doctor/notifications?limit=50'),
           api.get('/appointments/doctor')
         ]);
 
@@ -208,18 +208,20 @@ const Notifications = () => {
         console.log('🚨 Alerts fetched:', alerts.length);
         console.log('📅 Appointments fetched:', appointments.length);
 
-        // Convert alerts to notification format
+        // Convert alerts to notification format (now with patient names from backend)
         const alertNotifications = alerts.map(alert => ({
           id: alert._id,
           type: alert.type === 'critical' ? 'critical_alert' : 'health_metric_warning',
-          patientName: alert.patientName || 'Unknown Patient',
+          patientName: alert.patientName || 'Unknown Patient', // Now comes from backend with patient info
           title: alert.type === 'critical' ? `Critical: ${alert.title || 'Health Alert'}` : `Warning: ${alert.title || 'Health Alert'}`,
           message: alert.message || alert.description || 'Health data requires review',
           timestamp: alert.createdAt || alert.timestamp,
           isRead: alert.isRead || false,
           source: alert.source || 'Health Monitor',
           actions: ["View Details", "Mark as Read", "Contact Patient"],
-          priority: alert.priority || (alert.type === 'critical' ? 'high' : 'medium')
+          priority: alert.priority || (alert.type === 'critical' ? 'high' : 'medium'),
+          patientEmail: alert.patientEmail || '',
+          patientProfilePicture: alert.patientProfilePicture || null
         }));
 
         // Convert upcoming appointments to notifications
@@ -230,7 +232,7 @@ const Notifications = () => {
         const appointmentNotifications = appointments
           .filter(apt => {
             const aptDate = new Date(apt.dateTime);
-            return aptDate >= today && aptDate <= tomorrow && apt.status === 'Confirmed';
+            return aptDate >= today && aptDate <= tomorrow && (apt.status === 'Approved' || apt.status === 'Confirmed');
           })
           .map(apt => {
             const aptDate = new Date(apt.dateTime);
@@ -246,7 +248,7 @@ const Notifications = () => {
               type: 'appointment_reminder',
               patientName: patientName,
               title: isToday ? `Today's Appointment` : `Tomorrow's Appointment`,
-              message: `${patientName} - ${apt.reasonForVisit || 'Consultation'} at ${timeStr}`,
+              message: `${patientName} - ${apt.reason || apt.reasonForVisit || 'Consultation'} at ${timeStr}`,
               timestamp: apt.dateTime,
               isRead: false, // Appointment reminders are always unread initially
               source: 'Appointment System',
@@ -302,31 +304,54 @@ const Notifications = () => {
 
   const markAsRead = async (notificationId) => {
     try {
-      // Update in backend
-      await api.put(`/alerts/${notificationId}/read`);
+      console.log('🩺 Doctor marking alert as read:', notificationId);
 
-      // Update in frontend
-      setNotifications(notifications.map((n) => (n.id === notificationId ? { ...n, isRead: true } : n)));
-      console.log('✅ Marked notification as read:', notificationId);
+      // Use doctor-specific endpoint for marking patient alerts as read
+      const response = await api.put(`/alerts/doctor/${notificationId}/read`);
+
+      if (response.data.success) {
+        // Update in frontend
+        setNotifications(notifications.map((n) => (n.id === notificationId ? { ...n, isRead: true } : n)));
+        console.log('✅ Alert marked as read by doctor:', notificationId);
+      } else {
+        throw new Error('Failed to mark alert as read');
+      }
     } catch (err) {
       console.error('❌ Error marking notification as read:', err);
-      // Still update frontend even if backend fails
-      setNotifications(notifications.map((n) => (n.id === notificationId ? { ...n, isRead: true } : n)));
+
+      // Check if it's an authorization error
+      if (err.response?.status === 403) {
+        alert('You do not have permission to mark this alert as read. You can only mark alerts for your assigned patients.');
+      } else if (err.response?.status === 404) {
+        alert('Alert not found or already processed.');
+      } else {
+        // Still update frontend for better UX, but show warning
+        setNotifications(notifications.map((n) => (n.id === notificationId ? { ...n, isRead: true } : n)));
+        console.warn('⚠️ Updated frontend but backend update failed');
+      }
     }
   };
 
   const markAllAsRead = async () => {
     try {
-      // Update all in backend
-      await api.put('/alerts/read-all');
+      console.log('🩺 Doctor marking all patient alerts as read...');
 
-      // Update in frontend
-      setNotifications(notifications.map((n) => ({ ...n, isRead: true })));
-      console.log('✅ Marked all notifications as read');
+      // Use doctor-specific endpoint for marking all patient alerts as read
+      const response = await api.put('/alerts/doctor/read-all');
+
+      if (response.data.success) {
+        // Update in frontend
+        setNotifications(notifications.map((n) => ({ ...n, isRead: true })));
+        console.log('✅ Marked all patient alerts as read:', response.data.modifiedCount);
+      } else {
+        throw new Error('Failed to mark all alerts as read');
+      }
     } catch (err) {
       console.error('❌ Error marking all notifications as read:', err);
-      // Still update frontend even if backend fails
+
+      // Still update frontend for better UX, but show warning
       setNotifications(notifications.map((n) => ({ ...n, isRead: true })));
+      console.warn('⚠️ Updated frontend but backend update may have failed');
     }
   };
 

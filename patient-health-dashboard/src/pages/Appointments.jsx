@@ -941,7 +941,7 @@ const Appointments = () => {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
-                        Reason for Visit
+                        Reason for Appointment
                       </label>
                       <input
                         type="text"

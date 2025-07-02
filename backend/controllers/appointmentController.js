@@ -336,6 +336,92 @@ const getAvailableDoctors = async (req, res) => {
   }
 };
 
+// @desc    Get doctor dashboard analytics
+// @route   GET api/appointments/doctor/analytics
+// @access  Private (Doctor only)
+const getDoctorDashboardAnalytics = async (req, res) => {
+  try {
+    const doctorId = req.user.id;
+    console.log('📊 getDoctorDashboardAnalytics called for doctor:', doctorId);
+
+    // Get current date for today's calculations
+    const today = new Date();
+    const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const endOfToday = new Date(startOfToday.getTime() + 24 * 60 * 60 * 1000);
+
+    // Get all appointments for this doctor
+    const allAppointments = await Appointment.find({ providerId: doctorId })
+      .populate('userId', 'firstName lastName email profilePicture')
+      .sort({ dateTime: -1 });
+
+    console.log(`📋 Total appointments found for doctor: ${allAppointments.length}`);
+
+    // Calculate unique patients (patients who have appointments with this doctor)
+    const uniquePatientIds = [...new Set(allAppointments.map(apt => apt.userId._id.toString()))];
+    const totalPatients = uniquePatientIds.length;
+
+    // Today's appointments
+    const todayAppointments = allAppointments.filter(apt => {
+      const aptDate = new Date(apt.dateTime);
+      return aptDate >= startOfToday && aptDate < endOfToday;
+    });
+
+    // Approved appointments today
+    const approvedToday = todayAppointments.filter(apt => apt.status === 'approved').length;
+
+    // Total approved appointments (all time)
+    const totalApproved = allAppointments.filter(apt => apt.status === 'approved').length;
+
+    // Total appointments (all statuses)
+    const totalAppointments = allAppointments.length;
+
+    // Completed appointments today
+    const completedToday = todayAppointments.filter(apt =>
+      apt.status === 'completed' || apt.status === 'cancelled'
+    ).length;
+
+    // Get health alerts for doctor's patients
+    const Alert = require('../models/Alert');
+    const patientAlerts = await Alert.find({
+      userId: { $in: uniquePatientIds },
+      isRead: false
+    });
+
+    // Critical alerts requiring doctor review
+    const criticalAlerts = patientAlerts.filter(alert =>
+      alert.type === 'critical' || alert.priority === 'high'
+    ).length;
+
+    // Pending reviews (critical health alerts)
+    const pendingReviews = criticalAlerts;
+
+    const analytics = {
+      totalPatients,
+      appointmentsToday: todayAppointments.length,
+      approvedToday,
+      totalApproved,
+      totalAppointments,
+      completedToday,
+      pendingReviews,
+      criticalAlerts,
+      systemStatus: totalAppointments > 0 ? 'All Systems Operational' : 'No Data Available'
+    };
+
+    console.log('📊 Doctor dashboard analytics:', analytics);
+
+    res.json({
+      success: true,
+      data: analytics
+    });
+
+  } catch (error) {
+    console.error('Get doctor dashboard analytics error:', error.message);
+    res.status(500).json({
+      message: 'Server error fetching doctor dashboard analytics'
+    });
+  }
+};
+
 module.exports = {
   createAppointment,
   getAppointments,
@@ -343,5 +429,6 @@ module.exports = {
   deleteAppointment,
   getDoctorAppointments,
   getActiveSessions,
-  getAvailableDoctors
+  getAvailableDoctors,
+  getDoctorDashboardAnalytics
 };

@@ -46,7 +46,7 @@ const transformAppointmentData = (appointment, userData = null) => {
       hour12: true
     }),
     duration: "30 min", // Default duration, could be added to backend model
-    type: appointment.type === 'Virtual' ? 'chat' : 'in-person',
+    type: 'chat', // All appointments are chat sessions in this system
     status: appointment.status.toLowerCase(),
     reasonForVisit: appointment.reason,
     patientNotes: "", // Could be added to backend model
@@ -98,8 +98,7 @@ const YourAppointments = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterType, setFilterType] = useState("all");
-  const [editingNotes, setEditingNotes] = useState(false);
-  const [currentDoctorNotes, setCurrentDoctorNotes] = useState("");
+
 
   // New state for real data
   const [appointments, setAppointments] = useState([]);
@@ -182,6 +181,11 @@ const YourAppointments = () => {
     const isInPast = appointmentDate < now;
     const isCompleted = apt.status === 'completed' || apt.status === 'cancelled';
     return isInPast || isCompleted;
+  }).sort((a, b) => {
+    // Sort past appointments by date in descending order (newest first)
+    const dateA = new Date(a.originalData.dateTime);
+    const dateB = new Date(b.originalData.dateTime);
+    return dateB - dateA;
   });
 
   const tabs = [
@@ -197,9 +201,8 @@ const YourAppointments = () => {
         (appointment.reasonForVisit && appointment.reasonForVisit.toLowerCase().includes(searchTerm.toLowerCase()));
 
       const matchesStatus = filterStatus === "all" || appointment.status === filterStatus;
-      const matchesType = filterType === "all" || appointment.type === filterType;
 
-      return matchesSearch && matchesStatus && matchesType;
+      return matchesSearch && matchesStatus;
     }
   );
   
@@ -208,43 +211,11 @@ const YourAppointments = () => {
     fetchAppointments();
   }, []);
 
-  useEffect(() => {
-    if (selectedAppointment) {
-      setCurrentDoctorNotes(selectedAppointment.doctorNotes || "");
-    }
-  }, [selectedAppointment]);
+
 
 
   const handleOpenAppointmentModal = (appointment) => {
     setSelectedAppointment(appointment);
-    setEditingNotes(false); // Reset editing state
-  };
-  
-  const handleSaveNotes = async () => {
-    if (selectedAppointment) {
-      try {
-        // Save notes to backend
-        await api.put(`/appointments/${selectedAppointment.id}`, {
-          notes: currentDoctorNotes
-        });
-
-        // Update local state for immediate UI feedback
-        setSelectedAppointment(prev => ({...prev, doctorNotes: currentDoctorNotes}));
-
-        // Update the appointments list
-        setAppointments(prev => prev.map(apt =>
-          apt.id === selectedAppointment.id
-            ? {...apt, doctorNotes: currentDoctorNotes}
-            : apt
-        ));
-
-        setEditingNotes(false);
-        console.log("Notes saved successfully");
-      } catch (err) {
-        console.error("Error saving notes:", err);
-        setError("Failed to save notes");
-      }
-    }
   };
 
   // Status management functions
@@ -637,11 +608,11 @@ const YourAppointments = () => {
             <div>
               <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-slate-100">
                 {appointments.filter(a =>
-                  (a.status === 'completed' || a.status === 'cancelled') &&
+                  a.status === 'approved' &&
                   new Date(a.originalData.dateTime).toDateString() === new Date().toDateString()
                 ).length}
               </p>
-              <p className="text-xs md:text-sm text-gray-600 dark:text-slate-300">Completed Today</p>
+              <p className="text-xs md:text-sm text-gray-600 dark:text-slate-300">Approved Today</p>
             </div>
           </div>
         </div>
@@ -652,22 +623,22 @@ const YourAppointments = () => {
             </div>
             <div>
               <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-slate-100">
-                {appointments.filter(a => a.status === "completed").length}
+                {appointments.filter(a => a.status === "approved").length}
               </p>
-              <p className="text-xs md:text-sm text-gray-600 dark:text-slate-300">Total Completed</p>
+              <p className="text-xs md:text-sm text-gray-600 dark:text-slate-300">Total Approved</p>
             </div>
           </div>
         </div>
         <div className="bg-white dark:bg-slate-800 rounded-xl md:rounded-2xl p-3 md:p-4 border border-gray-200 dark:border-slate-700">
           <div className="flex items-center space-x-2 md:space-x-3">
-            <div className="p-1.5 md:p-2 bg-yellow-100 dark:bg-yellow-600/30 rounded-xl md:rounded-xl">
-              <ExclamationTriangleIcon className="w-5 h-5 md:w-6 md:h-6 text-yellow-600 dark:text-yellow-400" />
+            <div className="p-1.5 md:p-2 bg-purple-100 dark:bg-purple-600/30 rounded-xl md:rounded-xl">
+              <CalendarIcon className="w-5 h-5 md:w-6 md:h-6 text-purple-600 dark:text-purple-400" />
             </div>
             <div>
               <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-slate-100">
-                {upcomingAppointments.filter(a => a.status === 'scheduled').length}
+                {appointments.length}
               </p>
-              <p className="text-xs md:text-sm text-gray-600 dark:text-slate-300">Pending Actions</p>
+              <p className="text-xs md:text-sm text-gray-600 dark:text-slate-300">Total Appointments</p>
             </div>
           </div>
         </div>
@@ -702,7 +673,7 @@ const YourAppointments = () => {
             <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-gray-400 dark:text-slate-500" />
             <input
               type="text"
-              placeholder="Search patient name, appointment type..."
+              placeholder="Search patient name, reason for appointment..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-9 md:pl-10 pr-4 py-2 text-sm md:text-base border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 dark:placeholder-slate-400 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 focus:border-transparent"
@@ -710,23 +681,13 @@ const YourAppointments = () => {
           </div>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value)}
-              className="px-3 py-2 text-sm md:text-base border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 focus:border-transparent w-full sm:w-auto"
-            >
-              <option value="all">All Types</option>
-              <option value="in-person">In-Person</option>
-              <option value="chat">Chat Sessions</option>
-            </select>
-            <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
               className="px-3 py-2 text-sm md:text-base border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 focus:border-transparent w-full sm:w-auto"
             >
               <option value="all">All Status</option>
-              <option value="confirmed">Confirmed</option>
               <option value="pending">Pending</option>
-              <option value="completed">Completed</option>
+              <option value="approved">Approved</option>
               <option value="cancelled">Cancelled</option>
             </select>
              <button className="flex items-center justify-center space-x-2 px-3 py-2 text-sm md:text-base text-gray-600 dark:text-slate-300 hover:text-gray-800 dark:hover:text-slate-100 hover:bg-blue-100 dark:hover:bg-blue-700/20 rounded-xl transition-colors w-full sm:w-auto">
@@ -821,11 +782,6 @@ const YourAppointments = () => {
                         </div>
                       </div>
                       <div className="flex flex-col sm:flex-row items-end sm:items-center space-y-2 sm:space-y-0 sm:space-x-2 mt-3 sm:mt-0 ml-0 sm:ml-4">
-                        {/* Send Message button for both upcoming and past appointments */}
-                        <button className="flex items-center space-x-1 px-2 py-1 sm:px-3 sm:py-2 text-xs sm:text-sm text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 hover:bg-green-50 dark:hover:bg-green-700/20 rounded-xl transition-colors w-full sm:w-auto justify-center">
-                          <ChatBubbleLeftRightIcon className="w-3 h-3 sm:w-4 sm:h-4" />
-                          <span className="hidden sm:inline">Send Message</span>
-                        </button>
                          <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -836,7 +792,6 @@ const YourAppointments = () => {
                             <DocumentTextIcon className="w-3 h-3 sm:w-4 sm:h-4" />
                             <span className="hidden sm:inline">View Chart</span>
                           </button>
-                        <div className="self-center sm:self-auto pt-1 sm:pt-0">{getStatusIcon(appointment.status)}</div>
                       </div>
                     </div>
                   </motion.div>
@@ -889,15 +844,15 @@ const YourAppointments = () => {
                   <p className="text-sm text-gray-800 dark:text-slate-100">{formatDate(selectedAppointment.date)} at {selectedAppointment.time} ({selectedAppointment.duration})</p>
                 </div>
                 <div>
-                  <h4 className="font-medium text-sm text-gray-700 dark:text-slate-300 mb-1">Type & Location/Room</h4>
+                  <h4 className="font-medium text-sm text-gray-700 dark:text-slate-300 mb-1">Type </h4>
                   <p className="text-sm text-gray-800 dark:text-slate-100">
-                    {selectedAppointment.type === 'chat' ? `Chat Session (${selectedAppointment.chatRoom || 'N/A'})` : `In-Person (${selectedAppointment.location || 'N/A'})`}
+                    {selectedAppointment.type === 'chat' ? `Chat Session` : `In-Person`}
                   </p>
                 </div>
               </div>
               
               <div>
-                <h4 className="font-medium text-sm text-gray-700 dark:text-slate-300 mb-1">Reason for Visit</h4>
+                <h4 className="font-medium text-sm text-gray-700 dark:text-slate-300 mb-1">Reason for Appointment</h4>
                 <p className="text-sm text-gray-600 dark:text-slate-200 bg-gray-50 dark:bg-slate-700/50 p-2 rounded-md">{selectedAppointment.reasonForVisit || "Not specified."}</p>
               </div>
 
@@ -988,31 +943,12 @@ const YourAppointments = () => {
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-1">
-                    <h4 className="font-medium text-sm text-gray-700 dark:text-slate-300">Doctor's Consultation Notes</h4>
-                    {!editingNotes && (
-                        <button onClick={() => setEditingNotes(true)} className="text-xs text-blue-500 hover:underline">Edit</button>
-                    )}
+                <div className="mb-1">
+                    <h4 className="font-medium text-sm text-gray-700 dark:text-slate-300">Patient Additional Notes</h4>
                 </div>
-                {editingNotes ? (
-                    <>
-                        <textarea 
-                            value={currentDoctorNotes}
-                            onChange={(e) => setCurrentDoctorNotes(e.target.value)}
-                            rows="4"
-                            className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-md text-sm dark:bg-slate-700 dark:text-slate-100 focus:ring-blue-500 focus:border-blue-500"
-                            placeholder="Enter consultation notes, findings, treatment plan..."
-                        />
-                        <div className="flex justify-end space-x-2 mt-2">
-                            <button onClick={() => { setEditingNotes(false); setCurrentDoctorNotes(selectedAppointment.doctorNotes || "");}} className="text-xs px-3 py-1 border rounded-md hover:bg-gray-100 dark:hover:bg-slate-700">Cancel</button>
-                            <button onClick={handleSaveNotes} className="text-xs px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600">Save Notes</button>
-                        </div>
-                    </>
-                ) : (
-                    <p className="text-sm text-gray-600 dark:text-slate-200 bg-gray-50 dark:bg-slate-700/50 p-2 rounded-md min-h-[50px]">
-                        {currentDoctorNotes || "No notes added yet."}
-                    </p>
-                )}
+                <p className="text-sm text-gray-600 dark:text-slate-200 bg-gray-50 dark:bg-slate-700/50 p-2 rounded-md min-h-[50px]">
+                    {selectedAppointment.doctorNotes || "No notes added yet."}
+                </p>
               </div>
             </div>
 

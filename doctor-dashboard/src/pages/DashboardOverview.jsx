@@ -1,12 +1,15 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import WelcomeCard from "../components/dashboard/WelcomeCard";
 import PatientMetricsGrid from "../components/dashboard/PatientMetricsGrid";
 import UpcomingAppointments from "../components/dashboard/UpcomingAppointments";
 import RecentPatientActivity from "../components/dashboard/RecentPatientActivity";
-import { ExclamationTriangleIcon, UserGroupIcon, ChatBubbleLeftIcon, ClipboardDocumentListIcon, CheckCircleIcon } from "@heroicons/react/24/outline";
+import { ExclamationTriangleIcon, UserGroupIcon, ChatBubbleLeftIcon, ClipboardDocumentListIcon, CheckCircleIcon, XMarkIcon, ArrowPathIcon } from "@heroicons/react/24/outline";
 import api from "../services/api";
 
 const DashboardOverview = () => {
+  const navigate = useNavigate();
+
   // State for real dashboard data
   const [dashboardData, setDashboardData] = useState({
     totalPatients: 0,
@@ -20,10 +23,11 @@ const DashboardOverview = () => {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [alertsBannerDismissed, setAlertsBannerDismissed] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(null);
 
   // Fetch real dashboard data
-  useEffect(() => {
-    const fetchDashboardData = async () => {
+  const fetchDashboardData = async () => {
       try {
         setLoading(true);
 
@@ -35,88 +39,33 @@ const DashboardOverview = () => {
           return;
         }
 
-        // Fetch multiple data sources in parallel
-        const [appointmentsRes, alertsRes] = await Promise.allSettled([
-          api.get('/appointments/doctor'),
-          api.get('/alerts?limit=100') // Get recent alerts to count critical ones
-        ]);
+        // Fetch doctor dashboard analytics from the new dedicated endpoint
+        console.log('📊 Fetching doctor dashboard analytics...');
+        const analyticsRes = await api.get('/appointments/doctor/analytics');
 
-        // Process appointments data with validation
-        const appointmentsData = appointmentsRes.status === 'fulfilled' ? appointmentsRes.value.data : {};
-        const alertsData = alertsRes.status === 'fulfilled' ? alertsRes.value.data : {};
+        if (analyticsRes.status === 200 && analyticsRes.data.success) {
+          const analytics = analyticsRes.data.data;
+          console.log('📊 Doctor dashboard analytics fetched:', analytics);
 
-        // The backend returns { data: [...], totalPages, currentPage, totalAppointments }
-        const appointments = Array.isArray(appointmentsData.data) ? appointmentsData.data :
-                           Array.isArray(appointmentsData) ? appointmentsData : [];
-        const alerts = Array.isArray(alertsData.data) ? alertsData.data : Array.isArray(alertsData) ? alertsData : [];
+          const dashboardStats = {
+            totalPatients: analytics.totalPatients || 0,
+            messagesToday: 0, // Will be updated when messaging system is implemented
+            newMessages: 0,
+            pendingLabReviews: analytics.pendingReviews || 0,
+            systemStatus: analytics.systemStatus || 'No Data Available',
+            criticalAlertsCount: analytics.criticalAlerts || 0,
+            appointmentsToday: analytics.appointmentsToday || 0,
+            completedToday: analytics.completedToday || 0,
+            approvedToday: analytics.approvedToday || 0,
+            totalApproved: analytics.totalApproved || 0,
+            totalAppointments: analytics.totalAppointments || 0
+          };
 
-        console.log('Appointments data:', appointments);
-        console.log('Alerts data:', alerts);
-
-        // Calculate real statistics
-        const today = new Date().toDateString();
-
-        // Get unique patients under doctor's care (count unique patient IDs, not appointments)
-        const patientIds = appointments.map(apt => {
-          // Extract patient ID from different possible locations
-          const patientId = apt.userId?._id || apt.userId || apt.patient?.id || apt.patientId;
-          console.log('🔍 Extracting patient ID from appointment:', {
-            appointmentId: apt._id,
-            userId: apt.userId,
-            patientId: patientId,
-            patientName: apt.userId?.firstName ? `${apt.userId.firstName} ${apt.userId.lastName}` : 'Unknown'
-          });
-          return patientId;
-        }).filter(Boolean); // Remove null/undefined values
-
-        const uniquePatients = new Set(patientIds).size;
-        console.log('👥 Unique patient IDs:', Array.from(new Set(patientIds)));
-        console.log('👥 Total unique patients:', uniquePatients);
-
-        // Today's appointments with safe date handling
-        const todayAppointments = appointments.filter(apt => {
-          try {
-            const aptDate = apt.dateTime || apt.date;
-            return aptDate && new Date(aptDate).toDateString() === today && apt.status === 'Confirmed';
-          } catch (e) {
-            return false;
-          }
-        });
-
-        // Completed today with safe date handling
-        const completedToday = appointments.filter(apt => {
-          try {
-            const aptDate = apt.dateTime || apt.date;
-            return (apt.status === 'completed' || apt.status === 'cancelled') &&
-                   aptDate && new Date(aptDate).toDateString() === today;
-          } catch (e) {
-            console.warn('Invalid date in completed appointment:', apt);
-            return false;
-          }
-        }).length;
-
-        // Critical alerts (high priority health alerts)
-        const criticalAlerts = alerts.filter(alert =>
-          alert && alert.type === 'critical' && !alert.isRead
-        ).length;
-
-        // Pending reviews: Critical health alerts + unread health data requiring medical attention
-        const pendingReviews = alerts.filter(alert =>
-          alert && (alert.type === 'critical' || alert.priority === 'high') && !alert.isRead
-        ).length;
-
-        const dashboardStats = {
-          totalPatients: uniquePatients || 0,
-          messagesToday: 0, // Will be updated when messaging system is implemented
-          newMessages: 0,
-          pendingLabReviews: pendingReviews || 0, // Critical health alerts requiring doctor review
-          systemStatus: appointments.length > 0 ? 'All Systems Operational' : 'No Data Available',
-          criticalAlertsCount: criticalAlerts || 0,
-          appointmentsToday: todayAppointments.length || 0,
-          completedToday: completedToday || 0
-        };
-
-        setDashboardData(dashboardStats);
+          setDashboardData(dashboardStats);
+          setLastUpdated(new Date());
+        } else {
+          throw new Error('Failed to fetch analytics data');
+        }
 
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
@@ -148,14 +97,78 @@ const DashboardOverview = () => {
       }
     };
 
+  useEffect(() => {
     fetchDashboardData();
+  }, []);
+
+  // Refresh data when returning to dashboard (e.g., from notifications)
+  useEffect(() => {
+    const handleFocus = () => {
+      console.log('🔄 Dashboard focused - refreshing data...');
+      fetchDashboardData();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, []);
+
+  // Auto-refresh dashboard data every 30 seconds for real-time updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      console.log('🔄 Auto-refreshing dashboard data...');
+      fetchDashboardData();
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Add visibility change listener for when user switches tabs
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log('🔄 Tab became visible - refreshing data...');
+        fetchDashboardData();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, []);
 
   return (
     <div className="space-y-6 p-4 sm:p-6"> {/* Added padding to the main container */}
-      
-      {/* Welcome Section - Real Data */}
-      <WelcomeCard dashboardData={dashboardData} loading={loading} />
+
+      {/* Dashboard Header with Refresh Button */}
+      <div className="flex items-center justify-between">
+        <div className="flex-1">
+          {/* Welcome Section - Real Data */}
+          <WelcomeCard dashboardData={dashboardData} loading={loading} />
+        </div>
+
+        {/* Refresh Button and Last Updated */}
+        <div className="flex flex-col items-end space-y-1">
+          {lastUpdated && (
+            <span className="text-xs text-gray-500 dark:text-slate-400">
+              Updated: {lastUpdated.toLocaleTimeString()}
+            </span>
+          )}
+          <button
+            onClick={() => {
+              console.log('🔄 Manual refresh triggered');
+              fetchDashboardData();
+            }}
+            disabled={loading}
+            className={`p-2 rounded-lg transition-all duration-200 ${
+              loading
+                ? 'bg-gray-100 dark:bg-slate-700 text-gray-400 dark:text-slate-500 cursor-not-allowed'
+                : 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50'
+            }`}
+            title="Refresh dashboard data"
+          >
+            <ArrowPathIcon className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
+      </div>
 
       {/* Quick Stats Grid - Real Data */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -189,7 +202,7 @@ const DashboardOverview = () => {
         <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm p-5 rounded-xl shadow-md border border-gray-100 dark:border-slate-700/50">
           <div className="flex items-center justify-between">
             <div>
-              <h4 className="text-sm font-medium text-gray-500 dark:text-slate-400 mb-1">Pending Reviews</h4>
+              <h4 className="text-sm font-medium text-gray-500 dark:text-slate-400 mb-1">Pending Alerts</h4>
               <p className="text-2xl font-bold text-gray-800 dark:text-slate-100">
                 {loading ? '...' : dashboardData.pendingLabReviews}
               </p>
@@ -212,20 +225,52 @@ const DashboardOverview = () => {
       </div>
       
       {/* Critical Alerts Summary - Real Data */}
-      {!loading && dashboardData.criticalAlertsCount > 0 && (
+      {!loading && dashboardData.criticalAlertsCount > 0 && !alertsBannerDismissed && (
         <div className="bg-red-50 dark:bg-red-700/20 border border-red-200 dark:border-red-600/40 rounded-xl p-4 shadow-md">
           <div className="flex items-center space-x-3">
             <ExclamationTriangleIcon className="w-6 h-6 text-red-500 dark:text-red-400" />
-            <div>
+            <div className="flex-1">
               <h3 className="text-sm sm:text-base font-semibold text-red-800 dark:text-red-200">
                 {dashboardData.criticalAlertsCount} Critical Patient Alert{dashboardData.criticalAlertsCount > 1 ? 's' : ''}
               </h3>
               <p className="text-xs sm:text-sm text-red-700 dark:text-red-300">
-                Please review immediately in the Patient Activity Feed or individual patient dashboards.
+                Please review immediately in the notifications page or individual patient dashboards.
               </p>
             </div>
-             <button className="ml-auto px-3 py-1.5 text-xs sm:text-sm bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors">
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => navigate('/notifications')}
+                className="px-3 py-1.5 text-xs sm:text-sm bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
+              >
                 View Alerts
+              </button>
+              <button
+                onClick={() => setAlertsBannerDismissed(true)}
+                className="p-1.5 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-100 dark:hover:bg-red-800/30 rounded-lg transition-colors"
+                title="Dismiss alerts banner"
+              >
+                <XMarkIcon className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Dismissed Alerts Summary - Minimized State */}
+      {!loading && dashboardData.criticalAlertsCount > 0 && alertsBannerDismissed && (
+        <div className="bg-gray-50 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700/50 rounded-xl p-3 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <ExclamationTriangleIcon className="w-4 h-4 text-gray-500 dark:text-slate-400" />
+              <span className="text-sm text-gray-600 dark:text-slate-400">
+                {dashboardData.criticalAlertsCount} critical alert{dashboardData.criticalAlertsCount > 1 ? 's' : ''} (dismissed)
+              </span>
+            </div>
+            <button
+              onClick={() => setAlertsBannerDismissed(false)}
+              className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+            >
+              Show again
             </button>
           </div>
         </div>
