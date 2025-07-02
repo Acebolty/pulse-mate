@@ -86,6 +86,8 @@ app.use('/api/email-test', emailTestRoutes); // All routes will be prefixed with
 
 // Import and use admin routes
 const adminRoutes = require('./routes/adminRoutes');
+console.log('📋 Admin routes loaded successfully');
 app.use('/api/admin', adminRoutes); // All routes will be prefixed with /api/admin
+console.log('📋 Admin routes registered at /api/admin');
 
 // Note: app.listen() is now inside the mongoose.connect().then() block

@@ -110,7 +110,8 @@ export const getPendingAppointments = async () => {
  */
 export const approveAppointment = async (appointmentId) => {
   try {
-    const response = await api.post(`/admin/appointments/${appointmentId}/approve`);
+    // Temporary: Use appointment route instead of admin route
+    const response = await api.post(`/appointments/${appointmentId}/approve`);
     return response.data;
   } catch (error) {
     console.error('Error approving appointment:', error);

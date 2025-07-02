@@ -258,7 +258,9 @@ const Messages = () => {
   const [error, setError] = useState(null); // General error for the page
 
   const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
   const fileInputRef = useRef(null);
+
   const currentUser = getCurrentUser(); // Get logged-in user info
 
   // Fetch Chat List
@@ -330,6 +332,17 @@ const Messages = () => {
       fetchAppointmentSessions();
     }
   }, [currentUser?.id]); // Re-fetch if user changes (though unlikely in this component's lifecycle)
+
+  // Refresh sessions when window gains focus (to catch new approvals)
+  useEffect(() => {
+    const handleFocus = () => {
+      console.log('🔄 Window focused, refreshing appointment sessions...');
+      fetchAppointmentSessions();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, []);
 
   // Fetch active appointment sessions
   const fetchAppointmentSessions = async () => {
@@ -487,7 +500,7 @@ const Messages = () => {
         <button
           onClick={handleFileUpload}
           disabled={isSessionExpired}
-          className={`p-1.5 sm:p-2 rounded-lg transition-colors ${
+          className={`p-1.5 sm:p-2 rounded-xl transition-colors ${
             isSessionExpired
               ? 'text-gray-300 dark:text-slate-600 cursor-not-allowed'
               : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700'
@@ -504,7 +517,7 @@ const Messages = () => {
             placeholder={isSessionExpired ? "Session ended" : "Type your message..."}
             rows={1}
             disabled={isSessionExpired}
-            className={`w-full px-3 py-2 sm:px-4 sm:py-3 border rounded-xl sm:rounded-2xl resize-none text-xs sm:text-sm focus:ring-1 sm:focus:ring-2 focus:border-transparent ${
+            className={`w-full px-3 py-2 sm:px-4 sm:py-3 border rounded-xl sm:rounded-2xl translate-y-2 resize-none text-xs sm:text-sm focus:ring-1 sm:focus:ring-2 focus:border-transparent ${
               isSessionExpired
                 ? 'border-gray-200 dark:border-slate-700 bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-slate-500 cursor-not-allowed'
                 : 'border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 dark:placeholder-slate-400 focus:ring-green-500 dark:focus:ring-green-600'
@@ -515,7 +528,7 @@ const Messages = () => {
 
         <button
           disabled={isSessionExpired}
-          className={`p-1.5 sm:p-2 rounded-lg transition-colors ${
+          className={`p-1.5 sm:p-2 rounded-xl transition-colors ${
             isSessionExpired
               ? 'text-gray-300 dark:text-slate-600 cursor-not-allowed'
               : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700'
@@ -527,7 +540,7 @@ const Messages = () => {
         <button
           onClick={handleSendMessage}
           disabled={!messageInput.trim() || isSessionExpired}
-          className={`p-1.5 sm:p-2 rounded-lg transition-colors ${
+          className={`p-1.5 sm:p-2 rounded-xl transition-colors ${
             messageInput.trim() && !isSessionExpired
               ? "bg-green-500 text-white hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700"
               : "bg-gray-200 text-gray-400 dark:bg-slate-600 dark:text-slate-500 cursor-not-allowed"
@@ -588,11 +601,27 @@ const Messages = () => {
   );
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messagesContainerRef.current) {
+      const container = messagesContainerRef.current;
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: 'smooth'
+      });
+    }
   };
 
   useEffect(() => {
-    scrollToBottom();
+    if (messagesContainerRef.current) {
+      const container = messagesContainerRef.current;
+      const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+
+      // Only auto-scroll if user is near the bottom (to avoid interrupting reading)
+      if (isNearBottom || currentMessages.length <= 5) {
+        setTimeout(() => {
+          scrollToBottom();
+        }, 100);
+      }
+    }
   }, [currentMessages]); // Scrolls when new messages are added or selected chat changes
 
   const handleSendMessage = async () => {
@@ -708,14 +737,52 @@ const Messages = () => {
               {selectedChat && (
                 <button
                   onClick={() => setShowChatList(false)}
-                  className="md:hidden p-1 sm:p-2 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                  className="md:hidden p-1 sm:p-2 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
                 >
                   <XMarkIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
               )}
               <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-slate-100">Messages</h1>
             </div>
-            <div className="flex items-center space-x-1 sm:space-x-2">
+            <div className="flex items-center space-x-2">
+              {/* Reactivate Session Button */}
+              {(() => {
+                const hasExpiredSession = chatList.some(chat => {
+                  const sessionInfo = appointmentSessions.find(s => s.chatRoomId === chat._rawChat?._id);
+                  return sessionInfo && sessionStatus[sessionInfo._id] !== 'active';
+                });
+
+                if (hasExpiredSession) {
+                  return (
+                    <button
+                      onClick={async () => {
+                        try {
+                          console.log('🔄 Reactivating session...');
+                          console.log('🔑 Auth token:', localStorage.getItem('authToken') ? 'Present' : 'Missing');
+                          console.log('👤 Current user:', getCurrentUser());
+
+                          // Call the reactivation endpoint
+                          const response = await api.post('/appointments/reactivate-latest');
+                          console.log('📋 Response:', response.data);
+
+                          // Refresh the sessions
+                          fetchAppointmentSessions();
+                          console.log('✅ Session reactivated!');
+                        } catch (error) {
+                          console.error('❌ Error reactivating session:', error);
+                          console.error('❌ Error details:', error.response?.data);
+                        }
+                      }}
+                      className="px-3 py-1 text-xs bg-green-500 text-white rounded-full hover:bg-green-600 transition-colors flex items-center space-x-1"
+                    >
+                      <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                      <span>Reactivate</span>
+                    </button>
+                  );
+                }
+                return null;
+              })()}
+
               {totalUnreadCount > 0 && (
                 <span className="bg-red-500 text-white text-xs rounded-full px-1.5 sm:px-2 py-0.5 sm:py-1">{totalUnreadCount}</span>
               )}
@@ -730,7 +797,7 @@ const Messages = () => {
               placeholder="Search conversations..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-7 sm:pl-9 pr-3 sm:pr-4 py-1.5 sm:py-2 border border-gray-300 dark:border-slate-600 rounded-lg sm:rounded-xl text-xs sm:text-sm dark:bg-slate-700 dark:text-slate-200 dark:placeholder-slate-400 focus:ring-1 sm:focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
+              className="w-full pl-7 sm:pl-9 pr-3 sm:pr-4 py-1.5 sm:py-2 border border-gray-300 dark:border-slate-600 rounded-xl sm:rounded-xl text-xs sm:text-sm dark:bg-slate-700 dark:text-slate-200 dark:placeholder-slate-400 focus:ring-1 sm:focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
             />
           </div>
         </div>
@@ -750,8 +817,10 @@ const Messages = () => {
                   setSelectedChat(chat)
                   setShowChatList(false) // Hide chat list on mobile after selecting a chat
                 }}
-                className={`p-3 sm:p-4 border-b border-gray-100 dark:border-slate-700 cursor-pointer hover:bg-green-50 dark:hover:bg-green-700/20 transition-colors ${
-                  selectedChat?.id === chat.id ? "bg-green-50 dark:bg-green-700/20 border-r-2 sm:border-r-4 border-r-green-500 dark:border-r-green-600" : ""
+                className={`p-4 m-2 rounded-xl cursor-pointer transition-all duration-300 border ${
+                  selectedChat?.id === chat.id
+                    ? "bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200 dark:border-green-700/50 shadow-lg transform scale-[1.02]"
+                    : "bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700/50 hover:shadow-md hover:border-gray-300 dark:hover:border-slate-600"
                 }`}
               >
                 <div className="flex items-start space-x-2 sm:space-x-3">
@@ -782,16 +851,16 @@ const Messages = () => {
                       </div>
                     </div>
 
-                    <div className="flex items-center space-x-2 mb-1">
-                      <span className="px-2 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-700/30 dark:text-blue-400 text-2xs rounded-md font-medium">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <span className="px-3 py-1 bg-blue-100 text-blue-700 dark:bg-blue-700/30 dark:text-blue-400 text-xs rounded-full font-medium">
                         {chat.specialty || 'General Medicine'}
                       </span>
                       {(() => {
                         const sessionInfo = appointmentSessions.find(s => s.chatRoomId === chat._rawChat?._id);
                         if (sessionInfo && sessionStatus[sessionInfo._id] === 'active') {
                           return (
-                            <span className="px-2 py-0.5 bg-green-100 text-green-700 dark:bg-green-700/30 dark:text-green-400 text-2xs rounded-md font-medium flex items-center space-x-1">
-                              <ClockIcon className="w-2.5 h-2.5" />
+                            <span className="px-3 py-1 bg-green-100 text-green-700 dark:bg-green-700/30 dark:text-green-400 text-xs rounded-full font-medium flex items-center space-x-1.5">
+                              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                               <span>Session Active</span>
                             </span>
                           );
@@ -809,19 +878,28 @@ const Messages = () => {
                       )}
                     </div>
 
-                    <p className="text-2xs sm:text-xs text-gray-400 dark:text-slate-500 mt-0.5 sm:mt-1">
+                    <div className="flex items-center justify-between mt-1">
+                      <p className="text-xs text-gray-600 dark:text-slate-400 font-medium">
+                        {chat.lastMessage || 'hmInuukluv'}
+                      </p>
                       {(() => {
                         const sessionInfo = appointmentSessions.find(s => s.chatRoomId === chat._rawChat?._id);
                         if (sessionInfo && sessionStatus[sessionInfo._id] === 'active') {
                           const timeLeft = formatRemainingTime(sessionTimers[sessionInfo._id] || 0);
-                          return `${timeLeft} left`;
+                          return (
+                            <span className="px-2 py-1 bg-orange-100 text-orange-700 dark:bg-orange-700/30 dark:text-orange-400 text-xs rounded-full font-medium flex items-center space-x-1">
+                              <ClockIcon className="w-3 h-3" />
+                              <span>{timeLeft} left</span>
+                            </span>
+                          );
                         }
-                        if (chat.isOnline) {
-                          return 'Active now';
-                        }
-                        return 'Available for consultation';
+                        return (
+                          <span className="text-xs text-gray-400 dark:text-slate-500">
+                            Available for consultation
+                          </span>
+                        );
                       })()}
-                    </p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -847,7 +925,7 @@ const Messages = () => {
                   {/* Button to show chat list on mobile */}
                   <button
                     onClick={() => setShowChatList(true)}
-                    className="md:hidden p-1 sm:p-2 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                    className="md:hidden p-1 sm:p-2 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
                   >
                     <ChatBubbleLeftRightIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                   </button>
@@ -871,7 +949,7 @@ const Messages = () => {
                       )}
                     </div>
                     <div className="flex items-center space-x-2 flex-wrap">
-                      <span className="px-2 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-700/30 dark:text-blue-400 text-2xs rounded-md font-medium">
+                      <span className="px-2 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-700/30 dark:text-blue-400 text-2xs rounded-xl font-medium">
                         {selectedChat.specialty || 'General Medicine'}
                       </span>
                       {selectedChat.isUrgent && (
@@ -882,19 +960,23 @@ const Messages = () => {
                         const sessionInfo = getCurrentSessionInfo();
                         if (sessionInfo) {
                           return (
-                            <span className={`px-2 py-0.5 text-2xs sm:text-xs rounded-full font-medium flex items-center space-x-1 ${
+                            <div className={`px-3 py-2 rounded-xl font-medium flex items-center space-x-2 ${
                               sessionInfo.isActive
-                                ? 'bg-green-100 text-green-700 dark:bg-green-700/30 dark:text-green-400'
-                                : 'bg-red-100 text-red-700 dark:bg-red-700/30 dark:text-red-400'
+                                ? 'bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 dark:from-green-700/20 dark:to-emerald-700/20 dark:text-green-400 border border-green-200 dark:border-green-600/30'
+                                : 'bg-gradient-to-r from-red-100 to-rose-100 text-red-700 dark:from-red-700/20 dark:to-rose-700/20 dark:text-red-400 border border-red-200 dark:border-red-600/30'
                             }`}>
-                              <ClockIcon className="w-3 h-3" />
-                              <span>
+                              {sessionInfo.isActive ? (
+                                <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></div>
+                              ) : (
+                                <ClockIcon className="w-4 h-4" />
+                              )}
+                              <span className="text-sm">
                                 {sessionInfo.isActive
-                                  ? `${formatRemainingTime(sessionInfo.remainingTime)} left`
+                                  ? `${formatRemainingTime(sessionInfo.remainingTime)} remaining`
                                   : 'Session Expired'
                                 }
                               </span>
-                            </span>
+                            </div>
                           );
                         }
                         return null;
@@ -917,7 +999,11 @@ const Messages = () => {
             </div>
 
             {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-3 sm:space-y-4 bg-gray-50 dark:bg-slate-900">
+            <div
+              ref={messagesContainerRef}
+              className="flex-1 overflow-y-auto p-3 sm:p-4 bg-gray-50 dark:bg-slate-900 max-h-96 min-h-96 scroll-smooth"
+            >
+              <div className="space-y-3 sm:space-y-4 pb-4">
               {currentMessages.map((message, index) => {
                 const isPatient = message.senderId === currentUser?.id // Check if sender is current user (patient)
                 const showAvatar =
@@ -967,8 +1053,8 @@ const Messages = () => {
                           {message.type === "text" ? (
                             <p className={`text-xs sm:text-sm ${isPatient ? 'text-white' : 'text-gray-800 dark:text-slate-200'}`}>{message.message}</p>
                           ) : message.type === "file" ? (
-                            <div className="flex items-center space-x-2 sm:space-x-3">
-                              <div className="p-1.5 sm:p-2 bg-blue-100 dark:bg-blue-600/30 rounded-md sm:rounded-lg">
+                            <div className="flex items-center space-x-2 sm:space-x-3 ">
+                              <div className="p-1.5 sm:p-2 bg-blue-100 dark:bg-blue-600/30 rounded-xl sm:rounded-xl">
                                 <DocumentIcon className="w-4 h-4 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400" />
                               </div>
                               <div>
@@ -1017,6 +1103,7 @@ const Messages = () => {
               )}
 
               <div ref={messagesEndRef} />
+              </div>
             </div>
 
             {/* Message Input */}

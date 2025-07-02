@@ -101,10 +101,17 @@ router.post('/doctors/:doctorId/reject', authMiddleware, adminMiddleware, reject
 // @access  Private (Admin only)
 router.get('/appointments/pending', authMiddleware, adminMiddleware, getPendingAppointments);
 
+// Test route to verify admin routes are working
+router.get('/test', (req, res) => {
+  console.log('🧪 Admin test route called');
+  res.json({ message: 'Admin routes are working!' });
+});
+
 // @route   POST /api/admin/appointments/:appointmentId/approve
 // @desc    Approve an appointment and create chat room
 // @access  Private (Admin only)
 router.post('/appointments/:appointmentId/approve', authMiddleware, adminMiddleware, approveAppointment);
+console.log('📋 Registered route: POST /api/admin/appointments/:appointmentId/approve');
 
 // @route   POST /api/admin/appointments/:appointmentId/reject
 // @desc    Reject an appointment

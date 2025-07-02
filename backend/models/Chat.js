@@ -21,6 +21,24 @@ const chatSchema = new Schema({
     default: Date.now,
     index: true // To sort chat threads by recent activity
   },
+  // Appointment session management
+  appointmentId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Appointment',
+    default: null
+  },
+  isActive: {
+    type: Boolean,
+    default: true
+  },
+  sessionEndTime: {
+    type: Date,
+    default: null
+  },
+  renewedAt: {
+    type: Date,
+    default: null
+  },
   // You could also add unread counts per participant if needed:
   // unreadCounts: [{ userId: Schema.Types.ObjectId, count: Number }]
 }, { timestamps: true }); // createdAt, updatedAt for the chat thread itself

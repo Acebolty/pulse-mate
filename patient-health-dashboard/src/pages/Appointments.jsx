@@ -307,7 +307,7 @@ const Appointments = () => {
     providerName: "", // Doctor name (auto-filled when doctor is selected)
     dateTime: "", // Should be ISO string or Date object for backend
     reason: "",
-    type: "Consultation", // Default
+    type: "Chat", // Default - only Chat is allowed for school project
     notes: "",
     virtualLink: ""
   };
@@ -465,6 +465,9 @@ const Appointments = () => {
     setError(null);
     try {
       const payload = { ...newAppointmentData };
+
+      console.log('📋 Appointment data before processing:', newAppointmentData);
+
       // Ensure dateTime is in a format backend expects, e.g., ISO string
       if (payload.dateTime) {
         payload.dateTime = new Date(payload.dateTime).toISOString();
@@ -474,15 +477,23 @@ const Appointments = () => {
         return;
       }
 
+      console.log('📤 Sending appointment payload:', payload);
+
       if (isEditingModal && editingAppointmentId) {
         await api.put(`/appointments/${editingAppointmentId}`, payload);
       } else {
-        await api.post('/appointments', payload);
+        const response = await api.post('/appointments', payload);
+        console.log('✅ Appointment created successfully:', response.data);
       }
-      setShowBookingModal(false);
+
+      // Reset form and close
+      setNewAppointmentData(initialAppointmentFormState);
+      setActiveTab("upcoming"); // Switch to upcoming tab to see the new appointment
       fetchAppointments(); // Re-fetch appointments after create/update
     } catch (err) {
-      console.error("Error saving appointment:", err);
+      console.error("❌ Error saving appointment:", err);
+      console.error("❌ Error response:", err.response?.data);
+      console.error("❌ Error status:", err.response?.status);
       setError(err.response?.data?.message || "Failed to save appointment.");
     } finally {
       setLoading(false);
@@ -923,10 +934,7 @@ const Appointments = () => {
                           onChange={handleModalFormChange}
                           className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:bg-slate-700 dark:text-slate-100"
                         >
-                          <option value="Consultation">Consultation</option>
-                          <option value="Follow-up">Follow-up</option>
-                          <option value="Check-up">Check-up</option>
-                          <option value="Emergency">Emergency</option>
+                          <option value="Chat">Chat Session</option>
                         </select>
                       </div>
                     </div>

@@ -409,6 +409,10 @@ const getPendingAppointments = async (req, res) => {
  */
 const approveAppointment = async (req, res) => {
   try {
+    console.log('🎯 approveAppointment function called');
+    console.log('📋 Request params:', req.params);
+    console.log('👤 Admin user:', req.adminUser);
+
     const { appointmentId } = req.params;
     const adminId = req.adminUser._id;
 
