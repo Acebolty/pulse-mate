@@ -129,13 +129,11 @@ router.post('/:appointmentId/approve', authMiddleware, async (req, res) => {
       return res.status(404).json({ message: 'Appointment not found' });
     }
 
-    // Update appointment status and enable chat
+    // Update appointment status - doctor will control chat session
     appointment.status = 'Approved';
     appointment.approvedAt = new Date();
     appointment.approvedBy = req.user.id;
-    appointment.chatEnabled = true; // Enable chat for the session
-    appointment.sessionStartTime = new Date(); // Set session start time
-    appointment.sessionEndTime = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes from now
+    // Remove automatic chat enabling - doctor will control this
     await appointment.save();
 
     fs.appendFileSync('approval.log', `${new Date().toISOString()} - APPOINTMENT UPDATED: chatEnabled=true, sessionEndTime=${appointment.sessionEndTime}\n`);
@@ -146,35 +144,33 @@ router.post('/:appointmentId/approve', authMiddleware, async (req, res) => {
     });
 
     if (existingChat) {
-      // Reactivate expired chat room with new appointment
-      const logMsg = `${new Date().toISOString()} - REACTIVATING EXISTING CHAT\nChat ID: ${existingChat._id}\nPrevious status: ${existingChat.isActive}\n`;
+      // Link existing chat room to new appointment (but don't activate yet)
+      const logMsg = `${new Date().toISOString()} - LINKING EXISTING CHAT\nChat ID: ${existingChat._id}\nPrevious status: ${existingChat.isActive}\n`;
       fs.appendFileSync('approval.log', logMsg);
 
-      console.log('🔄 Found existing chat room, reactivating...');
+      console.log('🔗 Found existing chat room, linking to appointment...');
       console.log('📋 Chat ID:', existingChat._id);
       console.log('📋 Previous status:', existingChat.isActive);
 
       existingChat.appointmentId = appointment._id;
-      existingChat.isActive = true;
-      existingChat.sessionEndTime = null; // Clear previous session end time
       existingChat.renewedAt = new Date();
-      existingChat.lastMessageTimestamp = new Date();
+      // Don't automatically activate - doctor will control this
       await existingChat.save();
 
       // Link chat room to appointment
       appointment.chatRoomId = existingChat._id;
       await appointment.save();
 
-      fs.appendFileSync('approval.log', `${new Date().toISOString()} - CHAT REACTIVATED SUCCESSFULLY, chatRoomId=${existingChat._id}\n`);
-      console.log('✅ Existing chat room reactivated for new appointment');
+      fs.appendFileSync('approval.log', `${new Date().toISOString()} - CHAT LINKED SUCCESSFULLY, chatRoomId=${existingChat._id}\n`);
+      console.log('✅ Existing chat room linked to new appointment');
     } else {
-      // Create new chat room
+      // Create new chat room (but don't activate yet)
       fs.appendFileSync('approval.log', `${new Date().toISOString()} - CREATING NEW CHAT\n`);
       console.log('🆕 No existing chat found, creating new one...');
       const newChat = new Chat({
         participants: [appointment.userId, appointment.providerId],
         appointmentId: appointment._id,
-        isActive: true,
+        isActive: false, // Doctor will activate when ready
         createdAt: new Date(),
         lastMessageTimestamp: new Date()
       });

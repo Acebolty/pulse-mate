@@ -21,6 +21,8 @@ import {
   BriefcaseIcon, // For doctor's role or quick actions
 } from "@heroicons/react/24/outline"
 import { motion } from "framer-motion"
+import api from "../services/api"
+import { getCurrentUser } from "../services/authService"
 
 
 // Dummy chat data for Doctor's View
@@ -125,27 +127,172 @@ const formatMessageTime = (timestamp) => {
 };
 
 const Messages = () => {
-  const [selectedPatientChat, setSelectedPatientChat] = useState(patientChatList[0]);
+  // Real state management
+  const [chatList, setChatList] = useState([]);
+  const [selectedChat, setSelectedChat] = useState(null);
+  const [currentMessages, setCurrentMessages] = useState([]);
   const [messageInput, setMessageInput] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [showPatientInfo, setShowPatientInfo] = useState(false); // For doctor's view of patient info
-  const [isDoctorTyping, setIsDoctorTyping] = useState(false); // Doctor typing, not patient
-  const [showChatListPane, setShowChatListPane] = useState(true); // Manage visibility of chat list on mobile
+  const [showPatientInfo, setShowPatientInfo] = useState(false);
+  const [showChatListPane, setShowChatListPane] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [error, setError] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
+
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  const currentPatientMessages = doctorMessages[selectedPatientChat?.patientId] || [];
-
-  const filteredPatientChats = patientChatList.filter(
-    (chat) =>
-      chat.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (chat.condition && chat.condition.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      chat.lastMessage.toLowerCase().includes(searchTerm.toLowerCase())
+  // Filter chats based on search term
+  const filteredChats = chatList.filter((chat) =>
+    chat.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (chat.lastMessage && chat.lastMessage.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+
+  // Fetch doctor's active chat sessions
+  const fetchActiveChats = async (silent = false) => {
+    try {
+      if (!silent) {
+        setLoading(true);
+        setError(null);
+      }
+
+      // Get current doctor info
+      const user = getCurrentUser();
+      setCurrentUser(user);
+
+      if (!user) {
+        setError("User not authenticated");
+        return;
+      }
+
+      // Fetch chats where doctor is a participant
+      const response = await api.get('/chats');
+
+      // Transform chats for doctor's view
+      const transformedChats = response.data.map(chat => {
+        // Find the patient (non-doctor participant)
+        const patient = chat.participants.find(p => p._id !== user.id && p.role === 'patient');
+
+        if (!patient) return null; // Skip if no patient found
+
+        return {
+          id: chat._id,
+          patientId: patient._id,
+          patientName: `${patient.firstName} ${patient.lastName}`,
+          patientAvatar: patient.profilePicture || null,
+          lastMessage: chat.lastMessage?.messageContent || "No messages yet",
+          lastMessageTime: chat.lastMessageTimestamp || chat.createdAt,
+          unreadCount: 0, // Can be implemented later
+          isOnline: false, // Can be implemented with real-time features
+          lastSeen: "Recently",
+          isUrgent: false,
+          condition: patient.medicalInfo?.chronicConditions?.[0] || patient.medicalInfo?.primaryDoctor?.specialty || "General Consultation",
+          _rawChat: chat
+        };
+      }).filter(Boolean); // Remove null entries
+
+      setChatList(transformedChats);
+
+      // Select first chat if available and none selected
+      if (transformedChats.length > 0 && !selectedChat) {
+        setSelectedChat(transformedChats[0]);
+      }
+
+    } catch (err) {
+      if (!silent) {
+        console.error("Failed to fetch chats:", err);
+        setError("Could not load patient conversations.");
+      }
+    } finally {
+      if (!silent) {
+        setLoading(false);
+      }
+    }
+  };
+
+  // Fetch messages for selected chat
+  const fetchMessages = async (chatId, silent = false) => {
+    if (!chatId) return;
+
+    try {
+      // Only show loading on initial load, not on auto-refresh
+      if (!silent) {
+        setLoadingMessages(true);
+      }
+
+      const response = await api.get(`/chats/${chatId}/messages`);
+
+      if (!silent) {
+        console.log('📨 Messages response:', response.data);
+      }
+
+      // Transform messages for display
+      const messages = response.data.data || response.data || [];
+      const transformedMessages = messages.map(msg => ({
+        id: msg._id,
+        senderId: msg.senderId?._id || msg.senderId,
+        senderName: msg.senderId ? `${msg.senderId.firstName} ${msg.senderId.lastName}` : "Unknown",
+        message: msg.messageContent,
+        timestamp: msg.timestamp,
+        type: "text",
+        status: msg.status || "sent"
+      }));
+
+      // Update messages smoothly like patient side
+      setCurrentMessages(transformedMessages);
+    } catch (err) {
+      if (!silent) {
+        console.error("Failed to fetch messages:", err);
+        setError("Could not load messages.");
+      }
+    } finally {
+      if (!silent) {
+        setLoadingMessages(false);
+      }
+    }
+  };
 
   const scrollToBottom = () => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); };
 
-  useEffect(() => { scrollToBottom(); }, [currentPatientMessages]);
+  // Fetch chats on component mount
+  useEffect(() => {
+    fetchActiveChats();
+  }, []);
+
+  // Auto-refresh chat list for new messages (silent)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Silent refresh - no loading states
+      fetchActiveChats(true);
+    }, 10000); // Refresh every 10 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Fetch messages when selected chat changes
+  useEffect(() => {
+    if (selectedChat?._rawChat?._id) {
+      fetchMessages(selectedChat._rawChat._id);
+    }
+  }, [selectedChat]);
+
+  // Auto-refresh messages for real-time sync (silent)
+  useEffect(() => {
+    if (!selectedChat?._rawChat?._id) return;
+
+    const interval = setInterval(() => {
+      // Silent refresh - no loading states
+      fetchMessages(selectedChat._rawChat._id, true);
+    }, 5000); // Refresh every 5 seconds
+
+    return () => clearInterval(interval);
+  }, [selectedChat]);
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    scrollToBottom();
+  }, [currentMessages]);
   
   // Effect to manage chat list visibility on screen size change
   useEffect(() => {
@@ -154,39 +301,73 @@ const Messages = () => {
         setShowChatListPane(true);
       } else {
         // On smaller screens, if a chat is selected, hide the list. Otherwise show it.
-        setShowChatListPane(selectedPatientChat === null);
+        setShowChatListPane(selectedChat === null);
       }
     };
     handleResize(); // Initial check
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [selectedPatientChat]);
+  }, [selectedChat]);
 
 
-  const handleSendMessage = () => {
-    if (messageInput.trim() && selectedPatientChat) {
-      const newMessage = {
-        id: Date.now(), // Temporary ID
-        senderId: "doctor-current", // Doctor is always the sender in this UI
-        senderName: "Dr. Eve", // Placeholder doctor name
-        message: messageInput.trim(),
-        timestamp: new Date().toISOString(),
-        type: "text",
-        status: "sent", // Initial status
-      };
-      // This would typically be an API call
-      // For now, update local state:
-      doctorMessages[selectedPatientChat.patientId] = [...(doctorMessages[selectedPatientChat.patientId] || []), newMessage];
-      // Update last message in chatList (optional, for better UX)
-      const chatIndex = patientChatList.findIndex(chat => chat.patientId === selectedPatientChat.patientId);
-      if (chatIndex !== -1) {
-        patientChatList[chatIndex].lastMessage = messageInput.trim();
-        patientChatList[chatIndex].lastMessageTime = newMessage.timestamp;
-      }
-      
-      setMessageInput("");
-      // Potentially trigger a re-render if state isn't automatically picking up nested changes
-      setSelectedPatientChat(prev => ({...prev})); // Force re-render of chat list if needed
+  const handleSendMessage = async () => {
+    if (!messageInput.trim() || !selectedChat?._rawChat?._id) return;
+
+    const tempMessageId = `temp-${Date.now()}`;
+    const newMessageOptimistic = {
+      id: tempMessageId,
+      senderId: currentUser?.id,
+      senderName: `${currentUser?.firstName} ${currentUser?.lastName}`,
+      message: messageInput.trim(),
+      timestamp: new Date().toISOString(),
+      type: "text",
+      status: "sending",
+    };
+
+    // Optimistic UI update
+    setCurrentMessages(prevMessages => [...prevMessages, newMessageOptimistic]);
+    const messageToSend = messageInput.trim();
+    setMessageInput(""); // Clear input immediately
+
+    try {
+      const response = await api.post(`/chats/${selectedChat._rawChat._id}/messages`, {
+        messageContent: messageToSend,
+      });
+      const savedMessage = response.data;
+
+      // Update the message list with the actual message from server
+      setCurrentMessages(prevMessages =>
+        prevMessages.map(msg =>
+          msg.id === tempMessageId ? {
+            id: savedMessage._id,
+            senderId: savedMessage.senderId._id,
+            senderName: `${savedMessage.senderId.firstName} ${savedMessage.senderId.lastName}`,
+            message: savedMessage.messageContent,
+            timestamp: savedMessage.timestamp,
+            type: "text",
+            status: savedMessage.status || "sent",
+          } : msg
+        )
+      );
+
+      // Update chat list with new last message
+      setChatList(prevChats =>
+        prevChats.map(chat =>
+          chat.id === selectedChat.id ? {
+            ...chat,
+            lastMessage: messageToSend,
+            lastMessageTime: savedMessage.timestamp
+          } : chat
+        )
+      );
+
+    } catch (err) {
+      console.error("Failed to send message:", err);
+      // Remove the optimistic message on error
+      setCurrentMessages(prevMessages =>
+        prevMessages.filter(msg => msg.id !== tempMessageId)
+      );
+      setError("Failed to send message. Please try again.");
     }
   };
 
@@ -221,7 +402,7 @@ const Messages = () => {
         <div className="p-4 border-b border-gray-200 dark:border-slate-700">
           <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-2">
-             {selectedPatientChat && !showChatListPane && ( // Show back button only if list is hidden AND a chat is selected
+             {selectedChat && !showChatListPane && ( // Show back button only if list is hidden AND a chat is selected
                 <button
                   onClick={() => setShowChatListPane(true)}
                   className="md:hidden p-1.5 text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg"
@@ -248,15 +429,20 @@ const Messages = () => {
           </div>
         </div>
         <div className="flex-1 overflow-y-auto">
-          {filteredPatientChats.length === 0 ? (
+          {loading ? (
+            <div className="p-4 text-center text-gray-500 dark:text-slate-400">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
+              <p className="text-sm">Loading conversations...</p>
+            </div>
+          ) : filteredChats.length === 0 ? (
             <div className="p-4 text-center text-gray-500 dark:text-slate-400">
               <ChatBubbleLeftRightIcon className="w-12 h-12 mx-auto mb-2 text-gray-300 dark:text-slate-600" />
               <p className="text-sm">No patient conversations found.</p>
             </div>
           ) : (
-            filteredPatientChats.map((chat) => (
-              <div key={chat.patientId} onClick={() => { setSelectedPatientChat(chat); if (window.innerWidth < 768) setShowChatListPane(false);}}
-                className={`p-4 border-b border-gray-100 dark:border-slate-700/50 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-700/20 transition-colors ${selectedPatientChat?.patientId === chat.patientId ? "bg-blue-50 dark:bg-blue-700/20 border-r-4 border-r-blue-500 dark:border-r-blue-600" : ""}`}
+            filteredChats.map((chat) => (
+              <div key={chat.patientId} onClick={() => { setSelectedChat(chat); if (window.innerWidth < 768) setShowChatListPane(false);}}
+                className={`p-4 border-b border-gray-100 dark:border-slate-700/50 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-700/20 transition-colors ${selectedChat?.patientId === chat.patientId ? "bg-blue-50 dark:bg-blue-700/20 border-r-4 border-r-blue-500 dark:border-r-blue-600" : ""}`}
               >
                 <div className="flex items-start space-x-3">
                   <div className="relative">
@@ -285,8 +471,8 @@ const Messages = () => {
       </div>
 
       {/* Main Chat Area */}
-      <div className={`flex-1 flex flex-col bg-gray-50 dark:bg-slate-900 ${showChatListPane && selectedPatientChat ? 'hidden md:flex' : 'flex'}`}>
-        {selectedPatientChat ? (
+      <div className={`flex-1 flex flex-col bg-gray-50 dark:bg-slate-900 ${showChatListPane && selectedChat ? 'hidden md:flex' : 'flex'}`}>
+        {selectedChat ? (
           <>
             <div className="p-4 border-b border-gray-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
               <div className="flex items-center justify-between">
@@ -295,12 +481,12 @@ const Messages = () => {
                         <ArrowLeftIcon className="w-5 h-5" />
                     </button>
                   <div className="relative">
-                    <img src={selectedPatientChat.patientAvatar || "https://via.placeholder.com/100/E0E0E0/B0B0B0?text=P"} alt={selectedPatientChat.patientName} className="w-10 h-10 rounded-full object-cover" />
-                    {selectedPatientChat.isOnline && <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white dark:border-slate-800 rounded-full"></div>}
+                    <img src={selectedChat.patientAvatar || "https://via.placeholder.com/100/E0E0E0/B0B0B0?text=P"} alt={selectedChat.patientName} className="w-10 h-10 rounded-full object-cover" />
+                    {selectedChat.isOnline && <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white dark:border-slate-800 rounded-full"></div>}
                   </div>
                   <div>
-                    <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100">{selectedPatientChat.patientName}</h2>
-                    <p className="text-xs text-gray-500 dark:text-slate-400">{selectedPatientChat.isOnline ? 'Online' : selectedPatientChat.lastSeen} {selectedPatientChat.condition ? `• ${selectedPatientChat.condition}` : ''}</p>
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100">{selectedChat.patientName}</h2>
+                    <p className="text-xs text-gray-500 dark:text-slate-400">{selectedChat.isOnline ? 'Online' : selectedChat.lastSeen} {selectedChat.condition ? `• ${selectedChat.condition}` : ''}</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -317,13 +503,19 @@ const Messages = () => {
               </div>
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {currentPatientMessages.map((message, index) => {
-                const isDoctor = message.senderId === "doctor-current";
-                const showAvatar = index === 0 || currentPatientMessages[index - 1].senderId !== message.senderId || new Date(message.timestamp) - new Date(currentPatientMessages[index - 1].timestamp) > 300000;
+              {currentMessages.length === 0 ? (
+                <div className="text-center py-8">
+                  <ChatBubbleLeftRightIcon className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+                  <p className="text-sm text-gray-500">No messages yet. Start the conversation!</p>
+                </div>
+              ) : (
+                currentMessages.map((message, index) => {
+                  const isDoctor = message.senderId === currentUser?.id;
+                  const showAvatar = index === 0 || currentMessages[index - 1].senderId !== message.senderId || new Date(message.timestamp) - new Date(currentMessages[index - 1].timestamp) > 300000;
                 return (
                   <div key={message.id} className={`flex ${isDoctor ? "justify-end" : "justify-start"}`}>
                     <div className={`flex items-end space-x-2 max-w-[80%] sm:max-w-md ${isDoctor ? "flex-row-reverse space-x-reverse" : ""}`}>
-                      {!isDoctor && showAvatar && <img src={selectedPatientChat.patientAvatar || "https://via.placeholder.com/100/E0E0E0/B0B0B0?text=P"} alt={selectedPatientChat.patientName} className="w-8 h-8 rounded-full object-cover self-start"/>}
+                      {!isDoctor && showAvatar && <img src={selectedChat.patientAvatar || "https://via.placeholder.com/100/E0E0E0/B0B0B0?text=P"} alt={selectedChat.patientName} className="w-8 h-8 rounded-full object-cover self-start"/>}
                       {!isDoctor && !showAvatar && <div className="w-8"></div>}
                       <div className={`flex flex-col ${isDoctor ? "items-end" : "items-start"}`}>
                         {showAvatar && <span className="text-xs text-gray-500 dark:text-slate-400 mb-1 px-2">{isDoctor ? "You" : message.senderName} • {formatMessageTime(message.timestamp)}</span>}
@@ -341,8 +533,9 @@ const Messages = () => {
                     </div>
                   </div>
                 );
-              })}
-              {isDoctorTyping && <div className="flex justify-start"><div className="flex items-end space-x-2 max-w-xs"><img src={selectedPatientChat.patientAvatar} className="w-8 h-8 rounded-full"/><div className="bg-white dark:bg-slate-700 border rounded-2xl p-3"><div className="flex space-x-1"><div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div><div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-75"></div><div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-150"></div></div></div></div></div>}
+              })
+              )}
+              {/* Typing indicator can be added later */}
               <div ref={messagesEndRef} />
             </div>
             <div className="p-4 border-t border-gray-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
@@ -367,17 +560,17 @@ const Messages = () => {
       </div>
 
       {/* Patient Info Sidebar (Doctor's View) */}
-      {showPatientInfo && selectedPatientChat && (
+      {showPatientInfo && selectedChat && (
         <div className="hidden md:block w-80 lg:w-96 border-l border-gray-200 dark:border-slate-700 bg-white/95 dark:bg-slate-800/95 p-6 overflow-y-auto shadow-xl rounded-tr-2xl rounded-br-2xl">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Patient Information</h3>
             <button onClick={() => setShowPatientInfo(false)} className="text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300"><XMarkIcon className="w-6 h-6" /></button>
           </div>
           <div className="text-center mb-6">
-            <img src={selectedPatientChat.patientAvatar || "https://via.placeholder.com/150/E0E0E0/B0B0B0?text=P"} alt={selectedPatientChat.patientName} className="w-24 h-24 rounded-full object-cover mx-auto mb-3 ring-2 ring-blue-200 dark:ring-blue-700 p-0.5" />
-            <h4 className="text-xl font-semibold text-gray-900 dark:text-slate-100">{selectedPatientChat.patientName}</h4>
-            {selectedPatientChat.condition && <p className="text-sm text-blue-600 dark:text-blue-400">{selectedPatientChat.condition}</p>}
-            <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">Last seen: {selectedPatientChat.lastSeen}</p>
+            <img src={selectedChat.patientAvatar || "https://via.placeholder.com/150/E0E0E0/B0B0B0?text=P"} alt={selectedChat.patientName} className="w-24 h-24 rounded-full object-cover mx-auto mb-3 ring-2 ring-blue-200 dark:ring-blue-700 p-0.5" />
+            <h4 className="text-xl font-semibold text-gray-900 dark:text-slate-100">{selectedChat.patientName}</h4>
+            {selectedChat.condition && <p className="text-sm text-blue-600 dark:text-blue-400">{selectedChat.condition}</p>}
+            <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">Last seen: {selectedChat.lastSeen}</p>
           </div>
           <div className="space-y-5">
             <div>

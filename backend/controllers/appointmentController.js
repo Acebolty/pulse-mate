@@ -1,5 +1,6 @@
 const Appointment = require('../models/Appointment');
 const User = require('../models/User');
+const Chat = require('../models/Chat');
 
 // @desc    Create a new appointment for the logged-in user
 // @route   POST api/appointments
@@ -146,6 +147,11 @@ const updateAppointment = async (req, res) => {
     if (cancelledAt) appointment.cancelledAt = new Date(cancelledAt);
     if (rescheduleReason !== undefined) appointment.rescheduleReason = rescheduleReason;
 
+    // Handle chat session management based on status changes
+    if (status) {
+      await handleChatSessionManagement(appointment, status);
+    }
+
     await appointment.save();
     res.json(appointment);
 
@@ -269,9 +275,9 @@ const getActiveSessions = async (req, res) => {
 
     const activeSessions = await Appointment.find({
       userId: req.user.id,
-      status: 'Approved',
+      status: 'Open Chat', // Only sessions that doctor has opened
       chatEnabled: true
-    }).populate('userId', 'firstName lastName email');
+    }).populate('userId', 'firstName lastName email').populate('providerId', 'firstName lastName email doctorInfo');
 
     console.log('📋 Found active sessions:', activeSessions.length);
 
@@ -419,6 +425,67 @@ const getDoctorDashboardAnalytics = async (req, res) => {
     res.status(500).json({
       message: 'Server error fetching doctor dashboard analytics'
     });
+  }
+};
+
+// Helper function to manage chat sessions based on appointment status
+const handleChatSessionManagement = async (appointment, newStatus) => {
+  try {
+    console.log(`🔄 Managing chat session for appointment ${appointment._id}, status: ${newStatus}`);
+
+    // Find or create chat room for this appointment
+    let chat = await Chat.findOne({
+      participants: { $all: [appointment.userId, appointment.providerId] }
+    });
+
+    if (!chat) {
+      // Create new chat room if it doesn't exist
+      console.log('🆕 Creating new chat room...');
+      chat = new Chat({
+        participants: [appointment.userId, appointment.providerId],
+        appointmentId: appointment._id,
+        isActive: false,
+        lastMessageTimestamp: new Date()
+      });
+      await chat.save();
+
+      // Link chat to appointment
+      appointment.chatRoomId = chat._id;
+    }
+
+    // Handle status-based session management
+    if (newStatus === 'Open Chat') {
+      console.log('🟢 Opening chat session...');
+      chat.isActive = true;
+      chat.sessionEndTime = null; // Remove any previous end time
+      chat.appointmentId = appointment._id;
+      chat.renewedAt = new Date();
+
+      // Update appointment
+      appointment.chatEnabled = true;
+      appointment.sessionStartTime = new Date();
+      appointment.sessionEndTime = null; // Doctor-controlled, no fixed end time
+
+    } else if (newStatus === 'Completed' || newStatus === 'Cancelled') {
+      console.log('🔴 Closing chat session...');
+      chat.isActive = false;
+      chat.sessionEndTime = new Date();
+
+      // Update appointment
+      appointment.chatEnabled = false;
+      if (newStatus === 'Completed') {
+        appointment.completedAt = new Date();
+      } else if (newStatus === 'Cancelled') {
+        appointment.cancelledAt = new Date();
+      }
+    }
+
+    await chat.save();
+    console.log(`✅ Chat session management completed for status: ${newStatus}`);
+
+  } catch (error) {
+    console.error('❌ Error managing chat session:', error);
+    throw error;
   }
 };
 

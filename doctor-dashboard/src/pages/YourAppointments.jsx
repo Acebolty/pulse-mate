@@ -19,6 +19,7 @@ import {
   DocumentTextIcon, // For notes/charts
   VideoCameraIcon, // For virtual appointments (doctor's view)
   BriefcaseIcon, // For specialties or general doctor icon
+  ChevronDownIcon, // For dropdown
 } from "@heroicons/react/24/outline"
 import { motion } from "framer-motion"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts'
@@ -59,22 +60,28 @@ const transformAppointmentData = (appointment, userData = null) => {
 
 
 const getStatusColor = (status) => {
-  // Same as patient's version, can be reused or made a shared util
+  // Updated to handle new status options
   switch (status) {
     case "confirmed": return "text-green-600 bg-green-100 dark:text-green-300 dark:bg-green-700/30";
     case "pending": return "text-yellow-600 bg-yellow-100 dark:text-yellow-300 dark:bg-yellow-600/30";
-    case "completed": return "text-blue-600 bg-blue-100 dark:text-blue-300 dark:bg-blue-700/30";
+    case "approved": return "text-blue-600 bg-blue-100 dark:text-blue-300 dark:bg-blue-700/30";
+    case "open_chat":
+    case "open chat": return "text-purple-600 bg-purple-100 dark:text-purple-300 dark:bg-purple-700/30";
+    case "completed": return "text-emerald-600 bg-emerald-100 dark:text-emerald-300 dark:bg-emerald-700/30";
     case "cancelled": return "text-red-600 bg-red-100 dark:text-red-300 dark:bg-red-700/30";
     default: return "text-gray-600 bg-gray-100 dark:text-gray-300 dark:bg-gray-700/50";
   }
 }
 
 const getStatusIcon = (status) => {
-  // Same as patient's version
+  // Updated to handle new status options
   switch (status) {
     case "confirmed": return <CheckCircleIcon className="w-4 h-4 text-green-600 dark:text-green-400" />;
     case "pending": return <ClockIcon className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />;
-    case "completed": return <CheckCircleIcon className="w-4 h-4 text-blue-600 dark:text-blue-400" />;
+    case "approved": return <CheckCircleIcon className="w-4 h-4 text-blue-600 dark:text-blue-400" />;
+    case "open_chat":
+    case "open chat": return <ChatBubbleLeftRightIcon className="w-4 h-4 text-purple-600 dark:text-purple-400" />;
+    case "completed": return <CheckCircleIcon className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />;
     case "cancelled": return <XMarkIcon className="w-4 h-4 text-red-600 dark:text-red-400" />;
     default: return <InformationCircleIcon className="w-4 h-4 text-gray-600 dark:text-gray-400" />;
   }
@@ -92,7 +99,7 @@ const cardVariants = {
 };
 
 const YourAppointments = () => {
-  const [activeTab, setActiveTab] = useState("upcoming");
+  const [activeTab, setActiveTab] = useState("ongoing");
   const [showSchedulingModal, setShowSchedulingModal] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -110,6 +117,9 @@ const YourAppointments = () => {
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [statusAction, setStatusAction] = useState(null); // 'reschedule', 'complete', 'cancel'
   const [statusLoading, setStatusLoading] = useState(false);
+
+  // Dropdown state for status updates
+  const [openDropdownId, setOpenDropdownId] = useState(null);
 
   // Patient health chart state
   const [showPatientHealthModal, setShowPatientHealthModal] = useState(false);
@@ -132,6 +142,20 @@ const YourAppointments = () => {
     notifyPatient: true,
     refundRequested: false
   });
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (openDropdownId && !event.target.closest('.relative')) {
+        setOpenDropdownId(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [openDropdownId]);
 
   // Fetch appointments from backend
   const fetchAppointments = async () => {
@@ -167,20 +191,20 @@ const YourAppointments = () => {
     }
   };
 
-  // Separate appointments into upcoming and past based on date AND status
-  const now = new Date();
-  const upcomingAppointments = appointments.filter(apt => {
-    const appointmentDate = new Date(apt.originalData.dateTime);
-    const isInFuture = appointmentDate >= now;
-    const isActive = apt.status !== 'completed' && apt.status !== 'cancelled';
-    return isInFuture && isActive;
+  // Separate appointments into ongoing and past based on STATUS only
+  const ongoingAppointments = appointments.filter(apt => {
+    // Ongoing: pending, approved, or open_chat status
+    const ongoingStatuses = ['pending', 'approved', 'open_chat', 'open chat'];
+    return ongoingStatuses.includes(apt.status.toLowerCase());
+  }).sort((a, b) => {
+    // Sort ongoing appointments by date (earliest first)
+    return new Date(a.originalData.dateTime) - new Date(b.originalData.dateTime);
   });
 
   const pastAppointments = appointments.filter(apt => {
-    const appointmentDate = new Date(apt.originalData.dateTime);
-    const isInPast = appointmentDate < now;
-    const isCompleted = apt.status === 'completed' || apt.status === 'cancelled';
-    return isInPast || isCompleted;
+    // Past: completed or cancelled status
+    const pastStatuses = ['completed', 'cancelled'];
+    return pastStatuses.includes(apt.status.toLowerCase());
   }).sort((a, b) => {
     // Sort past appointments by date in descending order (newest first)
     const dateA = new Date(a.originalData.dateTime);
@@ -189,18 +213,21 @@ const YourAppointments = () => {
   });
 
   const tabs = [
-    { id: "upcoming", label: "Upcoming Appointments", count: upcomingAppointments.length },
+    { id: "ongoing", label: "Ongoing Appointments", count: ongoingAppointments.length },
     { id: "past", label: "Past Appointments", count: pastAppointments.length },
   ];
 
-  const filteredAppointments = (activeTab === "upcoming" ? upcomingAppointments : pastAppointments).filter(
+  const filteredAppointments = (activeTab === "ongoing" ? ongoingAppointments : pastAppointments).filter(
     (appointment) => {
       const matchesSearch =
         appointment.patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         appointment.appointmentTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (appointment.reasonForVisit && appointment.reasonForVisit.toLowerCase().includes(searchTerm.toLowerCase()));
 
-      const matchesStatus = filterStatus === "all" || appointment.status === filterStatus;
+      // Handle status filtering with proper matching for new statuses
+      const matchesStatus = filterStatus === "all" ||
+        appointment.status === filterStatus ||
+        (filterStatus === "open_chat" && (appointment.status === "open_chat" || appointment.status === "open chat"));
 
       return matchesSearch && matchesStatus;
     }
@@ -267,6 +294,35 @@ const YourAppointments = () => {
 
   const handleQuickStatusUpdate = async (newStatus) => {
     await handleStatusChange(newStatus);
+  };
+
+  // New function for dropdown status updates
+  const handleDropdownStatusUpdate = async (appointmentId, newStatus) => {
+    setStatusLoading(true);
+    try {
+      const updateData = { status: newStatus };
+
+      // Backend will handle chat session management automatically
+
+      await api.put(`/appointments/${appointmentId}`, updateData);
+
+      // Update appointments list
+      setAppointments(prev => prev.map(apt =>
+        apt.id === appointmentId
+          ? {...apt, status: newStatus.toLowerCase().replace(' ', '_'), ...updateData}
+          : apt
+      ));
+
+      // Close dropdown
+      setOpenDropdownId(null);
+
+      console.log(`Appointment ${appointmentId} status updated to: ${newStatus}`);
+    } catch (err) {
+      console.error("Error updating appointment status:", err);
+      setError("Failed to update appointment status");
+    } finally {
+      setStatusLoading(false);
+    }
   };
 
   const openStatusModal = (action) => {
@@ -587,32 +643,14 @@ const YourAppointments = () => {
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 md:gap-4">
         <div className="bg-white dark:bg-slate-800 rounded-xl md:rounded-2xl p-3 md:p-4 border border-gray-200 dark:border-slate-700">
           <div className="flex items-center space-x-2 md:space-x-3">
-            <div className="p-1.5 md:p-2 bg-green-100 dark:bg-green-700/30 rounded-xl md:rounded-xl">
-              <CalendarIcon className="w-5 h-5 md:w-6 md:h-6 text-green-600 dark:text-green-400" />
-            </div>
-            <div>
-              <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-slate-100">
-                {upcomingAppointments.filter(a =>
-                  new Date(a.originalData.dateTime).toDateString() === new Date().toDateString()
-                ).length}
-              </p>
-              <p className="text-xs md:text-sm text-gray-600 dark:text-slate-300">Upcoming Today</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white dark:bg-slate-800 rounded-xl md:rounded-2xl p-3 md:p-4 border border-gray-200 dark:border-slate-700">
-          <div className="flex items-center space-x-2 md:space-x-3">
             <div className="p-1.5 md:p-2 bg-blue-100 dark:bg-blue-700/30 rounded-xl md:rounded-xl">
-              <CheckCircleIcon className="w-5 h-5 md:w-6 md:h-6 text-blue-600 dark:text-blue-400" />
+              <CalendarIcon className="w-5 h-5 md:w-6 md:h-6 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
               <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-slate-100">
-                {appointments.filter(a =>
-                  a.status === 'approved' &&
-                  new Date(a.originalData.dateTime).toDateString() === new Date().toDateString()
-                ).length}
+                {ongoingAppointments.length}
               </p>
-              <p className="text-xs md:text-sm text-gray-600 dark:text-slate-300">Approved Today</p>
+              <p className="text-xs md:text-sm text-gray-600 dark:text-slate-300">Ongoing</p>
             </div>
           </div>
         </div>
@@ -623,16 +661,45 @@ const YourAppointments = () => {
             </div>
             <div>
               <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-slate-100">
-                {appointments.filter(a => a.status === "approved").length}
+                {appointments.filter(a =>
+                  a.status === 'completed' &&
+                  new Date(a.originalData.dateTime).toDateString() === new Date().toDateString()
+                ).length}
               </p>
-              <p className="text-xs md:text-sm text-gray-600 dark:text-slate-300">Total Approved</p>
+              <p className="text-xs md:text-sm text-gray-600 dark:text-slate-300">Completed Today</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white dark:bg-slate-800 rounded-xl md:rounded-2xl p-3 md:p-4 border border-gray-200 dark:border-slate-700">
+          <div className="flex items-center space-x-2 md:space-x-3">
+            <div className="p-1.5 md:p-2 bg-emerald-100 dark:bg-emerald-700/30 rounded-xl md:rounded-xl">
+              <CheckCircleIcon className="w-5 h-5 md:w-6 md:h-6 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div>
+              <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-slate-100">
+                {appointments.filter(a => a.status === 'completed').length}
+              </p>
+              <p className="text-xs md:text-sm text-gray-600 dark:text-slate-300">Total Completed</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white dark:bg-slate-800 rounded-xl md:rounded-2xl p-3 md:p-4 border border-gray-200 dark:border-slate-700">
+          <div className="flex items-center space-x-2 md:space-x-3">
+            <div className="p-1.5 md:p-2 bg-yellow-100 dark:bg-yellow-700/30 rounded-xl md:rounded-xl">
+              <ClockIcon className="w-5 h-5 md:w-6 md:h-6 text-yellow-600 dark:text-yellow-400" />
+            </div>
+            <div>
+              <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-slate-100">
+                {appointments.filter(a => a.status === "pending").length}
+              </p>
+              <p className="text-xs md:text-sm text-gray-600 dark:text-slate-300">Pending</p>
             </div>
           </div>
         </div>
         <div className="bg-white dark:bg-slate-800 rounded-xl md:rounded-2xl p-3 md:p-4 border border-gray-200 dark:border-slate-700">
           <div className="flex items-center space-x-2 md:space-x-3">
             <div className="p-1.5 md:p-2 bg-purple-100 dark:bg-purple-600/30 rounded-xl md:rounded-xl">
-              <CalendarIcon className="w-5 h-5 md:w-6 md:h-6 text-purple-600 dark:text-purple-400" />
+              <BriefcaseIcon className="w-5 h-5 md:w-6 md:h-6 text-purple-600 dark:text-purple-400" />
             </div>
             <div>
               <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-slate-100">
@@ -642,23 +709,7 @@ const YourAppointments = () => {
             </div>
           </div>
         </div>
-        <div className="bg-white dark:bg-slate-800 rounded-xl md:rounded-2xl p-3 md:p-4 border border-gray-200 dark:border-slate-700 col-span-2 sm:col-span-1 md:col-span-1">
-          <div className="flex items-center space-x-2 md:space-x-3">
-            <div className="p-1.5 md:p-2 bg-indigo-100 dark:bg-indigo-700/30 rounded-xl md:rounded-xl">
-              <UsersIcon className="w-5 h-5 md:w-6 md:h-6 text-indigo-600 dark:text-indigo-400" />
-            </div>
-            <div>
-              <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-slate-100">
-                {new Set(
-                  upcomingAppointments
-                    .filter(a => new Date(a.originalData.dateTime).toDateString() === new Date().toDateString())
-                    .map(a => a.patient.name)
-                ).size}
-              </p>
-              <p className="text-xs md:text-sm text-gray-600 dark:text-slate-300">Patients Today</p>
-            </div>
-          </div>
-        </div>
+
       </div>
 
       {/* Search and Filter */}
@@ -668,6 +719,22 @@ const YourAppointments = () => {
         transition={{ duration: 0.5, delay: 0.1 }}
         className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-4 shadow-lg"
       >
+        {/* Active Filters Indicator */}
+        {(searchTerm || filterStatus !== "all") && (
+          <div className="mb-3 flex items-center space-x-2">
+            <span className="text-xs text-gray-500 dark:text-slate-400">Active filters:</span>
+            {searchTerm && (
+              <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 text-xs rounded-full">
+                Search: "{searchTerm}"
+              </span>
+            )}
+            {filterStatus !== "all" && (
+              <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-xs rounded-full">
+                Status: {filterStatus}
+              </span>
+            )}
+          </div>
+        )}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between space-y-4 md:space-y-0 md:space-x-4">
           <div className="relative flex-1 md:max-w-md">
             <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-gray-400 dark:text-slate-500" />
@@ -688,11 +755,21 @@ const YourAppointments = () => {
               <option value="all">All Status</option>
               <option value="pending">Pending</option>
               <option value="approved">Approved</option>
+              <option value="open_chat">Open Chat</option>
+              <option value="completed">Completed</option>
               <option value="cancelled">Cancelled</option>
             </select>
-             <button className="flex items-center justify-center space-x-2 px-3 py-2 text-sm md:text-base text-gray-600 dark:text-slate-300 hover:text-gray-800 dark:hover:text-slate-100 hover:bg-blue-100 dark:hover:bg-blue-700/20 rounded-xl transition-colors w-full sm:w-auto">
-              <FunnelIcon className="w-4 h-4" />
-              <span>Filters</span>
+             <button
+              onClick={() => {
+                setSearchTerm("");
+                setFilterStatus("all");
+                setFilterType("all");
+              }}
+              className="flex items-center justify-center space-x-2 px-3 py-2 text-sm md:text-base text-gray-600 dark:text-slate-300 hover:text-gray-800 dark:hover:text-slate-100 hover:bg-blue-100 dark:hover:bg-blue-700/20 rounded-xl transition-colors w-full sm:w-auto"
+              title="Clear all filters"
+            >
+              <XMarkIcon className="w-4 h-4" />
+              <span>Clear Filters</span>
             </button>
           </div>
         </div>
@@ -725,8 +802,20 @@ const YourAppointments = () => {
 
         {/* Tab Content */}
         <div className="p-6">
-          {(activeTab === "upcoming" || activeTab === "past") && (
+          {(activeTab === "ongoing" || activeTab === "past") && (
             <div className="space-y-4">
+              {/* Results Counter */}
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-gray-600 dark:text-slate-400">
+                  Showing {filteredAppointments.length} of {activeTab === "ongoing" ? ongoingAppointments.length : pastAppointments.length} appointments
+                </p>
+                {(searchTerm || filterStatus !== "all") && (
+                  <p className="text-xs text-gray-500 dark:text-slate-500">
+                    Filtered results
+                  </p>
+                )}
+              </div>
+
               {filteredAppointments.length === 0 ? (
                 <div className="text-center py-12">
                   <CalendarIcon className="w-12 h-12 text-gray-400 dark:text-slate-500 mx-auto mb-4" />
@@ -754,9 +843,61 @@ const YourAppointments = () => {
                         <div className="flex-1 min-w-0">
                           <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2 mb-1 sm:mb-2">
                             <h3 className="text-base md:text-lg font-semibold text-gray-800 dark:text-slate-100">{appointment.patient.name}</h3>
-                            <span className={`px-2 py-0.5 sm:py-1 text-xs font-medium rounded-full ${getStatusColor(appointment.status)} self-start sm:self-center`}>
-                              {appointment.status}
-                            </span>
+                            {/* Status Dropdown - Only for approved appointments */}
+                            {appointment.status === 'approved' ? (
+                              <div className="relative">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setOpenDropdownId(openDropdownId === appointment.id ? null : appointment.id);
+                                  }}
+                                  className={`flex items-center space-x-1 px-2 py-0.5 sm:py-1 text-xs font-medium rounded-full ${getStatusColor(appointment.status)} self-start sm:self-center hover:opacity-80 transition-opacity`}
+                                >
+                                  <span>{appointment.status}</span>
+                                  <ChevronDownIcon className="w-3 h-3" />
+                                </button>
+
+                                {/* Dropdown Menu */}
+                                {openDropdownId === appointment.id && (
+                                  <div className="absolute top-full left-0 mt-1 w-32 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-lg shadow-lg z-50">
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDropdownStatusUpdate(appointment.id, 'Open Chat');
+                                      }}
+                                      disabled={statusLoading}
+                                      className="w-full text-left px-3 py-2 text-xs text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-t-lg disabled:opacity-50"
+                                    >
+                                      Open Chat
+                                    </button>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDropdownStatusUpdate(appointment.id, 'Completed');
+                                      }}
+                                      disabled={statusLoading}
+                                      className="w-full text-left px-3 py-2 text-xs text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 disabled:opacity-50"
+                                    >
+                                      Completed
+                                    </button>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDropdownStatusUpdate(appointment.id, 'Cancelled');
+                                      }}
+                                      disabled={statusLoading}
+                                      className="w-full text-left px-3 py-2 text-xs text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-b-lg disabled:opacity-50"
+                                    >
+                                      Cancelled
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <span className={`px-2 py-0.5 sm:py-1 text-xs font-medium rounded-full ${getStatusColor(appointment.status)} self-start sm:self-center`}>
+                                {appointment.status}
+                              </span>
+                            )}
                           </div>
                           <p className="text-sm text-gray-600 dark:text-slate-300 mb-1 sm:mb-2">
                             {appointment.appointmentTitle}

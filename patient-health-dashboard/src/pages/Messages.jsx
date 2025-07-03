@@ -250,8 +250,7 @@ const Messages = () => {
 
   // Appointment session states
   const [appointmentSessions, setAppointmentSessions] = useState([]); // Active appointment sessions
-  const [sessionTimers, setSessionTimers] = useState({}); // Timer for each session
-  const [sessionStatus, setSessionStatus] = useState({}); // Status of each session
+  const [sessionStatus, setSessionStatus] = useState({}); // Status of each session (doctor-controlled)
 
   const [loadingChats, setLoadingChats] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
@@ -263,11 +262,12 @@ const Messages = () => {
 
   const currentUser = getCurrentUser(); // Get logged-in user info
 
-  // Fetch Chat List
-  useEffect(() => {
-    const fetchChats = async () => {
-      setLoadingChats(true);
-      setError(null);
+  // Fetch Chat List Function
+  const fetchChats = async (silent = false) => {
+      if (!silent) {
+        setLoadingChats(true);
+        setError(null);
+      }
       try {
         const response = await api.get('/chats');
         // Transform backend chat data to match frontend structure if needed
@@ -291,6 +291,13 @@ const Messages = () => {
             providerName: otherParticipant ? `${otherParticipant.firstName} ${otherParticipant.lastName}` : "Unknown User",
             specialty: (() => {
               // Use doctor info directly from backend response
+              console.log('🔍 Debug - Doctor specialty check:', {
+                otherParticipant: otherParticipant,
+                role: otherParticipant?.role,
+                doctorInfo: otherParticipant?.doctorInfo,
+                specialty: otherParticipant?.doctorInfo?.specialty
+              });
+
               let specialty;
               if (otherParticipant?.doctorInfo?.specialty) {
                 specialty = otherParticipant.doctorInfo.specialty;
@@ -321,17 +328,36 @@ const Messages = () => {
           // setSelectedChat(transformedChats[0]); // This would trigger fetching its messages
         }
       } catch (err) {
-        console.error("Failed to fetch chats:", err);
-        setError("Could not load your conversations.");
+        if (!silent) {
+          console.error("Failed to fetch chats:", err);
+          setError("Could not load your conversations.");
+        }
       } finally {
-        setLoadingChats(false);
+        if (!silent) {
+          setLoadingChats(false);
+        }
       }
     };
+
+  // Initial fetch on mount
+  useEffect(() => {
     if(currentUser?.id) {
       fetchChats();
       fetchAppointmentSessions();
     }
   }, [currentUser?.id]); // Re-fetch if user changes (though unlikely in this component's lifecycle)
+
+  // Auto-refresh chat list for new messages (silent)
+  useEffect(() => {
+    if (!currentUser?.id) return;
+
+    const interval = setInterval(() => {
+      // Silent refresh - no loading states
+      fetchChats(true);
+    }, 10000); // Refresh every 10 seconds
+
+    return () => clearInterval(interval);
+  }, [currentUser?.id]);
 
   // Refresh sessions when window gains focus (to catch new approvals)
   useEffect(() => {
@@ -344,122 +370,52 @@ const Messages = () => {
     return () => window.removeEventListener('focus', handleFocus);
   }, []);
 
-  // Fetch active appointment sessions
+  // Fetch active appointment sessions (now doctor-controlled)
   const fetchAppointmentSessions = async () => {
     try {
       const response = await api.get('/appointments/active-sessions');
       const sessions = response.data.data || [];
       setAppointmentSessions(sessions);
 
-      // Initialize session timers and status
-      const timers = {};
+      console.log('📋 Active sessions found:', sessions.length);
+      console.log('📋 Sessions:', sessions);
+
+      // Initialize session status (no more timers - doctor controlled)
       const status = {};
 
       sessions.forEach(session => {
-        if (session.status === 'Approved' && session.chatEnabled) {
-          // Calculate session time based on actual approval time
-          const sessionDuration = session.sessionDuration || 30; // Default 30 minutes
-          const now = new Date();
-
-          // Debug: Log session data to see what we have
+        if (session.status === 'Open Chat' && session.chatEnabled) {
+          // Doctor-controlled session - no timers needed
+          console.log(`✅ Active session found: ${session._id}`);
           console.log('Session data:', {
             id: session._id,
             status: session.status,
-            approvedAt: session.approvedAt,
-            updatedAt: session.updatedAt,
-            createdAt: session.createdAt
+            chatEnabled: session.chatEnabled,
+            sessionStartTime: session.sessionStartTime
           });
 
-          // Use the approval time as session start
-          let sessionStart;
-          if (session.approvedAt) {
-            sessionStart = new Date(session.approvedAt);
-            console.log('Using approvedAt:', sessionStart);
-          } else if (session.updatedAt && session.status === 'Approved') {
-            // If no approvedAt field, use updatedAt when status is Approved
-            sessionStart = new Date(session.updatedAt);
-            console.log('Using updatedAt:', sessionStart);
-          } else {
-            // Fallback: use current time (for newly approved sessions)
-            sessionStart = now;
-            console.log('Using current time as fallback:', sessionStart);
-          }
-
-          const sessionEnd = new Date(sessionStart.getTime() + (sessionDuration * 60 * 1000));
-          console.log('Session end time:', sessionEnd);
-
-          if (now < sessionEnd) {
-            // Session is still active
-            const remainingTime = Math.max(0, sessionEnd.getTime() - now.getTime());
-            const remainingMinutes = Math.floor(remainingTime / (1000 * 60));
-            console.log(`Session ${session._id} active: ${remainingMinutes} minutes left`);
-            timers[session._id] = remainingTime;
-            status[session._id] = remainingTime > 0 ? 'active' : 'expired';
-          } else {
-            // Session has expired
-            console.log(`Session ${session._id} expired`);
-            timers[session._id] = 0;
-            status[session._id] = 'expired';
-          }
+          status[session._id] = 'active';
         }
       });
 
-      setSessionTimers(timers);
+      // No more timers - just status
       setSessionStatus(status);
     } catch (error) {
       console.error('Failed to fetch appointment sessions:', error);
     }
   };
 
-  // Session timer countdown effect
+  // Refresh sessions periodically to check for doctor status changes
   useEffect(() => {
     const interval = setInterval(() => {
-      setSessionTimers(prevTimers => {
-        const updatedTimers = { ...prevTimers };
-        let hasChanges = false;
-
-        Object.keys(updatedTimers).forEach(sessionId => {
-          if (updatedTimers[sessionId] > 0) {
-            updatedTimers[sessionId] = Math.max(0, updatedTimers[sessionId] - 1000);
-            hasChanges = true;
-
-            // Update session status when timer expires
-            if (updatedTimers[sessionId] === 0) {
-              setSessionStatus(prevStatus => ({
-                ...prevStatus,
-                [sessionId]: 'expired'
-              }));
-            }
-          }
-        });
-
-        return hasChanges ? updatedTimers : prevTimers;
-      });
-    }, 1000);
+      console.log('🔄 Refreshing appointment sessions...');
+      fetchAppointmentSessions();
+    }, 30000); // Check every 30 seconds for status changes
 
     return () => clearInterval(interval);
   }, []);
 
-  // Helper function to format remaining time
-  const formatRemainingTime = (milliseconds) => {
-    const totalSeconds = Math.floor(milliseconds / 1000);
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-
-    // For school project: Show cleaner format
-    if (minutes > 60) {
-      // If more than 1 hour, something is wrong - show just minutes
-      return `${minutes} min`;
-    } else if (minutes > 5) {
-      // If more than 5 minutes, show just minutes
-      return `${minutes} min`;
-    } else {
-      // If 5 minutes or less, show minutes:seconds for precision
-      return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-    }
-  };
-
-  // Check if current chat is an appointment session
+  // Check if current chat is an appointment session (doctor-controlled)
   const getCurrentSessionInfo = () => {
     if (!selectedChat?._rawChat?._id) return null;
 
@@ -470,8 +426,7 @@ const Messages = () => {
     if (session) {
       return {
         ...session,
-        remainingTime: sessionTimers[session._id] || 0,
-        status: sessionStatus[session._id] || 'expired',
+        status: sessionStatus[session._id] || 'inactive',
         isActive: sessionStatus[session._id] === 'active'
       };
     }
@@ -552,15 +507,16 @@ const Messages = () => {
     );
   };
 
-  // Fetch Messages for Selected Chat
-  useEffect(() => {
-    const fetchMessages = async () => {
+  // Fetch Messages for Selected Chat Function
+  const fetchMessages = async (silent = false) => {
       if (!selectedChat?._rawChat?._id) { // Use _rawChat._id which is the actual chat ID
         setCurrentMessages([]);
         return;
       }
-      setLoadingMessages(true);
-      setError(null);
+      if (!silent) {
+        setLoadingMessages(true);
+        setError(null);
+      }
       try {
         // TODO: Implement pagination for messages if needed
         const response = await api.get(`/chats/${selectedChat._rawChat._id}/messages`);
@@ -578,13 +534,19 @@ const Messages = () => {
         }));
         setCurrentMessages(transformedMessages);
       } catch (err) {
-        console.error(`Failed to fetch messages for chat ${selectedChat._rawChat._id}:`, err);
-        setError("Could not load messages for this conversation.");
+        if (!silent) {
+          console.error(`Failed to fetch messages for chat ${selectedChat._rawChat._id}:`, err);
+          setError("Could not load messages for this conversation.");
+        }
       } finally {
-        setLoadingMessages(false);
+        if (!silent) {
+          setLoadingMessages(false);
+        }
       }
     };
 
+  // Fetch messages when selected chat changes
+  useEffect(() => {
     if (selectedChat) {
       fetchMessages();
     } else {
@@ -592,6 +554,17 @@ const Messages = () => {
     }
   }, [selectedChat]);
 
+  // Auto-refresh messages for real-time sync (silent)
+  useEffect(() => {
+    if (!selectedChat?._rawChat?._id) return;
+
+    const interval = setInterval(() => {
+      // Silent refresh - no loading states
+      fetchMessages(true);
+    }, 5000); // Refresh every 5 seconds
+
+    return () => clearInterval(interval);
+  }, [selectedChat]);
 
   const filteredChats = chatList.filter(
     (chat) =>
@@ -885,11 +858,10 @@ const Messages = () => {
                       {(() => {
                         const sessionInfo = appointmentSessions.find(s => s.chatRoomId === chat._rawChat?._id);
                         if (sessionInfo && sessionStatus[sessionInfo._id] === 'active') {
-                          const timeLeft = formatRemainingTime(sessionTimers[sessionInfo._id] || 0);
                           return (
-                            <span className="px-2 py-1 bg-orange-100 text-orange-700 dark:bg-orange-700/30 dark:text-orange-400 text-xs rounded-full font-medium flex items-center space-x-1">
-                              <ClockIcon className="w-3 h-3" />
-                              <span>{timeLeft} left</span>
+                            <span className="px-2 py-1 bg-green-100 text-green-700 dark:bg-green-700/30 dark:text-green-400 text-xs rounded-full font-medium flex items-center space-x-1">
+                              <ChatBubbleLeftRightIcon className="w-3 h-3" />
+                              <span>Active Session</span>
                             </span>
                           );
                         }
@@ -972,8 +944,8 @@ const Messages = () => {
                               )}
                               <span className="text-sm">
                                 {sessionInfo.isActive
-                                  ? `${formatRemainingTime(sessionInfo.remainingTime)} remaining`
-                                  : 'Session Expired'
+                                  ? 'Doctor is available - Session Active'
+                                  : 'Waiting for doctor to open session'
                                 }
                               </span>
                             </div>

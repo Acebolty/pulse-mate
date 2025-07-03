@@ -138,20 +138,14 @@ const DashboardOverview = () => {
   return (
     <div className="space-y-6 p-4 sm:p-6"> {/* Added padding to the main container */}
 
-      {/* Dashboard Header with Refresh Button */}
+      {/* Welcome Section - Clean Layout */}
       <div className="flex items-center justify-between">
         <div className="flex-1">
-          {/* Welcome Section - Real Data */}
           <WelcomeCard dashboardData={dashboardData} loading={loading} />
         </div>
 
-        {/* Refresh Button and Last Updated */}
-        <div className="flex flex-col items-end space-y-1">
-          {lastUpdated && (
-            <span className="text-xs text-gray-500 dark:text-slate-400">
-              Updated: {lastUpdated.toLocaleTimeString()}
-            </span>
-          )}
+        {/* Refresh Button - Clean and Simple */}
+        <div className="ml-4">
           <button
             onClick={() => {
               console.log('🔄 Manual refresh triggered');
