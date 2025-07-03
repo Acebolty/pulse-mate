@@ -885,22 +885,19 @@ const Messages = () => {
                       )}
                     </div>
 
-                    <div className="flex items-center justify-between mt-1">
-                      <p className="text-xs text-gray-600 dark:text-slate-400 font-medium">
-                        {chat.lastMessage || 'hmInuukluv'}
-                      </p>
+                    <div className="mt-1 flex items-center">
                       {(() => {
                         const sessionInfo = appointmentSessions.find(s => s.chatRoomId === chat._rawChat?._id);
                         if (sessionInfo && sessionStatus[sessionInfo._id] === 'active') {
                           return (
-                            <span className="px-2 py-1 bg-green-100 text-green-700 dark:bg-green-700/30 dark:text-green-400 text-xs rounded-full font-medium flex items-center space-x-1">
+                            <span className="px-2 py-1 bg-green-100 text-green-700 dark:bg-green-700/30 dark:text-green-400 text-xs rounded-full font-medium flex items-center space-x-1 w-fit">
                               <ChatBubbleLeftRightIcon className="w-3 h-3" />
                               <span>Active Session</span>
                             </span>
                           );
                         }
                         return (
-                          <span className="text-xs text-gray-400 dark:text-slate-500">
+                          <span className="text-xs text-gray-400 dark:text-slate-500 ml-1">
                             Available for consultation
                           </span>
                         );
@@ -988,7 +985,7 @@ const Messages = () => {
                         return null;
                       })()}
                     </div>
-                    <p className="text-xs sm:text-sm text-gray-500 dark:text-slate-400">
+                    <p className="text-xs sm:text-xs text-gray-500 dark:text-slate-400 ml-2">
                       {(() => {
                         const sessionInfo = getCurrentSessionInfo();
                         if (sessionInfo) {
