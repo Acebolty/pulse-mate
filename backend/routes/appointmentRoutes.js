@@ -8,6 +8,7 @@ const {
     deleteAppointment,
     getDoctorAppointments,
     getActiveSessions,
+    getDoctorSessions,
     getAvailableDoctors,
     getDoctorDashboardAnalytics
 } = require('../controllers/appointmentController');
@@ -33,9 +34,14 @@ router.get('/doctor', authMiddleware, getDoctorAppointments);
 router.get('/doctor/analytics', authMiddleware, getDoctorDashboardAnalytics);
 
 // @route   GET api/appointments/active-sessions
-// @desc    Get active appointment sessions for the logged-in user
+// @desc    Get active appointment sessions for the logged-in user (patient)
 // @access  Private
 router.get('/active-sessions', authMiddleware, getActiveSessions);
+
+// @route   GET api/appointments/doctor-sessions
+// @desc    Get active appointment sessions for the logged-in doctor
+// @access  Private
+router.get('/doctor-sessions', authMiddleware, getDoctorSessions);
 
 // @route   GET api/appointments/available-doctors
 // @desc    Get available doctors for appointment booking

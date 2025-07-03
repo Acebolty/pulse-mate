@@ -298,13 +298,17 @@ const YourAppointments = () => {
 
   // New function for dropdown status updates
   const handleDropdownStatusUpdate = async (appointmentId, newStatus) => {
+    console.log('🔄 DOCTOR: Updating appointment status...');
+    console.log('📋 Appointment ID:', appointmentId);
+    console.log('📋 New Status:', newStatus);
+
     setStatusLoading(true);
     try {
       const updateData = { status: newStatus };
 
-      // Backend will handle chat session management automatically
-
-      await api.put(`/appointments/${appointmentId}`, updateData);
+      console.log('📤 DOCTOR: Sending API request...');
+      const response = await api.put(`/appointments/${appointmentId}`, updateData);
+      console.log('✅ DOCTOR: API response:', response.data);
 
       // Update appointments list
       setAppointments(prev => prev.map(apt =>
@@ -316,9 +320,11 @@ const YourAppointments = () => {
       // Close dropdown
       setOpenDropdownId(null);
 
-      console.log(`Appointment ${appointmentId} status updated to: ${newStatus}`);
+      console.log(`✅ DOCTOR: Appointment ${appointmentId} status updated to: ${newStatus}`);
     } catch (err) {
-      console.error("Error updating appointment status:", err);
+      console.error("❌ DOCTOR: Error updating appointment status:", err);
+      console.error("❌ DOCTOR: Error response:", err.response?.data);
+      console.error("❌ DOCTOR: Error status:", err.response?.status);
       setError("Failed to update appointment status");
     } finally {
       setStatusLoading(false);
@@ -843,8 +849,8 @@ const YourAppointments = () => {
                         <div className="flex-1 min-w-0">
                           <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2 mb-1 sm:mb-2">
                             <h3 className="text-base md:text-lg font-semibold text-gray-800 dark:text-slate-100">{appointment.patient.name}</h3>
-                            {/* Status Dropdown - Only for approved appointments */}
-                            {appointment.status === 'approved' ? (
+                            {/* Status Dropdown - For approved and open_chat appointments */}
+                            {(appointment.status === 'approved' || appointment.status === 'open_chat' || appointment.status === 'open chat') ? (
                               <div className="relative">
                                 <button
                                   onClick={(e) => {

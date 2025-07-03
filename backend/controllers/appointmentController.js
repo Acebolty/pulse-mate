@@ -296,6 +296,36 @@ const getActiveSessions = async (req, res) => {
   }
 };
 
+// @desc    Get active appointment sessions for the logged-in doctor
+// @route   GET api/appointments/doctor-sessions
+// @access  Private
+const getDoctorSessions = async (req, res) => {
+  try {
+    console.log('🔍 Fetching doctor sessions for user:', req.user.id);
+
+    const doctorSessions = await Appointment.find({
+      providerId: req.user.id,
+      status: { $in: ['Approved', 'Open Chat', 'Completed'] } // Include all relevant statuses
+    }).populate('userId', 'firstName lastName email').populate('providerId', 'firstName lastName email doctorInfo');
+
+    console.log('📋 Found doctor sessions:', doctorSessions.length);
+
+    res.json({
+      success: true,
+      data: doctorSessions,
+      message: 'Doctor sessions retrieved successfully'
+    });
+
+  } catch (error) {
+    console.error('Error fetching doctor sessions:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+};
+
 /**
  * @desc    Get available doctors for appointment booking
  * @route   GET /api/appointments/available-doctors
@@ -496,6 +526,7 @@ module.exports = {
   deleteAppointment,
   getDoctorAppointments,
   getActiveSessions,
+  getDoctorSessions,
   getAvailableDoctors,
   getDoctorDashboardAnalytics
 };

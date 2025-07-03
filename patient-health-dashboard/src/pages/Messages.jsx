@@ -14,6 +14,7 @@ import {
   CheckIcon,
   ClockIcon,
   ExclamationTriangleIcon,
+  CalendarIcon,
 } from "@heroicons/react/24/outline"
 
 // Dummy chat data
@@ -291,12 +292,6 @@ const Messages = () => {
             providerName: otherParticipant ? `${otherParticipant.firstName} ${otherParticipant.lastName}` : "Unknown User",
             specialty: (() => {
               // Use doctor info directly from backend response
-              console.log('🔍 Debug - Doctor specialty check:', {
-                otherParticipant: otherParticipant,
-                role: otherParticipant?.role,
-                doctorInfo: otherParticipant?.doctorInfo,
-                specialty: otherParticipant?.doctorInfo?.specialty
-              });
 
               let specialty;
               if (otherParticipant?.doctorInfo?.specialty) {
@@ -308,7 +303,6 @@ const Messages = () => {
               } else {
                 specialty = 'General Medicine'; // Default for all chats in appointment system
               }
-              console.log('Final specialty value:', specialty);
               return specialty;
             })(), // Show specialty for medical chats
             avatar: otherParticipant?.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(otherParticipant ? `${otherParticipant.firstName} ${otherParticipant.lastName}` : 'U')}&background=random`, // Placeholder avatar
@@ -385,7 +379,7 @@ const Messages = () => {
 
       sessions.forEach(session => {
         if (session.status === 'Open Chat' && session.chatEnabled) {
-          // Doctor-controlled session - no timers needed
+          // Doctor-controlled session - active
           console.log(`✅ Active session found: ${session._id}`);
           console.log('Session data:', {
             id: session._id,
@@ -395,6 +389,10 @@ const Messages = () => {
           });
 
           status[session._id] = 'active';
+        } else if (session.status === 'completed') {
+          // Session ended by doctor
+          console.log(`🔚 Completed session found: ${session._id}`);
+          status[session._id] = 'ended';
         }
       });
 
@@ -417,49 +415,95 @@ const Messages = () => {
 
   // Check if current chat is an appointment session (doctor-controlled)
   const getCurrentSessionInfo = () => {
-    if (!selectedChat?._rawChat?._id) return null;
+    if (!selectedChat?._rawChat?._id) {
+      console.log('🔍 No selected chat or chat ID');
+      return null;
+    }
+
+    console.log('🔍 Looking for session with chatRoomId:', selectedChat._rawChat._id);
+    console.log('🔍 Available sessions:', appointmentSessions);
 
     const session = appointmentSessions.find(s =>
       s.chatRoomId === selectedChat._rawChat._id
     );
 
+    console.log('🔍 Found session:', session);
+
     if (session) {
+      // Determine status based on appointment status
+      let isActive = false;
+      let displayStatus = 'inactive';
+
+      console.log('🔍 Session status:', session.status, 'chatEnabled:', session.chatEnabled);
+
+      if (session.status === 'Open Chat' && session.chatEnabled) {
+        isActive = true;
+        displayStatus = 'active';
+        console.log('✅ Session is ACTIVE');
+      } else if (session.status === 'Completed') {
+        isActive = false;
+        displayStatus = 'ended';
+        console.log('❌ Session is ENDED');
+      } else {
+        console.log('⚠️ Session status not recognized:', session.status);
+      }
+
       return {
         ...session,
-        status: sessionStatus[session._id] || 'inactive',
-        isActive: sessionStatus[session._id] === 'active'
+        status: displayStatus,
+        isActive: isActive
       };
     }
 
+    console.log('❌ No session found for this chat');
     return null;
   };
 
   // Render message input area
   const renderMessageInput = () => {
     const sessionInfo = getCurrentSessionInfo();
-    const isSessionExpired = sessionInfo && !sessionInfo.isActive;
 
-    if (isSessionExpired) {
+    // Check if there's any appointment session (active or ended)
+    if (!sessionInfo) {
+      // No appointment exists - show booking message
+      return (
+        <div className="flex flex-col items-center justify-center p-6 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
+          <div className="flex items-center space-x-2 text-blue-700 dark:text-blue-400 mb-3">
+            <CalendarIcon className="w-5 h-5" />
+            <span className="text-sm font-medium">Book an appointment to chat with Dr. {selectedChat?.providerName}</span>
+          </div>
+          <button
+            onClick={() => {
+              // Navigate to appointments page
+              window.location.href = '/appointments';
+            }}
+            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium"
+          >
+            Book Appointment
+          </button>
+        </div>
+      );
+    }
+
+    // Check if session has ended
+    const isSessionEnded = sessionInfo && !sessionInfo.isActive;
+    if (isSessionEnded) {
       return (
         <div className="flex items-center justify-center p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800">
           <div className="flex items-center space-x-2 text-red-700 dark:text-red-400">
             <ExclamationTriangleIcon className="w-5 h-5" />
-            <span className="text-sm font-medium">Appointment session has ended. Chat is now disabled.</span>
+            <span className="text-sm font-medium">Appointment session has ended. Chat is now read-only.</span>
           </div>
         </div>
       );
     }
 
+    // Active appointment session - allow messaging
     return (
       <div className="flex items-end space-x-1.5 sm:space-x-3">
         <button
           onClick={handleFileUpload}
-          disabled={isSessionExpired}
-          className={`p-1.5 sm:p-2 rounded-xl transition-colors ${
-            isSessionExpired
-              ? 'text-gray-300 dark:text-slate-600 cursor-not-allowed'
-              : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700'
-          }`}
+          className="p-1.5 sm:p-2 rounded-xl transition-colors text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700"
         >
           <PaperClipIcon className="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
@@ -469,34 +513,24 @@ const Messages = () => {
             value={messageInput}
             onChange={(e) => setMessageInput(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder={isSessionExpired ? "Session ended" : "Type your message..."}
+            placeholder="Type your message..."
             rows={1}
-            disabled={isSessionExpired}
-            className={`w-full px-3 py-2 sm:px-4 sm:py-3 border rounded-xl sm:rounded-2xl translate-y-2 resize-none text-xs sm:text-sm focus:ring-1 sm:focus:ring-2 focus:border-transparent ${
-              isSessionExpired
-                ? 'border-gray-200 dark:border-slate-700 bg-gray-100 dark:bg-slate-800 text-gray-400 dark:text-slate-500 cursor-not-allowed'
-                : 'border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 dark:placeholder-slate-400 focus:ring-green-500 dark:focus:ring-green-600'
-            }`}
+            className="w-full px-3 py-2 sm:px-4 sm:py-3 border rounded-xl sm:rounded-2xl translate-y-2 resize-none text-xs sm:text-sm focus:ring-1 sm:focus:ring-2 focus:border-transparent border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 dark:placeholder-slate-400 focus:ring-green-500 dark:focus:ring-green-600"
             style={{ minHeight: "38px", maxHeight: "100px" }}
           />
         </div>
 
         <button
-          disabled={isSessionExpired}
-          className={`p-1.5 sm:p-2 rounded-xl transition-colors ${
-            isSessionExpired
-              ? 'text-gray-300 dark:text-slate-600 cursor-not-allowed'
-              : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700'
-          }`}
+          className="p-1.5 sm:p-2 rounded-xl transition-colors text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700"
         >
           <FaceSmileIcon className="w-4 h-4 sm:w-5 sm:h-5" />
         </button>
 
         <button
           onClick={handleSendMessage}
-          disabled={!messageInput.trim() || isSessionExpired}
+          disabled={!messageInput.trim()}
           className={`p-1.5 sm:p-2 rounded-xl transition-colors ${
-            messageInput.trim() && !isSessionExpired
+            messageInput.trim()
               ? "bg-green-500 text-white hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700"
               : "bg-gray-200 text-gray-400 dark:bg-slate-600 dark:text-slate-500 cursor-not-allowed"
           }`}
@@ -958,9 +992,9 @@ const Messages = () => {
                       {(() => {
                         const sessionInfo = getCurrentSessionInfo();
                         if (sessionInfo) {
-                          return sessionInfo.isActive ? 'Appointment Session Active' : 'Appointment Session Ended';
+                          return sessionInfo.isActive ? 'Active' : 'Session Ended';
                         }
-                        return selectedChat.lastSeen;
+                        return 'Available';
                       })()}
                     </p>
                   </div>

@@ -18,6 +18,7 @@ import {
   ExclamationTriangleIcon,
   UserCircleIcon, // For patient info
   ArrowLeftIcon, // For mobile back button
+  CalendarIcon,
   BriefcaseIcon, // For doctor's role or quick actions
 } from "@heroicons/react/24/outline"
 import { motion } from "framer-motion"
@@ -140,6 +141,10 @@ const Messages = () => {
   const [error, setError] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
 
+  // Appointment session states
+  const [appointmentSessions, setAppointmentSessions] = useState([]);
+  const [sessionStatus, setSessionStatus] = useState({});
+
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -258,6 +263,7 @@ const Messages = () => {
   // Fetch chats on component mount
   useEffect(() => {
     fetchActiveChats();
+    fetchAppointmentSessions();
   }, []);
 
   // Auto-refresh chat list for new messages (silent)
@@ -269,6 +275,107 @@ const Messages = () => {
 
     return () => clearInterval(interval);
   }, []);
+
+  // Fetch active appointment sessions for doctor
+  const fetchAppointmentSessions = async () => {
+    try {
+      const response = await api.get('/appointments/doctor-sessions');
+      const sessions = response.data.data || [];
+      setAppointmentSessions(sessions);
+
+      console.log('📋 DOCTOR: Sessions found:', sessions.length);
+      console.log('📋 DOCTOR: Sessions data:', sessions);
+
+      // Initialize session status
+      const status = {};
+      sessions.forEach(session => {
+        console.log('🔍 DOCTOR: Processing session:', {
+          id: session._id,
+          status: session.status,
+          chatEnabled: session.chatEnabled,
+          chatRoomId: session.chatRoomId
+        });
+
+        // Handle both "Open Chat" and "open_chat" formats
+        const normalizedStatus = session.status.toLowerCase().replace('_', ' ');
+
+        if ((normalizedStatus === 'open chat' || session.status === 'Open Chat') && session.chatEnabled) {
+          status[session._id] = 'active';
+          console.log('✅ DOCTOR: Marked session as active:', session._id);
+        } else if (normalizedStatus === 'completed' || session.status === 'Completed') {
+          status[session._id] = 'ended';
+          console.log('❌ DOCTOR: Marked session as ended:', session._id);
+        }
+      });
+
+      console.log('📋 DOCTOR: Final session status:', status);
+      setSessionStatus(status);
+    } catch (error) {
+      console.error('❌ DOCTOR: Failed to fetch appointment sessions:', error);
+      console.error('❌ DOCTOR: Error details:', error.response?.data);
+    }
+  };
+
+  // Check if current chat has an active appointment session
+  const getCurrentSessionInfo = () => {
+    if (!selectedChat?._rawChat?._id) {
+      console.log('🔍 DOCTOR: No selected chat or chat ID');
+      return null;
+    }
+
+    console.log('🔍 DOCTOR: Looking for session with chatRoomId:', selectedChat._rawChat._id);
+    console.log('🔍 DOCTOR: Available sessions:', appointmentSessions);
+    console.log('🔍 DOCTOR: Sessions count:', appointmentSessions.length);
+
+    // Find ALL sessions for this chat room
+    const allMatchingSessions = appointmentSessions.filter(s =>
+      s.chatRoomId === selectedChat._rawChat._id
+    );
+    console.log('🔍 DOCTOR: All matching sessions for this chat:', allMatchingSessions);
+
+    // Find the most recent session or the one with "Open Chat" status
+    const session = appointmentSessions
+      .filter(s => s.chatRoomId === selectedChat._rawChat._id)
+      .sort((a, b) => {
+        // Prioritize "Open Chat" status first, then by date
+        if (a.status === 'Open Chat' && b.status !== 'Open Chat') return -1;
+        if (b.status === 'Open Chat' && a.status !== 'Open Chat') return 1;
+        return new Date(b.dateTime) - new Date(a.dateTime);
+      })[0];
+
+    console.log('🔍 DOCTOR: Found session:', session);
+
+    if (session) {
+      let isActive = false;
+      let displayStatus = 'inactive';
+
+      console.log('🔍 DOCTOR: Session status:', session.status, 'chatEnabled:', session.chatEnabled);
+
+      // Handle both "Open Chat" and "open_chat" formats
+      const normalizedStatus = session.status.toLowerCase().replace('_', ' ');
+
+      if ((normalizedStatus === 'open chat' || session.status === 'Open Chat') && session.chatEnabled) {
+        isActive = true;
+        displayStatus = 'active';
+        console.log('✅ DOCTOR: Session is ACTIVE');
+      } else if (normalizedStatus === 'completed' || session.status === 'Completed') {
+        isActive = false;
+        displayStatus = 'ended';
+        console.log('❌ DOCTOR: Session is ENDED');
+      } else {
+        console.log('⚠️ DOCTOR: Session status not recognized:', session.status, 'normalized:', normalizedStatus);
+      }
+
+      return {
+        ...session,
+        status: displayStatus,
+        isActive: isActive
+      };
+    }
+
+    console.log('❌ DOCTOR: No session found for this chat');
+    return null;
+  };
 
   // Fetch messages when selected chat changes
   useEffect(() => {
@@ -539,12 +646,47 @@ const Messages = () => {
               <div ref={messagesEndRef} />
             </div>
             <div className="p-4 border-t border-gray-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
-              <div className="flex items-end space-x-3">
-                <button onClick={handleFileUpload} className="p-2.5 text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition-colors"><PaperClipIcon className="w-5 h-5" /></button>
-                <div className="flex-1 relative"><textarea value={messageInput} onChange={(e) => setMessageInput(e.target.value)} onKeyPress={handleKeyPress} placeholder="Type your message to patient..." rows={1} className="w-full px-4 py-2.5 border border-gray-300 dark:border-slate-600 rounded-2xl resize-none text-sm dark:bg-slate-700 dark:text-slate-200 dark:placeholder-slate-400 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 focus:border-transparent" style={{ minHeight: "46px", maxHeight: "120px" }}/></div>
-                <button className="p-2.5 text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition-colors"><FaceSmileIcon className="w-5 h-5" /></button>
-                <button onClick={handleSendMessage} disabled={!messageInput.trim()} className={`p-2.5 rounded-xl transition-colors ${messageInput.trim() ? "bg-blue-500 text-white hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700" : "bg-gray-200 text-gray-400 dark:bg-slate-600 dark:text-slate-500 cursor-not-allowed"}`}><PaperAirplaneIcon className="w-5 h-5" /></button>
-              </div>
+              {(() => {
+                const sessionInfo = getCurrentSessionInfo();
+
+                // Check if there's any appointment session
+                if (!sessionInfo) {
+                  // No appointment exists - show message
+                  return (
+                    <div className="flex flex-col items-center justify-center p-6 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
+                      <div className="flex items-center space-x-2 text-blue-700 dark:text-blue-400 mb-3">
+                        <CalendarIcon className="w-5 h-5" />
+                        <span className="text-sm font-medium">No active appointment session with this patient</span>
+                      </div>
+                      <p className="text-xs text-blue-600 dark:text-blue-400 text-center">
+                        Patient needs to book an appointment for messaging to be enabled
+                      </p>
+                    </div>
+                  );
+                }
+
+                // Check if session has ended
+                if (!sessionInfo.isActive) {
+                  return (
+                    <div className="flex items-center justify-center p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800">
+                      <div className="flex items-center space-x-2 text-red-700 dark:text-red-400">
+                        <ExclamationTriangleIcon className="w-5 h-5" />
+                        <span className="text-sm font-medium">Appointment session has ended. Chat is now read-only.</span>
+                      </div>
+                    </div>
+                  );
+                }
+
+                // Active session - show message input
+                return (
+                  <div className="flex items-end space-x-3">
+                    <button onClick={handleFileUpload} className="p-2.5 text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition-colors"><PaperClipIcon className="w-5 h-5" /></button>
+                    <div className="flex-1 relative"><textarea value={messageInput} onChange={(e) => setMessageInput(e.target.value)} onKeyPress={handleKeyPress} placeholder="Type your message to patient..." rows={1} className="w-full px-4 py-2.5 border border-gray-300 dark:border-slate-600 rounded-2xl resize-none text-sm dark:bg-slate-700 dark:text-slate-200 dark:placeholder-slate-400 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 focus:border-transparent" style={{ minHeight: "46px", maxHeight: "120px" }}/></div>
+                    <button className="p-2.5 text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition-colors"><FaceSmileIcon className="w-5 h-5" /></button>
+                    <button onClick={handleSendMessage} disabled={!messageInput.trim()} className={`p-2.5 rounded-xl transition-colors ${messageInput.trim() ? "bg-blue-500 text-white hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700" : "bg-gray-200 text-gray-400 dark:bg-slate-600 dark:text-slate-500 cursor-not-allowed"}`}><PaperAirplaneIcon className="w-5 h-5" /></button>
+                  </div>
+                );
+              })()}
               <input ref={fileInputRef} type="file" className="hidden" onChange={(e) => console.log("File selected:", e.target.files[0])}/>
             </div>
           </>

@@ -15,15 +15,19 @@ if (!JWT_SECRET) {
 // @access  Public
 const signupUser = async (req, res) => {
   try {
-    const { 
-      firstName, 
-      lastName, 
-      email, 
-      password, 
-      dateOfBirth, 
+    const {
+      firstName,
+      lastName,
+      email,
+      password,
+      dateOfBirth,
       gender,
       address, // Expects an object
-      emergencyContact // Expects an object
+      emergencyContact, // Expects an object
+      // Doctor-specific fields
+      userType,
+      specialization,
+      licenseNumber
     } = req.body;
 
     if (!firstName || !lastName || !email || !password) {
@@ -38,7 +42,8 @@ const signupUser = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
 
-    const newUser = new User({
+    // Build user data based on user type
+    const userData = {
       firstName,
       lastName,
       email: email.toLowerCase(),
@@ -48,7 +53,20 @@ const signupUser = async (req, res) => {
       address, // Mongoose will use subschema defaults if parts are missing
       emergencyContact, // Mongoose will use subschema defaults if parts are missing
       // Settings will be initialized by the pre-save hook in User.js
-    });
+    };
+
+    // Add doctor-specific fields if this is a doctor registration
+    if (userType === 'doctor') {
+      console.log('👨‍⚕️ Creating doctor account with specialty:', specialization);
+      userData.role = 'doctor';
+      userData.doctorInfo = {
+        specialty: specialization,
+        licenseNumber: licenseNumber,
+        approvalStatus: 'pending' // Doctors need admin approval
+      };
+    }
+
+    const newUser = new User(userData);
 
     await newUser.save();
 

@@ -37,7 +37,7 @@ const appointmentSchema = new Schema({
   },
   status: {
     type: String,
-    enum: ['Pending', 'Approved', 'Active', 'Completed', 'Cancelled', 'Expired'],
+    enum: ['Pending', 'Approved', 'Open Chat', 'Completed', 'Cancelled', 'Expired'],
     default: 'Pending'
   },
 
