@@ -256,6 +256,7 @@ const Messages = () => {
   const [loadingChats, setLoadingChats] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [error, setError] = useState(null); // General error for the page
+  const [isInitialLoad, setIsInitialLoad] = useState(true); // Track if this is the first load
 
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
@@ -477,7 +478,7 @@ const Messages = () => {
               // Navigate to appointments page
               window.location.href = '/appointments';
             }}
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium"
+            className="px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors text-sm font-medium"
           >
             Book Appointment
           </button>
@@ -582,7 +583,15 @@ const Messages = () => {
   // Fetch messages when selected chat changes
   useEffect(() => {
     if (selectedChat) {
+      setIsInitialLoad(true); // Reset initial load flag for new chat
       fetchMessages();
+      // Only scroll to bottom when switching chats on desktop
+      const isMobile = window.innerWidth < 768;
+      if (!isMobile) {
+        setTimeout(() => {
+          scrollToBottom();
+        }, 300);
+      }
     } else {
       setCurrentMessages([]); // Clear messages if no chat is selected
     }
@@ -618,18 +627,26 @@ const Messages = () => {
   };
 
   useEffect(() => {
-    if (messagesContainerRef.current) {
+    // Completely disable auto-scroll on mobile to preserve manual scroll control
+    const isMobile = window.innerWidth < 768;
+    if (isMobile) return;
+
+    if (messagesContainerRef.current && currentMessages.length > 0) {
       const container = messagesContainerRef.current;
       const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
 
-      // Only auto-scroll if user is near the bottom (to avoid interrupting reading)
-      if (isNearBottom || currentMessages.length <= 5) {
+      // Auto-scroll on desktop if:
+      // 1. This is the initial load (first time viewing messages)
+      // 2. User is near the bottom (to avoid interrupting reading)
+      // 3. Short conversation (5 or fewer messages)
+      if (isInitialLoad || isNearBottom || currentMessages.length <= 5) {
         setTimeout(() => {
           scrollToBottom();
+          setIsInitialLoad(false); // Mark that initial load is complete
         }, 100);
       }
     }
-  }, [currentMessages]); // Scrolls when new messages are added or selected chat changes
+  }, [currentMessages, isInitialLoad]); // Scrolls when new messages are added or selected chat changes
 
   const handleSendMessage = async () => {
     if (!messageInput.trim() || !selectedChat?._rawChat?._id) return;
