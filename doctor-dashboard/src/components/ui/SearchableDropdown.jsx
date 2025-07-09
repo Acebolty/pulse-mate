@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { ChevronDownIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 
 /**
@@ -19,25 +19,27 @@ const SearchableDropdown = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filteredOptions, setFilteredOptions] = useState(options);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
-  
+
   const dropdownRef = useRef(null);
   const inputRef = useRef(null);
   const listRef = useRef(null);
 
-  // Filter options based on search query
-  useEffect(() => {
+  // Use useMemo to compute filtered options - this prevents infinite loops
+  const filteredOptions = useMemo(() => {
     if (filterFunction) {
-      setFilteredOptions(filterFunction(searchQuery));
+      return filterFunction(searchQuery);
     } else {
-      const filtered = options.filter(option =>
+      return options.filter(option =>
         option.toLowerCase().includes(searchQuery.toLowerCase())
       );
-      setFilteredOptions(filtered);
     }
-    setHighlightedIndex(-1);
   }, [searchQuery, options, filterFunction]);
+
+  // Reset highlighted index when filtered options change
+  useEffect(() => {
+    setHighlightedIndex(-1);
+  }, [filteredOptions]);
 
   // Close dropdown when clicking outside
   useEffect(() => {

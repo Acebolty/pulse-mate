@@ -137,7 +137,129 @@ const loginUser = async (req, res) => {
   }
 };
 
+// @desc    Register a new doctor with comprehensive verification
+// @route   POST /api/auth/doctor-signup
+// @access  Public
+const doctorSignup = async (req, res) => {
+  try {
+    const {
+      // Personal Information
+      firstName,
+      lastName,
+      email,
+      password,
+      phone,
+      dateOfBirth,
+      gender,
+
+      // Professional Credentials
+      title,
+      licenseNumber,
+      licenseState,
+      licenseExpirationDate,
+      deaNumber,
+      npiNumber,
+      specialization,
+      subSpecialty,
+      yearsOfExperience,
+
+      // Practice & Education
+      medicalSchool,
+      residency,
+      fellowship,
+      graduationYear,
+      affiliatedHospitals,
+      officeAddress,
+      telemedicineExperience,
+      malpracticeInsuranceProvider,
+      malpracticeInsuranceExpiration,
+
+      // References
+      references,
+
+      // Documents
+      applicationDocuments
+    } = req.body;
+
+    console.log('📋 Doctor registration attempt:', { email, firstName, lastName, specialization });
+
+    // Validate required fields
+    if (!firstName || !lastName || !email || !password) {
+      return res.status(400).json({ message: 'Please provide all required personal information' });
+    }
+
+    if (!licenseNumber || !licenseState || !specialization) {
+      return res.status(400).json({ message: 'Please provide all required professional credentials' });
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    if (existingUser) {
+      return res.status(400).json({ message: 'A user with this email already exists' });
+    }
+
+    // Hash password
+    const saltRounds = 12;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+    // Create new doctor user
+    const newDoctor = new User({
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      email: email.toLowerCase().trim(),
+      passwordHash: hashedPassword,
+      phone: phone?.trim(),
+      dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
+      gender,
+      role: 'doctor',
+      doctorInfo: {
+        title: title?.trim() || 'Dr.',
+        licenseNumber: licenseNumber?.trim(),
+        licenseState: licenseState?.trim(),
+        licenseExpirationDate: licenseExpirationDate ? new Date(licenseExpirationDate) : undefined,
+        specialization: specialization?.trim(),
+        subSpecialty: subSpecialty?.trim(),
+        yearsOfExperience: yearsOfExperience ? parseInt(yearsOfExperience) : undefined,
+        medicalSchool: medicalSchool?.trim(),
+        residency: residency?.trim(),
+        fellowship: fellowship?.trim(),
+        graduationYear: graduationYear ? parseInt(graduationYear) : undefined,
+        affiliatedHospitals: affiliatedHospitals?.filter(h => h?.trim()) || [],
+        officeAddress: officeAddress?.trim(),
+        telemedicineExperience: telemedicineExperience?.trim(),
+        references: references?.filter(ref => ref?.name?.trim()) || [],
+        applicationDocuments: applicationDocuments || [],
+        approvalStatus: 'pending_review',
+        applicationSubmittedAt: new Date()
+      }
+    });
+
+    await newDoctor.save();
+
+    console.log('✅ Doctor registration successful:', {
+      id: newDoctor._id,
+      email: newDoctor.email,
+      status: newDoctor.doctorInfo.approvalStatus
+    });
+
+    res.status(201).json({
+      message: 'Doctor registration submitted successfully! Your application is under review.',
+      doctorId: newDoctor._id,
+      status: newDoctor.doctorInfo.approvalStatus,
+      email: newDoctor.email
+    });
+
+  } catch (error) {
+    console.error('❌ Doctor registration error:', error);
+    res.status(500).json({
+      message: 'Registration failed. Please try again.',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
 module.exports = {
   signupUser,
   loginUser,
+  doctorSignup,
 };

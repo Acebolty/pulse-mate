@@ -20,14 +20,28 @@ const LoginPage = () => {
       
       if (response.data && response.data.token) {
         localStorage.setItem('doctorAuthToken', response.data.token); // Store the token
-        // Optionally store basic user info, or fetch profile separately after redirect
-        localStorage.setItem('doctorAuthUser', JSON.stringify(response.data.user)); 
-        
-        // TODO: Replace with proper global state management (e.g., Context API / Redux / Zustand)
-        // For now, we'll just navigate. The api.js interceptor will pick up the token.
-        window.dispatchEvent(new Event("doctorAuthChange")); // Basic way to notify other parts of app
-        
-        navigate('/'); // Redirect to dashboard
+        localStorage.setItem('doctorAuthUser', JSON.stringify(response.data.user));
+
+        // Check doctor approval status
+        const user = response.data.user;
+        if (user.role === 'doctor') {
+          const approvalStatus = user.doctorInfo?.approvalStatus;
+
+          console.log('👨‍⚕️ Doctor login - approval status:', approvalStatus);
+
+          if (approvalStatus === 'approved') {
+            // Doctor is approved, proceed to dashboard
+            window.dispatchEvent(new Event("doctorAuthChange"));
+            navigate('/');
+          } else {
+            // Doctor is not approved, show application status
+            navigate('/application-status');
+          }
+        } else {
+          // Non-doctor user (admin, etc.)
+          window.dispatchEvent(new Event("doctorAuthChange"));
+          navigate('/');
+        }
       } else {
         setError('Login failed: No token received.');
       }

@@ -4,8 +4,8 @@ import YourAppointments from "./pages/YourAppointments";
 import Notifications from "./pages/Notifications";
 import Messages from "./pages/Messages";
 import Profile from "./pages/Profile";
-import Settings from "./pages/Settings";
 import DashboardOverview from "./pages/DashboardOverview";
+import ApplicationStatus from "./pages/ApplicationStatus";
 import DashboardLayout from "./components/layout/DashboardLayout";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
@@ -26,6 +26,7 @@ function App() {
           path="/signup"
           element={!isAuthenticated() ? <SignupPage /> : <Navigate to="/" replace />}
         />
+        <Route path="/application-status" element={<ApplicationStatus />} />
 
         {/* Protected dashboard routes */}
         <Route path="/*" element={
@@ -38,7 +39,6 @@ function App() {
                   <Route path="/notifications" element={<Notifications />} />
                   <Route path="/messages" element={<Messages />} />
                   <Route path="/profile" element={<Profile />} />
-                  <Route path="/settings" element={<Settings />} />
                 </Routes>
               </DashboardLayout>
             </DoctorProfileProvider>

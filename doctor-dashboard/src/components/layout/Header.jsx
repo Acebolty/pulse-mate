@@ -374,9 +374,6 @@ const Header = ({ onMenuClick, isCollapsed }) => {
                   <a href="/profile" className="block px-4 py-2 text-sm text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
                     View Profile
                   </a>
-                  <a href="/settings" className="block px-4 py-2 text-sm text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
-                    Settings
-                  </a>
                 </div>
                 
                 <div className="border-t border-gray-100 dark:border-slate-700 pt-2">

@@ -19,7 +19,7 @@ const userSchema = new Schema({
   patientId: {
     type: String,
     unique: true,
-    required: true,
+    required: false, // Make it optional for now, we'll handle it in pre-save
     trim: true
   },
   firstName: {
@@ -54,7 +54,7 @@ const userSchema = new Schema({
   },
   gender: {
     type: String,
-    enum: ['Male', 'Female', 'Other', 'Prefer not to say']
+    enum: ['male', 'female', 'other', 'prefer_not_to_say', 'Male', 'Female', 'Other', 'Prefer not to say']
   },
   address: addressSchema,
   emergencyContact: emergencyContactSchema,
@@ -87,7 +87,15 @@ const userSchema = new Schema({
 
   // Doctor-specific information (only used when role is 'doctor')
   doctorInfo: {
+    // Basic Professional Info
     licenseNumber: { type: String, trim: true },
+    licenseState: { type: String, trim: true }, // State/Country where licensed
+    licenseExpirationDate: { type: Date },
+    deaNumber: { type: String, trim: true }, // DEA number if applicable
+    npiNumber: { type: String, trim: true }, // National Provider Identifier
+
+    // Professional Details
+    title: { type: String, trim: true, default: 'Dr.' }, // Dr., Prof., etc.
     specialty: { type: String, trim: true },
     specialization: { type: String, trim: true }, // Main specialization
     subSpecialty: { type: String, trim: true }, // Sub-specialization
@@ -98,20 +106,76 @@ const userSchema = new Schema({
     biography: { type: String, trim: true }, // Doctor's bio
     languagesSpoken: [{ type: String, trim: true }], // Languages spoken
     affiliatedHospitals: [{ type: String, trim: true }], // Affiliated hospitals
+
+    // Contact & Practice Info
     phone: { type: String, trim: true }, // Doctor's contact phone
     officeAddress: { type: String, trim: true }, // Office address
     generalHours: { type: String, trim: true, default: "Monday - Friday, 9:00 AM - 5:00 PM" }, // Working hours
     isAcceptingPatients: { type: Boolean, default: true }, // Availability toggle
     consultationFee: { type: String, trim: true, default: "$250 per consultation (approx.)" }, // Consultation fee
+
+    // Education & Training
+    medicalSchool: { type: String, trim: true },
+    residency: { type: String, trim: true },
+    fellowship: { type: String, trim: true },
+    graduationYear: { type: Number },
+
+    // Professional References
+    references: [{
+      name: { type: String, trim: true },
+      title: { type: String, trim: true },
+      institution: { type: String, trim: true },
+      phone: { type: String, trim: true },
+      email: { type: String, trim: true, lowercase: true },
+      relationship: { type: String, trim: true } // Colleague, Supervisor, etc.
+    }],
+
+    // Document Uploads for Verification
+    applicationDocuments: [{
+      documentType: {
+        type: String,
+        enum: [
+          'medical_license',
+          'board_certification',
+          'dea_certificate',
+          'cv_resume',
+          'malpractice_insurance',
+          'government_id',
+          'professional_headshot',
+          'diploma',
+          'other'
+        ],
+        required: true
+      },
+      fileName: { type: String, trim: true },
+      fileUrl: { type: String, trim: true },
+      cloudinaryPublicId: { type: String, trim: true },
+      uploadedAt: { type: Date, default: Date.now },
+      verified: { type: Boolean, default: false },
+      verifiedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+      verifiedAt: { type: Date },
+      notes: { type: String, trim: true }
+    }],
+
+    // Approval Status & Review
     approvalStatus: {
       type: String,
-      enum: ['pending', 'approved', 'rejected'],
-      default: 'pending'
+      enum: ['pending_review', 'under_review', 'approved', 'rejected', 'suspended', 'needs_more_info'],
+      default: 'pending_review'
     },
+    applicationSubmittedAt: { type: Date, default: Date.now },
+    reviewStartedAt: { type: Date },
+    reviewedBy: { type: Schema.Types.ObjectId, ref: 'User' },
     approvedBy: { type: Schema.Types.ObjectId, ref: 'User' },
     approvedAt: { type: Date },
     rejectedAt: { type: Date },
-    rejectionReason: { type: String, trim: true }
+    rejectionReason: { type: String, trim: true },
+    adminNotes: { type: String, trim: true }, // Internal notes for admin review
+
+    // Additional Info
+    telemedicineExperience: { type: String, trim: true }, // Experience with telemedicine
+    malpracticeInsuranceProvider: { type: String, trim: true },
+    malpracticeInsuranceExpiration: { type: Date }
   },
 
   medicalInfo: {
@@ -226,8 +290,8 @@ const userSchema = new Schema({
 
 // Pre-save middleware to generate patient ID
 userSchema.pre('save', async function(next) {
-  // Generate patient ID only for new users
-  if (this.isNew && !this.patientId) {
+  // Generate patient ID only for new patients (not doctors)
+  if (this.isNew && !this.patientId && this.role === 'patient') {
     try {
       // Generate a unique patient ID with format: PM-YYYYMMDD-XXXX
       const today = new Date();

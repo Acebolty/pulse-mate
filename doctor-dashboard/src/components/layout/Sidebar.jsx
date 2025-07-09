@@ -7,7 +7,6 @@ import {
   HeartIcon,
   CalendarIcon,
   ChatBubbleLeftIcon,
-  Cog6ToothIcon,
   ChartBarIcon,
   BellIcon,
   UserIcon,
@@ -16,10 +15,23 @@ import {
   ChevronRightIcon,
 } from "@heroicons/react/24/outline"
 import api from "../../services/api"
+import { useDoctorProfile } from "../../contexts/DoctorProfileContext"
+import { getCurrentUser } from "../../services/authService"
+import { generateDoctorAvatar } from "../../utils/avatarUtils"
 
 const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
   const [notificationCount, setNotificationCount] = useState(0)
   const [appointmentCount, setAppointmentCount] = useState(0)
+  const [currentUser, setCurrentUser] = useState(null)
+
+  // Use the doctor profile context for real-time data
+  const { profileData, displayName, profilePicture } = useDoctorProfile()
+
+  // Get current user data
+  useEffect(() => {
+    const user = getCurrentUser()
+    setCurrentUser(user)
+  }, [])
 
   // Fetch real notification and appointment counts
   useEffect(() => {
@@ -96,7 +108,6 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
     { name: "Notifications", href: "/notifications", icon: BellIcon, badge: notificationCount > 0 ? notificationCount : null },
     { name: "Messages", href: "/messages", icon: ChatBubbleLeftIcon }, // Remove dummy badge
     { name: "Profile", href: "/profile", icon: UserIcon },
-    { name: "Settings", href: "/settings", icon: Cog6ToothIcon },
   ]
 
   console.log('📋 Sidebar counts:', { notificationCount, appointmentCount })
@@ -104,6 +115,13 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
     name: item.name,
     badge: item.badge
   })))
+  console.log('👤 Sidebar profile data:', {
+    displayName,
+    profilePicture,
+    firstName: profileData?.firstName,
+    lastName: profileData?.lastName,
+    specialization: profileData?.doctorInfo?.specialization
+  })
 
   return (
     <>
@@ -160,15 +178,26 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
             <div className="relative">
               <img
                 className="w-10 h-10 rounded-full ring-2 ring-green-100 shadow-sm"
-                src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
-                alt="User avatar"
+                src={
+                  profilePicture ||
+                  generateDoctorAvatar(
+                    profileData?.firstName || currentUser?.firstName,
+                    profileData?.lastName || currentUser?.lastName,
+                    80
+                  )
+                }
+                alt="Doctor avatar"
               />
               <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white dark:border-slate-800"></div>
             </div>
             {!isCollapsed && (
               <div className="flex-1 min-w-0 overflow-hidden">
-                <p className="text-sm font-semibold text-gray-800 dark:text-slate-200 truncate">John Doe</p>
-                <p className="text-xs text-gray-500 dark:text-slate-400 truncate">Doctor ID: #12345</p>
+                <p className="text-sm font-semibold text-gray-800 dark:text-slate-200 truncate">
+                  {displayName || `Dr. ${profileData?.firstName || currentUser?.firstName || ''} ${profileData?.lastName || currentUser?.lastName || ''}`.trim() || 'Doctor'}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-slate-400 truncate">
+                  {profileData?.doctorInfo?.specialization || 'Medical Professional'}
+                </p>
               </div>
             )}
           </div>
