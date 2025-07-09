@@ -11,6 +11,7 @@ import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { logout, getCurrentUser } from "../../services/authService"
 import api from "../../services/api"
+import { useDoctorProfile } from "../../contexts/DoctorProfileContext"
 
 const Header = ({ onMenuClick, isCollapsed }) => {
   const [isDarkMode, setIsDarkMode] = useState(false)
@@ -18,6 +19,7 @@ const Header = ({ onMenuClick, isCollapsed }) => {
   const [showNotifications, setShowNotifications] = useState(false)
   const [currentUser, setCurrentUser] = useState(null)
   const navigate = useNavigate()
+  const { profileData, displayName, profilePicture } = useDoctorProfile()
 
   useEffect(() => {
     const savedMode = localStorage.getItem("darkMode")
@@ -199,7 +201,7 @@ const Header = ({ onMenuClick, isCollapsed }) => {
             <div className="hidden lg:block">
               <h1 className="text-xl font-semibold text-gray-800 dark:text-slate-200">Dashboard</h1>
               <p className="text-sm text-gray-500 dark:text-slate-400">
-                Welcome back, Dr. {currentUser?.firstName || 'Doctor'}!
+                Welcome back, {displayName || `Dr. ${currentUser?.firstName || 'Doctor'}`}!
               </p>
             </div>
           )}
@@ -335,14 +337,14 @@ const Header = ({ onMenuClick, isCollapsed }) => {
               <div className="relative">
                 <img
                   className="w-8 h-8 rounded-full ring-2 ring-green-100"
-                  src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+                  src={profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName || 'Doctor')}&background=3b82f6&color=ffffff&size=64`}
                   alt="User avatar"
                 />
                 <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 rounded-full border-2 border-white dark:border-slate-800"></div>
               </div>
               <div className="hidden sm:block text-left">
                 <p className="font-semibold text-gray-800 dark:text-slate-200">
-                  Dr. {currentUser?.firstName} {currentUser?.lastName}
+                  {displayName || `Dr. ${currentUser?.firstName} ${currentUser?.lastName}`}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-slate-400">Good Morning! 🌅</p>
               </div>
@@ -356,14 +358,14 @@ const Header = ({ onMenuClick, isCollapsed }) => {
                   <div className="flex items-center space-x-3">
                     <img
                       className="w-10 h-10 rounded-full"
-                      src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+                      src={profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName || 'Doctor')}&background=3b82f6&color=ffffff&size=80`}
                       alt="User avatar"
                     />
                     <div>
                       <p className="font-semibold text-gray-800 dark:text-slate-200">
-                        Dr. {currentUser?.firstName} {currentUser?.lastName}
+                        {displayName || `Dr. ${currentUser?.firstName} ${currentUser?.lastName}`}
                       </p>
-                      <p className="text-sm text-gray-500 dark:text-slate-400">{currentUser?.email}</p>
+                      <p className="text-sm text-gray-500 dark:text-slate-400">{profileData?.email || currentUser?.email}</p>
                     </div>
                   </div>
                 </div>

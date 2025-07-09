@@ -574,7 +574,7 @@ const Messages = () => {
               >
                 <div className="flex items-start space-x-2 sm:space-x-3">
                   <div className="relative">
-                    <img src={chat.patientAvatar || "https://via.placeholder.com/100/E0E0E0/B0B0B0?text=P"} alt={chat.patientName} className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover" />
+                    <img src={chat.patientAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(chat.patientName || 'Patient')}&background=10b981&color=ffffff&size=100`} alt={chat.patientName} className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover" />
                     {chat.isOnline && <div className="absolute bottom-0 right-0 w-2.5 h-2.5 sm:w-3 sm:h-3 bg-green-500 border border-white dark:border-slate-800 rounded-full"></div>}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -628,7 +628,7 @@ const Messages = () => {
                         <ArrowLeftIcon className="w-5 h-5" />
                     </button>
                   <div className="relative">
-                    <img src={selectedChat.patientAvatar || "https://via.placeholder.com/100/E0E0E0/B0B0B0?text=P"} alt={selectedChat.patientName} className="w-10 h-10 rounded-full object-cover" />
+                    <img src={selectedChat.patientAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedChat.patientName || 'Patient')}&background=10b981&color=ffffff&size=100`} alt={selectedChat.patientName} className="w-10 h-10 rounded-full object-cover" />
                     {selectedChat.isOnline && <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white dark:border-slate-800 rounded-full"></div>}
                   </div>
                   <div>
@@ -653,7 +653,7 @@ const Messages = () => {
                 return (
                   <div key={message.id} className={`flex ${isDoctor ? "justify-end" : "justify-start"}`}>
                     <div className={`flex items-end space-x-2 max-w-[80%] sm:max-w-md ${isDoctor ? "flex-row-reverse space-x-reverse" : ""}`}>
-                      {!isDoctor && showAvatar && <img src={selectedChat.patientAvatar || "https://via.placeholder.com/100/E0E0E0/B0B0B0?text=P"} alt={selectedChat.patientName} className="w-8 h-8 rounded-full object-cover self-start"/>}
+                      {!isDoctor && showAvatar && <img src={selectedChat.patientAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedChat.patientName || 'Patient')}&background=10b981&color=ffffff&size=64`} alt={selectedChat.patientName} className="w-8 h-8 rounded-full object-cover self-start"/>}
                       {!isDoctor && !showAvatar && <div className="w-8"></div>}
                       <div className={`flex flex-col ${isDoctor ? "items-end" : "items-start"}`}>
                         {showAvatar && <span className="text-xs text-gray-500 dark:text-slate-400 mb-1 px-2">{isDoctor ? "You" : message.senderName} • {formatMessageTime(message.timestamp)}</span>}

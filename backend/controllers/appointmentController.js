@@ -346,10 +346,14 @@ const getAvailableDoctors = async (req, res) => {
       console.log(`  approvalStatus:`, doctor.doctorInfo?.approvalStatus);
     });
 
-    // Get all approved doctors with their basic info and doctorInfo
+    // Get all approved doctors who are accepting patients
     const doctors = await User.find({
       role: 'doctor',
-      'doctorInfo.approvalStatus': 'approved'
+      'doctorInfo.approvalStatus': 'approved',
+      $or: [
+        { 'doctorInfo.isAcceptingPatients': true },
+        { 'doctorInfo.isAcceptingPatients': { $exists: false } } // Default to true if field doesn't exist
+      ]
     })
     .select('firstName lastName email profilePicture doctorInfo')
     .sort({ 'doctorInfo.specialty': 1, firstName: 1 });

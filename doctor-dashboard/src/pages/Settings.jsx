@@ -1,6 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import api from '../services/api'
+import { getCurrentUser } from '../services/authService'
 import {
   UserCircleIcon, // For Profile
   ShieldCheckIcon, // For Privacy
@@ -27,26 +29,27 @@ import {
 } from "@heroicons/react/24/outline"
 import { motion } from "framer-motion"
 
-// Initial Doctor Settings Data Structure
-const initialDoctorSettings = {
+// Default Doctor Settings Data Structure
+const getDefaultDoctorSettings = () => ({
   professionalProfile: {
     title: "Dr.",
-    firstName: "Evelyn",
-    lastName: "Reed",
-    profilePictureUrl: "https://randomuser.me/api/portraits/women/60.jpg",
-    specialization: "Cardiology",
-    subSpecialty: "Interventional Cardiology",
-    yearsOfExperience: 12,
-    biography: "Dr. Evelyn Reed is a dedicated cardiologist...",
-    qualifications: ["MD, Stanford University", "FACC"],
-    languagesSpoken: ["English", "Spanish"],
-    affiliatedHospitals: ["City General Hospital"],
-    officeAddress: "123 Health Parkway, Suite 402, Wellness City, ST 90210",
-    publicEmail: "dr.e.reed@clinic.com",
-    publicPhone: "+1 (555) 100-2000",
-    generalAvailability: "Mon-Fri, 9 AM - 5 PM",
-    consultationTypesOffered: ["In-Person", "Video Call"],
-    consultationFee: "$250 per consultation",
+    firstName: "",
+    lastName: "",
+    profilePictureUrl: null,
+    specialization: "",
+    subSpecialty: "",
+    yearsOfExperience: 0,
+    biography: "",
+    qualifications: [],
+    languagesSpoken: ["English"],
+    affiliatedHospitals: [],
+    officeAddress: "",
+    publicEmail: "",
+    publicPhone: "",
+    generalAvailability: "Monday - Friday, 9:00 AM - 5:00 PM",
+    consultationTypesOffered: ["Secure Chat"], // Only secure chat supported
+    consultationFee: "$250 per consultation (approx.)",
+    isAcceptingPatients: true,
   },
   practicePrivacy: {
     profileVisibilityToPatients: "full", // 'full', 'basic', 'searchable_only'
@@ -83,7 +86,7 @@ const initialDoctorSettings = {
     fontSize: "medium", // 'small', 'medium', 'large'
     // colorScheme: "blue", // Example: doctor dashboard might have a blue theme
   },
-}
+});
 
 // Helper function to render list items for profile arrays (qualifications, languages, etc.)
 const EditableListItem = ({ item, index, section, field, isEditing, handleListChange, removeListItem }) => (
@@ -106,12 +109,89 @@ const EditableListItem = ({ item, index, section, field, isEditing, handleListCh
 
 const Settings = () => {
   const [activeTab, setActiveTab] = useState("profile")
-  const [settings, setSettings] = useState(JSON.parse(JSON.stringify(initialDoctorSettings))) // Deep copy
+  const [settings, setSettings] = useState(getDefaultDoctorSettings())
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
-  
-  // For profile picture, a real app would use a file upload state
-  const [profilePicPreview, setProfilePicPreview] = useState(settings.professionalProfile.profilePictureUrl);
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [saving, setSaving] = useState(false)
 
+  // For profile picture, a real app would use a file upload state
+  const [profilePicPreview, setProfilePicPreview] = useState(null);
+
+  // Fetch doctor settings data
+  const fetchDoctorSettings = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      console.log('⚙️ Fetching doctor settings...')
+      const response = await api.get('/profile/me')
+      const userData = response.data
+
+      console.log('👨‍⚕️ Doctor settings data:', userData)
+
+      // Transform backend data to match settings structure
+      const transformedSettings = {
+        professionalProfile: {
+          title: userData.title || "Dr.",
+          firstName: userData.firstName || "",
+          lastName: userData.lastName || "",
+          profilePictureUrl: userData.profilePicture || null,
+          specialization: userData.doctorInfo?.specialization || "",
+          subSpecialty: userData.doctorInfo?.subSpecialty || "",
+          yearsOfExperience: userData.doctorInfo?.yearsOfExperience || 0,
+          biography: userData.doctorInfo?.biography || "",
+          qualifications: userData.doctorInfo?.qualifications || [],
+          languagesSpoken: userData.doctorInfo?.languagesSpoken || ["English"],
+          affiliatedHospitals: userData.doctorInfo?.affiliatedHospitals || [],
+          officeAddress: userData.doctorInfo?.officeAddress || "",
+          publicEmail: userData.email || "",
+          publicPhone: userData.doctorInfo?.phone || "",
+          generalAvailability: userData.doctorInfo?.generalHours || "Monday - Friday, 9:00 AM - 5:00 PM",
+          consultationTypesOffered: ["Secure Chat"], // Only secure chat supported
+          consultationFee: userData.doctorInfo?.consultationFee || "$250 per consultation (approx.)",
+          isAcceptingPatients: userData.doctorInfo?.isAcceptingPatients !== false,
+        },
+        // Keep other sections as they were for now
+        ...getDefaultDoctorSettings(),
+        professionalProfile: {
+          ...getDefaultDoctorSettings().professionalProfile,
+          title: userData.title || "Dr.",
+          firstName: userData.firstName || "",
+          lastName: userData.lastName || "",
+          profilePictureUrl: userData.profilePicture || null,
+          specialization: userData.doctorInfo?.specialization || "",
+          subSpecialty: userData.doctorInfo?.subSpecialty || "",
+          yearsOfExperience: userData.doctorInfo?.yearsOfExperience || 0,
+          biography: userData.doctorInfo?.biography || "",
+          qualifications: userData.doctorInfo?.qualifications || [],
+          languagesSpoken: userData.doctorInfo?.languagesSpoken || ["English"],
+          affiliatedHospitals: userData.doctorInfo?.affiliatedHospitals || [],
+          officeAddress: userData.doctorInfo?.officeAddress || "",
+          publicEmail: userData.email || "",
+          publicPhone: userData.doctorInfo?.phone || "",
+          generalAvailability: userData.doctorInfo?.generalHours || "Monday - Friday, 9:00 AM - 5:00 PM",
+          consultationTypesOffered: ["Secure Chat"],
+          consultationFee: userData.doctorInfo?.consultationFee || "$250 per consultation (approx.)",
+          isAcceptingPatients: userData.doctorInfo?.isAcceptingPatients !== false,
+        }
+      }
+
+      setSettings(transformedSettings)
+      setProfilePicPreview(userData.profilePicture)
+
+    } catch (err) {
+      console.error('❌ Error fetching doctor settings:', err)
+      setError('Failed to load settings data')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Load settings data on component mount
+  useEffect(() => {
+    fetchDoctorSettings()
+  }, [])
 
   const tabs = [
     { id: "profile", label: "Professional Profile", icon: BriefcaseIcon },
@@ -189,8 +269,36 @@ const Settings = () => {
   };
 
 
+  // Loading state
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-slate-400">Loading settings...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6 p-4 md:p-6">
+      {/* Error Alert */}
+      {error && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col items-start sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>

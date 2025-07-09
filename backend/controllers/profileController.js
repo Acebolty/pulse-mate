@@ -36,7 +36,9 @@ const updateUserProfile = async (req, res) => {
     language,
     settings,
     medicalInfo,
-    healthTargets // Added healthTargets here
+    healthTargets, // Added healthTargets here
+    doctorInfo, // Added doctorInfo for doctor profile updates
+    title // Added title for doctor profiles
   } = req.body;
 
   // Build fields to update
@@ -47,6 +49,7 @@ const updateUserProfile = async (req, res) => {
   if (phone !== undefined) updateFields.phone = phone;
   if (dateOfBirth !== undefined) updateFields.dateOfBirth = dateOfBirth;
   if (gender !== undefined) updateFields.gender = gender;
+  if (title !== undefined) updateFields.title = title;
   // Special handling for profilePicture to allow removal
   if (profilePicture !== undefined) { // If profilePicture is part of the request
     if (profilePicture === null || profilePicture === "") {
@@ -134,6 +137,27 @@ const updateUserProfile = async (req, res) => {
     }
   }
 
+  // Handle nested doctorInfo object for doctor profiles
+  if (doctorInfo && typeof doctorInfo === 'object') {
+    console.log('📋 Processing doctorInfo update:', doctorInfo);
+
+    // Direct fields
+    if (doctorInfo.specialization !== undefined) updateFields['doctorInfo.specialization'] = doctorInfo.specialization;
+    if (doctorInfo.subSpecialty !== undefined) updateFields['doctorInfo.subSpecialty'] = doctorInfo.subSpecialty;
+    if (doctorInfo.yearsOfExperience !== undefined) updateFields['doctorInfo.yearsOfExperience'] = doctorInfo.yearsOfExperience;
+    if (doctorInfo.biography !== undefined) updateFields['doctorInfo.biography'] = doctorInfo.biography;
+    if (doctorInfo.phone !== undefined) updateFields['doctorInfo.phone'] = doctorInfo.phone;
+    if (doctorInfo.officeAddress !== undefined) updateFields['doctorInfo.officeAddress'] = doctorInfo.officeAddress;
+    if (doctorInfo.generalHours !== undefined) updateFields['doctorInfo.generalHours'] = doctorInfo.generalHours;
+    if (doctorInfo.isAcceptingPatients !== undefined) updateFields['doctorInfo.isAcceptingPatients'] = doctorInfo.isAcceptingPatients;
+    if (doctorInfo.consultationFee !== undefined) updateFields['doctorInfo.consultationFee'] = doctorInfo.consultationFee;
+
+    // Array fields - replace the whole array if provided
+    if (doctorInfo.qualifications !== undefined) updateFields['doctorInfo.qualifications'] = doctorInfo.qualifications;
+    if (doctorInfo.languagesSpoken !== undefined) updateFields['doctorInfo.languagesSpoken'] = doctorInfo.languagesSpoken;
+    if (doctorInfo.affiliatedHospitals !== undefined) updateFields['doctorInfo.affiliatedHospitals'] = doctorInfo.affiliatedHospitals;
+  }
+
   // Handle nested healthTargets object
   if (healthTargets && typeof healthTargets === 'object') {
     for (const metric in healthTargets) {
@@ -148,11 +172,16 @@ const updateUserProfile = async (req, res) => {
   }
   
   try {
+    console.log('📋 Profile update - User ID:', req.user.id);
+    console.log('📋 Profile update - Update fields:', JSON.stringify(updateFields, null, 2));
+
     const updatedUserProfile = await User.findByIdAndUpdate(
       req.user.id,
       { $set: updateFields },
       { new: true, runValidators: true, context: 'query' } // context: 'query' for runValidators with $set
     ).select('-passwordHash');
+
+    console.log('✅ Profile updated successfully:', updatedUserProfile?.firstName, updatedUserProfile?.lastName);
 
     if (!updatedUserProfile) {
       return res.status(404).json({ message: 'User profile not found' });

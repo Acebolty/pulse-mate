@@ -880,20 +880,33 @@ const Appointments = () => {
                             <span className="text-yellow-500">★</span>
                             <span className="text-gray-600 dark:text-slate-300">4.8</span>
                           </div>
-                          <span className="text-green-600 dark:text-green-400">Available Today</span>
+                          {doctor.doctorInfo?.isAcceptingPatients !== false ? (
+                            <span className="text-green-600 dark:text-green-400">Accepting New Patients</span>
+                          ) : (
+                            <span className="text-red-600 dark:text-red-400">Not Accepting Patients</span>
+                          )}
                         </div>
                         <p className="text-xs text-gray-500 dark:text-slate-400">
-                          {doctor.doctorInfo?.experience || 0} years experience
+                          {doctor.doctorInfo?.experience || doctor.doctorInfo?.yearsOfExperience || 0} years experience
                         </p>
                       </div>
 
                       <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
-                        <button
-                          onClick={() => handleDoctorSelection(doctor)}
-                          className="flex-1 px-3 py-2 bg-green-600 dark:bg-green-500 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 transition-colors text-xs sm:text-sm"
-                        >
-                          Book Appointment
-                        </button>
+                        {doctor.doctorInfo?.isAcceptingPatients !== false ? (
+                          <button
+                            onClick={() => handleDoctorSelection(doctor)}
+                            className="flex-1 px-3 py-2 bg-green-600 dark:bg-green-500 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 transition-colors text-xs sm:text-sm"
+                          >
+                            Book Appointment
+                          </button>
+                        ) : (
+                          <button
+                            disabled
+                            className="flex-1 px-3 py-2 bg-gray-400 dark:bg-gray-600 text-white rounded-lg cursor-not-allowed text-xs sm:text-sm"
+                          >
+                            Not Available
+                          </button>
+                        )}
                       </div>
                     </div>
                     ))}

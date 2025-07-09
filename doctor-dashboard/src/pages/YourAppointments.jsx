@@ -38,7 +38,7 @@ const transformAppointmentData = (appointment, userData = null) => {
       name: patientData ? `${patientData.firstName} ${patientData.lastName}` : "Patient",
       age: patientData?.dateOfBirth ? new Date().getFullYear() - new Date(patientData.dateOfBirth).getFullYear() : "N/A",
       gender: patientData?.gender || "N/A",
-      image: patientData?.profilePicture || "https://via.placeholder.com/150/cccccc/808080?text=Patient",
+      image: patientData?.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(patientData ? `${patientData.firstName} ${patientData.lastName}` : 'Patient')}&background=10b981&color=ffffff&size=150`,
     },
     date: new Date(appointment.dateTime).toISOString().split('T')[0],
     time: new Date(appointment.dateTime).toLocaleTimeString('en-US', {
@@ -842,7 +842,7 @@ const YourAppointments = () => {
                     <div className="flex flex-col sm:flex-row items-start justify-between">
                       <div className="flex items-start space-x-3 sm:space-x-4 flex-1">
                         <img
-                          src={appointment.patient.image || "https://via.placeholder.com/150/cccccc/808080?text=Patient"}
+                          src={appointment.patient.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(appointment.patient.name || 'Patient')}&background=10b981&color=ffffff&size=150`}
                           alt={appointment.patient.name}
                           className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover"
                         />

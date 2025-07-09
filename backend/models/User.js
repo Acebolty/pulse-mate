@@ -89,8 +89,20 @@ const userSchema = new Schema({
   doctorInfo: {
     licenseNumber: { type: String, trim: true },
     specialty: { type: String, trim: true },
+    specialization: { type: String, trim: true }, // Main specialization
+    subSpecialty: { type: String, trim: true }, // Sub-specialization
     experience: { type: Number }, // Years of experience
+    yearsOfExperience: { type: Number }, // Alias for experience
     department: { type: String, trim: true },
+    qualifications: [{ type: String, trim: true }], // Array of qualifications
+    biography: { type: String, trim: true }, // Doctor's bio
+    languagesSpoken: [{ type: String, trim: true }], // Languages spoken
+    affiliatedHospitals: [{ type: String, trim: true }], // Affiliated hospitals
+    phone: { type: String, trim: true }, // Doctor's contact phone
+    officeAddress: { type: String, trim: true }, // Office address
+    generalHours: { type: String, trim: true, default: "Monday - Friday, 9:00 AM - 5:00 PM" }, // Working hours
+    isAcceptingPatients: { type: Boolean, default: true }, // Availability toggle
+    consultationFee: { type: String, trim: true, default: "$250 per consultation (approx.)" }, // Consultation fee
     approvalStatus: {
       type: String,
       enum: ['pending', 'approved', 'rejected'],

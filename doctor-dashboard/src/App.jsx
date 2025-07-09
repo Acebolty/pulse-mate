@@ -11,6 +11,7 @@ import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import { isAuthenticated } from "./services/authService";
+import { DoctorProfileProvider } from "./contexts/DoctorProfileContext";
 
 function App() {
   return (
@@ -29,16 +30,18 @@ function App() {
         {/* Protected dashboard routes */}
         <Route path="/*" element={
           <ProtectedRoute>
-            <DashboardLayout>
-              <Routes>
-                <Route path="/" element={<DashboardOverview />} />
-                <Route path="/your_appointments" element={<YourAppointments />} />
-                <Route path="/notifications" element={<Notifications />} />
-                <Route path="/messages" element={<Messages />} />
-                <Route path="/profile" element={<Profile />} />
-                <Route path="/settings" element={<Settings />} />
-              </Routes>
-            </DashboardLayout>
+            <DoctorProfileProvider>
+              <DashboardLayout>
+                <Routes>
+                  <Route path="/" element={<DashboardOverview />} />
+                  <Route path="/your_appointments" element={<YourAppointments />} />
+                  <Route path="/notifications" element={<Notifications />} />
+                  <Route path="/messages" element={<Messages />} />
+                  <Route path="/profile" element={<Profile />} />
+                  <Route path="/settings" element={<Settings />} />
+                </Routes>
+              </DashboardLayout>
+            </DoctorProfileProvider>
           </ProtectedRoute>
         } />
 
