@@ -106,6 +106,42 @@ const loginUser = async (req, res) => {
       return res.status(400).json({ message: 'Invalid credentials.' }); // Generic message
     }
 
+    // Check if doctor is approved (only for doctors)
+    if (user.role === 'doctor') {
+      const approvalStatus = user.doctorInfo?.approvalStatus;
+
+      if (!approvalStatus || approvalStatus === 'pending_review' || approvalStatus === 'rejected') {
+        console.log(`🚫 Doctor login blocked - Status: ${approvalStatus}`, {
+          email: user.email,
+          status: approvalStatus
+        });
+
+        return res.status(403).json({
+          message: 'Your doctor account is pending approval. Please wait for admin verification.',
+          status: approvalStatus || 'pending_review',
+          accountType: 'doctor_pending'
+        });
+      }
+
+      if (approvalStatus !== 'approved') {
+        console.log(`🚫 Doctor login blocked - Invalid status: ${approvalStatus}`, {
+          email: user.email,
+          status: approvalStatus
+        });
+
+        return res.status(403).json({
+          message: 'Your doctor account access has been restricted. Please contact support.',
+          status: approvalStatus,
+          accountType: 'doctor_restricted'
+        });
+      }
+
+      console.log('✅ Approved doctor login successful:', {
+        email: user.email,
+        status: approvalStatus
+      });
+    }
+
     const payload = {
       user: {
         id: user.id,
@@ -125,7 +161,9 @@ const loginUser = async (req, res) => {
             id: user.id,
             firstName: user.firstName,
             lastName: user.lastName,
-            email: user.email
+            email: user.email,
+            role: user.role,
+            approvalStatus: user.role === 'doctor' ? user.doctorInfo?.approvalStatus : null
           }
         });
       }

@@ -9,6 +9,7 @@ import ApplicationStatus from "./pages/ApplicationStatus";
 import DashboardLayout from "./components/layout/DashboardLayout";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
+import PendingApprovalPage from "./pages/PendingApprovalPage";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import { isAuthenticated } from "./services/authService";
 import { DoctorProfileProvider } from "./contexts/DoctorProfileContext";
@@ -27,6 +28,7 @@ function App() {
           element={!isAuthenticated() ? <SignupPage /> : <Navigate to="/" replace />}
         />
         <Route path="/application-status" element={<ApplicationStatus />} />
+        <Route path="/pending-approval" element={<PendingApprovalPage />} />
 
         {/* Protected dashboard routes */}
         <Route path="/*" element={

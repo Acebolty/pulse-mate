@@ -22,30 +22,32 @@ const LoginPage = () => {
         localStorage.setItem('doctorAuthToken', response.data.token); // Store the token
         localStorage.setItem('doctorAuthUser', JSON.stringify(response.data.user));
 
-        // Check doctor approval status
-        const user = response.data.user;
-        if (user.role === 'doctor') {
-          const approvalStatus = user.doctorInfo?.approvalStatus;
-
-          console.log('👨‍⚕️ Doctor login - approval status:', approvalStatus);
-
-          if (approvalStatus === 'approved') {
-            // Doctor is approved, proceed to dashboard
-            window.dispatchEvent(new Event("doctorAuthChange"));
-            navigate('/');
-          } else {
-            // Doctor is not approved, show application status
-            navigate('/application-status');
-          }
-        } else {
-          // Non-doctor user (admin, etc.)
-          window.dispatchEvent(new Event("doctorAuthChange"));
-          navigate('/');
-        }
+        // Login successful - backend has already verified approval status for doctors
+        console.log('✅ Login successful:', response.data.user);
+        window.dispatchEvent(new Event("doctorAuthChange"));
+        navigate('/');
       } else {
         setError('Login failed: No token received.');
       }
     } catch (err) {
+      // Handle doctor approval status errors
+      if (err.response?.status === 403 && err.response?.data?.accountType?.startsWith('doctor_')) {
+        const { message, status, accountType } = err.response.data;
+
+        console.log('🚫 Doctor login blocked:', { status, accountType, message });
+
+        // Redirect to pending approval page with status info
+        navigate('/pending-approval', {
+          state: {
+            status: status,
+            email: email,
+            message: message,
+            accountType: accountType
+          }
+        });
+        return;
+      }
+
       setError(err.response?.data?.message || 'Login failed. Please try again.');
     } finally {
       setLoading(false);
