@@ -16,7 +16,11 @@ const {
   // Doctor approval controllers
   approveDoctorRegistration,
   rejectDoctorRegistration,
+  updateDoctorApprovalStatus,
   getPendingDoctors,
+  getDoctorDetails,
+  updateDoctorAvailability,
+  deleteDoctorAccount,
 
   // Appointment approval controllers
   getPendingAppointments,
@@ -91,6 +95,26 @@ router.post('/doctors/:doctorId/approve', authMiddleware, adminMiddleware, appro
 // @desc    Reject doctor registration
 // @access  Private (Admin only)
 router.post('/doctors/:doctorId/reject', authMiddleware, adminMiddleware, rejectDoctorRegistration);
+
+// @route   PUT /api/admin/doctors/:doctorId/approval-status
+// @desc    Update doctor approval status (general)
+// @access  Private (Admin only)
+router.put('/doctors/:doctorId/approval-status', authMiddleware, adminMiddleware, updateDoctorApprovalStatus);
+
+// @route   GET /api/admin/doctors/:doctorId
+// @desc    Get detailed doctor information
+// @access  Private (Admin only)
+router.get('/doctors/:doctorId', authMiddleware, adminMiddleware, getDoctorDetails);
+
+// @route   PUT /api/admin/doctors/:doctorId/availability
+// @desc    Update doctor availability status
+// @access  Private (Admin only)
+router.put('/doctors/:doctorId/availability', authMiddleware, adminMiddleware, updateDoctorAvailability);
+
+// @route   DELETE /api/admin/doctors/:doctorId
+// @desc    Delete doctor account
+// @access  Private (Admin only)
+router.delete('/doctors/:doctorId', authMiddleware, adminMiddleware, deleteDoctorAccount);
 
 // ==========================================
 // APPOINTMENT APPROVAL ROUTES

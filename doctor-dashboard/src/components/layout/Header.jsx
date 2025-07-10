@@ -201,7 +201,7 @@ const Header = ({ onMenuClick, isCollapsed }) => {
             <div className="hidden lg:block">
               <h1 className="text-xl font-semibold text-gray-800 dark:text-slate-200">Dashboard</h1>
               <p className="text-sm text-gray-500 dark:text-slate-400">
-                Welcome back, {displayName || `Dr. ${currentUser?.firstName || 'Doctor'}`}!
+                Welcome back, {displayName || `${currentUser?.doctorInfo?.title || 'Dr.'} ${currentUser?.firstName || 'Doctor'}`}!
               </p>
             </div>
           )}
@@ -344,7 +344,7 @@ const Header = ({ onMenuClick, isCollapsed }) => {
               </div>
               <div className="hidden sm:block text-left">
                 <p className="font-semibold text-gray-800 dark:text-slate-200">
-                  {displayName || `Dr. ${currentUser?.firstName} ${currentUser?.lastName}`}
+                  {displayName || `${currentUser?.doctorInfo?.title || 'Dr.'} ${currentUser?.firstName} ${currentUser?.lastName}`}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-slate-400">Good Morning! 🌅</p>
               </div>
@@ -363,7 +363,7 @@ const Header = ({ onMenuClick, isCollapsed }) => {
                     />
                     <div>
                       <p className="font-semibold text-gray-800 dark:text-slate-200">
-                        {displayName || `Dr. ${currentUser?.firstName} ${currentUser?.lastName}`}
+                        {displayName || `${currentUser?.doctorInfo?.title || 'Dr.'} ${currentUser?.firstName} ${currentUser?.lastName}`}
                       </p>
                       <p className="text-sm text-gray-500 dark:text-slate-400">{profileData?.email || currentUser?.email}</p>
                     </div>

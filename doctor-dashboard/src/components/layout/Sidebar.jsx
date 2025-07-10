@@ -193,7 +193,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
             {!isCollapsed && (
               <div className="flex-1 min-w-0 overflow-hidden">
                 <p className="text-sm font-semibold text-gray-800 dark:text-slate-200 truncate">
-                  {displayName || `Dr. ${profileData?.firstName || currentUser?.firstName || ''} ${profileData?.lastName || currentUser?.lastName || ''}`.trim() || 'Doctor'}
+                  {displayName || `${profileData?.doctorInfo?.title || currentUser?.doctorInfo?.title || 'Dr.'} ${profileData?.firstName || currentUser?.firstName || ''} ${profileData?.lastName || currentUser?.lastName || ''}`.trim() || 'Doctor'}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-slate-400 truncate">
                   {profileData?.doctorInfo?.specialization || 'Medical Professional'}

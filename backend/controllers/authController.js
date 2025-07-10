@@ -142,6 +142,10 @@ const loginUser = async (req, res) => {
       });
     }
 
+    // Update last login time for online/offline tracking
+    user.lastLoginAt = new Date();
+    await user.save();
+
     const payload = {
       user: {
         id: user.id,
@@ -296,8 +300,39 @@ const doctorSignup = async (req, res) => {
   }
 };
 
+// @desc    Logout user and update last logout time
+// @route   POST /api/auth/logout
+// @access  Private
+const logoutUser = async (req, res) => {
+  try {
+    const userId = req.user?.id || req.user?.userId;
+
+    if (userId) {
+      // Update last logout timestamp for online/offline status tracking
+      await User.findByIdAndUpdate(userId, {
+        lastLogoutAt: new Date()
+      });
+
+      console.log(`✅ User ${userId} logged out successfully`);
+    }
+
+    res.json({
+      success: true,
+      message: 'Logout successful'
+    });
+
+  } catch (error) {
+    console.error('Logout Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error during logout.'
+    });
+  }
+};
+
 module.exports = {
   signupUser,
   loginUser,
   doctorSignup,
+  logoutUser
 };

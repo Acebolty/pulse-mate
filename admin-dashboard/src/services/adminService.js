@@ -184,6 +184,76 @@ export const rejectDoctorRegistration = async (doctorId, reason = '') => {
   }
 };
 
+/**
+ * Update doctor approval status (general function)
+ * @param {string} doctorId - Doctor ID
+ * @param {string} status - New approval status (approved, rejected, pending_review, suspended)
+ * @param {string} reason - Reason for status change (optional)
+ * @param {string} adminNotes - Admin notes (optional)
+ * @returns {Promise<object>} Update result
+ */
+export const updateDoctorApprovalStatus = async (doctorId, status, reason = '', adminNotes = '') => {
+  try {
+    const response = await api.put(`/admin/doctors/${doctorId}/approval-status`, {
+      status,
+      reason,
+      adminNotes
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error updating doctor approval status:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get detailed doctor information
+ * @param {string} doctorId - Doctor ID
+ * @returns {Promise<object>} Detailed doctor data
+ */
+export const getDoctorDetails = async (doctorId) => {
+  try {
+    const response = await api.get(`/admin/doctors/${doctorId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching doctor details:', error);
+    throw error;
+  }
+};
+
+/**
+ * Update doctor availability status
+ * @param {string} doctorId - Doctor ID
+ * @param {boolean} isAcceptingPatients - Availability status
+ * @returns {Promise<object>} Update result
+ */
+export const updateDoctorAvailability = async (doctorId, isAcceptingPatients) => {
+  try {
+    const response = await api.put(`/admin/doctors/${doctorId}/availability`, {
+      isAcceptingPatients
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error updating doctor availability:', error);
+    throw error;
+  }
+};
+
+/**
+ * Delete doctor account
+ * @param {string} doctorId - Doctor ID to delete
+ * @returns {Promise<object>} Deletion result
+ */
+export const deleteDoctorAccount = async (doctorId) => {
+  try {
+    const response = await api.delete(`/admin/doctors/${doctorId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting doctor account:', error);
+    throw error;
+  }
+};
+
 // ==========================================
 // ANALYTICS & DASHBOARD
 // ==========================================

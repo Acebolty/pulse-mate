@@ -155,7 +155,7 @@ export const DoctorProfileProvider = ({ children }) => {
     refreshProfile,
     // Computed values for easy access
     fullName: profileData ? `${profileData.firstName} ${profileData.lastName}` : '',
-    displayName: profileData ? `Dr. ${profileData.firstName} ${profileData.lastName}` : '',
+    displayName: profileData ? `${profileData.doctorInfo?.title || 'Dr.'} ${profileData.firstName} ${profileData.lastName}` : '',
     profilePicture: profileData?.profilePicture || null,
     isAcceptingPatients: profileData?.doctorInfo?.isAcceptingPatients !== false,
   };

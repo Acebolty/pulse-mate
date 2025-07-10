@@ -231,23 +231,29 @@ const getAllPatients = async (req, res) => {
  */
 const getAllDoctors = async (req, res) => {
   try {
-    const { 
-      page = 1, 
-      limit = 10, 
+    const {
+      page = 1,
+      limit = 50, // Increased for admin dashboard
       search = '',
       approvalStatus = 'all',
-      specialty = 'all' 
+      specialty = 'all',
+      availability = 'all',
+      status = 'all' // online/offline status
     } = req.query;
+
+    console.log('📋 Admin fetching doctors with filters:', {
+      search, approvalStatus, specialty, availability, status
+    });
 
     // Build query for doctors only
     let query = { role: 'doctor' };
-    
+
     if (search) {
       query.$or = [
         { firstName: { $regex: search, $options: 'i' } },
         { lastName: { $regex: search, $options: 'i' } },
         { email: { $regex: search, $options: 'i' } },
-        { patientId: { $regex: search, $options: 'i' } } // Using patientId as doctorId for now
+        { 'doctorInfo.licenseNumber': { $regex: search, $options: 'i' } }
       ];
     }
 
@@ -256,22 +262,133 @@ const getAllDoctors = async (req, res) => {
     }
 
     if (specialty !== 'all') {
-      query['doctorInfo.specialty'] = specialty;
+      query['doctorInfo.specialization'] = specialty;
     }
 
+    if (availability !== 'all') {
+      query['doctorInfo.isAcceptingPatients'] = availability === 'accepting';
+    }
+
+    // Fetch doctors with enhanced data
     const doctors = await User.find(query)
       .select('-passwordHash')
       .sort({ createdAt: -1 })
       .limit(limit * 1)
       .skip((page - 1) * limit);
 
+    // Get appointment statistics for each doctor
+    const Appointment = require('../models/Appointment');
+    const doctorsWithStats = await Promise.all(
+      doctors.map(async (doctor) => {
+        try {
+          // Count unique patients who had appointments with this doctor
+          // Note: Appointments use 'userId' for patient ID, not 'patientId'
+          const uniquePatients = await Appointment.distinct('userId', {
+            $or: [
+              { providerId: doctor._id.toString() }, // providerId is stored as string
+              { providerName: { $regex: `${doctor.doctorInfo?.title || 'Dr.'} ${doctor.firstName} ${doctor.lastName}`, $options: 'i' } }
+            ]
+          });
+
+          // Count total appointments
+          const totalAppointments = await Appointment.countDocuments({
+            $or: [
+              { providerId: doctor._id.toString() }, // providerId is stored as string
+              { providerName: { $regex: `${doctor.doctorInfo?.title || 'Dr.'} ${doctor.firstName} ${doctor.lastName}`, $options: 'i' } }
+            ]
+          });
+
+          // Determine online status with proper logout handling
+          const now = new Date();
+          const thirtyMinutesAgo = new Date(now.getTime() - 30 * 60 * 1000);
+          const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+
+          let isOnline = false;
+
+          if (doctor.lastLoginAt && doctor.lastLoginAt > thirtyMinutesAgo) {
+            // Doctor logged in within last 30 minutes
+            if (doctor.lastLogoutAt) {
+              // If there's a logout time, check if login is more recent than logout
+              if (doctor.lastLoginAt > doctor.lastLogoutAt) {
+                // Login is more recent than logout - doctor is online
+                isOnline = true;
+              } else {
+                // Logout is more recent than login - check 5-minute grace period
+                isOnline = doctor.lastLogoutAt > fiveMinutesAgo;
+              }
+            } else {
+              // No logout time recorded - doctor is online
+              isOnline = true;
+            }
+          }
+
+          return {
+            id: doctor._id,
+            name: `${doctor.doctorInfo?.title || 'Dr.'} ${doctor.firstName} ${doctor.lastName}`,
+            firstName: doctor.firstName,
+            lastName: doctor.lastName,
+            email: doctor.email,
+            phone: doctor.phone,
+            dateOfBirth: doctor.dateOfBirth,
+            gender: doctor.gender,
+
+            // Doctor-specific info
+            specialty: doctor.doctorInfo?.specialization || 'Not specified',
+            subSpecialty: doctor.doctorInfo?.subSpecialty,
+            experience: doctor.doctorInfo?.yearsOfExperience || 0,
+            licenseNumber: doctor.doctorInfo?.licenseNumber,
+            licenseState: doctor.doctorInfo?.licenseState,
+            licenseExpirationDate: doctor.doctorInfo?.licenseExpirationDate,
+
+            // Status information
+            approvalStatus: doctor.doctorInfo?.approvalStatus || 'pending_review',
+            isAcceptingPatients: doctor.doctorInfo?.isAcceptingPatients !== false, // Default to true
+            status: isOnline ? 'online' : 'offline',
+            lastLoginAt: doctor.lastLoginAt,
+
+            // Statistics
+            patientCount: uniquePatients.length,
+            totalAppointments: totalAppointments,
+
+            // Additional info
+            joinDate: doctor.createdAt,
+            applicationSubmittedAt: doctor.doctorInfo?.applicationSubmittedAt,
+            applicationDocuments: doctor.doctorInfo?.applicationDocuments || [],
+
+            // Education & Practice
+            medicalSchool: doctor.doctorInfo?.medicalSchool,
+            residency: doctor.doctorInfo?.residency,
+            fellowship: doctor.doctorInfo?.fellowship,
+            graduationYear: doctor.doctorInfo?.graduationYear,
+            telemedicineExperience: doctor.doctorInfo?.telemedicineExperience,
+            officeAddress: doctor.doctorInfo?.officeAddress
+          };
+        } catch (error) {
+          console.error(`Error processing doctor ${doctor._id}:`, error);
+          return {
+            id: doctor._id,
+            name: `${doctor.doctorInfo?.title || 'Dr.'} ${doctor.firstName} ${doctor.lastName}`,
+            email: doctor.email,
+            specialty: doctor.doctorInfo?.specialization || 'Not specified',
+            approvalStatus: doctor.doctorInfo?.approvalStatus || 'pending_review',
+            patientCount: 0,
+            totalAppointments: 0,
+            status: 'offline',
+            error: 'Failed to load statistics'
+          };
+        }
+      })
+    );
+
     const total = await User.countDocuments(query);
+
+    console.log(`✅ Fetched ${doctorsWithStats.length} doctors with statistics`);
 
     res.json({
       success: true,
-      doctors,
+      doctors: doctorsWithStats,
       pagination: {
-        current: page,
+        current: parseInt(page),
         pages: Math.ceil(total / limit),
         total
       }
@@ -303,11 +420,52 @@ const getDashboardOverview = async (req, res) => {
     const totalDoctors = await User.countDocuments({ role: 'doctor' });
     const totalAdmins = await User.countDocuments({ role: 'admin' });
 
-    // Get pending doctors (assuming we'll add approval status later)
+    // Get doctor approval statistics
     const pendingDoctors = await User.countDocuments({
       role: 'doctor',
-      'doctorInfo.approvalStatus': 'pending'
+      'doctorInfo.approvalStatus': 'pending_review'
     });
+    const approvedDoctors = await User.countDocuments({
+      role: 'doctor',
+      'doctorInfo.approvalStatus': 'approved'
+    });
+    const rejectedDoctors = await User.countDocuments({
+      role: 'doctor',
+      'doctorInfo.approvalStatus': 'rejected'
+    });
+
+    // Get doctor availability statistics
+    const availableDoctors = await User.countDocuments({
+      role: 'doctor',
+      'doctorInfo.approvalStatus': 'approved',
+      'doctorInfo.isAcceptingPatients': true
+    });
+
+    // Get online doctors with proper logout handling
+    const now = new Date();
+    const thirtyMinutesAgo = new Date(now.getTime() - 30 * 60 * 1000);
+    const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+
+    // Get all approved doctors and check their online status
+    const approvedDoctorsList = await User.find({
+      role: 'doctor',
+      'doctorInfo.approvalStatus': 'approved'
+    });
+
+    const onlineDoctors = approvedDoctorsList.filter(doctor => {
+      if (doctor.lastLoginAt && doctor.lastLoginAt > thirtyMinutesAgo) {
+        if (doctor.lastLogoutAt) {
+          if (doctor.lastLoginAt > doctor.lastLogoutAt) {
+            return true; // Login is more recent than logout
+          } else {
+            return doctor.lastLogoutAt > fiveMinutesAgo; // 5-minute grace period after logout
+          }
+        } else {
+          return true; // No logout time recorded
+        }
+      }
+      return false;
+    }).length;
 
     // Get recent health data count (last 7 days)
     const sevenDaysAgo = new Date();
@@ -347,6 +505,10 @@ const getDashboardOverview = async (req, res) => {
           totalDoctors,
           totalAdmins,
           pendingDoctors,
+          approvedDoctors,
+          rejectedDoctors,
+          availableDoctors,
+          onlineDoctors,
           totalAppointments,
           recentAppointments,
           totalHealthData,
@@ -357,6 +519,15 @@ const getDashboardOverview = async (req, res) => {
           patients: patientGrowth,
           doctors: doctorGrowth,
           appointments: appointmentGrowth
+        },
+        doctorStats: {
+          total: totalDoctors,
+          approved: approvedDoctors,
+          pending: pendingDoctors,
+          rejected: rejectedDoctors,
+          available: availableDoctors,
+          online: onlineDoctors,
+          approvalRate: totalDoctors > 0 ? Math.round((approvedDoctors / totalDoctors) * 100) : 0
         },
         systemHealth: {
           status: 'healthy',
@@ -509,6 +680,413 @@ const rejectAppointment = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Approve doctor registration
+ * @route   POST /api/admin/doctors/:doctorId/approve
+ * @access  Private (Admin only)
+ */
+const approveDoctorRegistration = async (req, res) => {
+  try {
+    const { doctorId } = req.params;
+    const { adminNotes } = req.body;
+
+    console.log(`📋 Admin approving doctor: ${doctorId}`);
+
+    const doctor = await User.findById(doctorId);
+    if (!doctor || doctor.role !== 'doctor') {
+      return res.status(404).json({
+        success: false,
+        message: 'Doctor not found'
+      });
+    }
+
+    // Update approval status
+    doctor.doctorInfo.approvalStatus = 'approved';
+    doctor.doctorInfo.approvedAt = new Date();
+    doctor.doctorInfo.approvedBy = req.user.id;
+    if (adminNotes) {
+      doctor.doctorInfo.adminNotes = adminNotes;
+    }
+
+    await doctor.save();
+
+    console.log(`✅ Doctor ${doctorId} approved successfully`);
+
+    res.json({
+      success: true,
+      message: 'Doctor registration approved successfully',
+      doctor: {
+        id: doctor._id,
+        name: `${doctor.doctorInfo?.title || 'Dr.'} ${doctor.firstName} ${doctor.lastName}`,
+        email: doctor.email,
+        approvalStatus: doctor.doctorInfo.approvalStatus,
+        approvedAt: doctor.doctorInfo.approvedAt
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error approving doctor:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to approve doctor registration',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+/**
+ * @desc    Reject doctor registration
+ * @route   POST /api/admin/doctors/:doctorId/reject
+ * @access  Private (Admin only)
+ */
+const rejectDoctorRegistration = async (req, res) => {
+  try {
+    const { doctorId } = req.params;
+    const { reason, adminNotes } = req.body;
+
+    console.log(`📋 Admin rejecting doctor: ${doctorId}`);
+
+    const doctor = await User.findById(doctorId);
+    if (!doctor || doctor.role !== 'doctor') {
+      return res.status(404).json({
+        success: false,
+        message: 'Doctor not found'
+      });
+    }
+
+    // Update approval status
+    doctor.doctorInfo.approvalStatus = 'rejected';
+    doctor.doctorInfo.rejectedAt = new Date();
+    doctor.doctorInfo.rejectedBy = req.user.id;
+    doctor.doctorInfo.rejectionReason = reason;
+    if (adminNotes) {
+      doctor.doctorInfo.adminNotes = adminNotes;
+    }
+
+    await doctor.save();
+
+    console.log(`❌ Doctor ${doctorId} rejected: ${reason}`);
+
+    res.json({
+      success: true,
+      message: 'Doctor registration rejected',
+      doctor: {
+        id: doctor._id,
+        name: `${doctor.doctorInfo?.title || 'Dr.'} ${doctor.firstName} ${doctor.lastName}`,
+        email: doctor.email,
+        approvalStatus: doctor.doctorInfo.approvalStatus,
+        rejectedAt: doctor.doctorInfo.rejectedAt,
+        rejectionReason: reason
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error rejecting doctor:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to reject doctor registration',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+/**
+ * @desc    Update doctor approval status (general function)
+ * @route   PUT /api/admin/doctors/:doctorId/approval-status
+ * @access  Private (Admin only)
+ */
+const updateDoctorApprovalStatus = async (req, res) => {
+  try {
+    const { doctorId } = req.params;
+    const { status, reason, adminNotes } = req.body;
+
+    console.log(`📋 Admin updating doctor ${doctorId} status to: ${status}`);
+
+    if (!['approved', 'rejected', 'pending_review', 'suspended'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid approval status'
+      });
+    }
+
+    const doctor = await User.findById(doctorId);
+    if (!doctor || doctor.role !== 'doctor') {
+      return res.status(404).json({
+        success: false,
+        message: 'Doctor not found'
+      });
+    }
+
+    // Update approval status
+    const previousStatus = doctor.doctorInfo.approvalStatus;
+    doctor.doctorInfo.approvalStatus = status;
+    doctor.doctorInfo.lastStatusUpdate = new Date();
+    doctor.doctorInfo.lastUpdatedBy = req.user.id;
+
+    if (status === 'approved') {
+      doctor.doctorInfo.approvedAt = new Date();
+      doctor.doctorInfo.approvedBy = req.user.id;
+    } else if (status === 'rejected') {
+      doctor.doctorInfo.rejectedAt = new Date();
+      doctor.doctorInfo.rejectedBy = req.user.id;
+      if (reason) doctor.doctorInfo.rejectionReason = reason;
+    }
+
+    if (adminNotes) {
+      doctor.doctorInfo.adminNotes = adminNotes;
+    }
+
+    await doctor.save();
+
+    console.log(`✅ Doctor ${doctorId} status updated: ${previousStatus} → ${status}`);
+
+    res.json({
+      success: true,
+      message: `Doctor status updated to ${status}`,
+      doctor: {
+        id: doctor._id,
+        name: `${doctor.doctorInfo?.title || 'Dr.'} ${doctor.firstName} ${doctor.lastName}`,
+        email: doctor.email,
+        previousStatus,
+        currentStatus: status,
+        updatedAt: doctor.doctorInfo.lastStatusUpdate
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error updating doctor status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update doctor status',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+/**
+ * @desc    Get pending doctors for approval
+ * @route   GET /api/admin/doctors/pending
+ * @access  Private (Admin only)
+ */
+const getPendingDoctors = async (req, res) => {
+  try {
+    console.log('📋 Admin fetching pending doctors');
+
+    const pendingDoctors = await User.find({
+      role: 'doctor',
+      'doctorInfo.approvalStatus': 'pending_review'
+    })
+    .select('-passwordHash')
+    .sort({ 'doctorInfo.applicationSubmittedAt': 1 }); // Oldest first
+
+    const doctorsWithDetails = pendingDoctors.map(doctor => ({
+      id: doctor._id,
+      name: `${doctor.doctorInfo?.title || 'Dr.'} ${doctor.firstName} ${doctor.lastName}`,
+      email: doctor.email,
+      specialty: doctor.doctorInfo?.specialization,
+      licenseNumber: doctor.doctorInfo?.licenseNumber,
+      applicationSubmittedAt: doctor.doctorInfo?.applicationSubmittedAt,
+      documentsCount: doctor.doctorInfo?.applicationDocuments?.length || 0,
+      applicationDocuments: doctor.doctorInfo?.applicationDocuments || []
+    }));
+
+    console.log(`✅ Found ${doctorsWithDetails.length} pending doctors`);
+
+    res.json({
+      success: true,
+      pendingDoctors: doctorsWithDetails,
+      count: doctorsWithDetails.length
+    });
+
+  } catch (error) {
+    console.error('❌ Error fetching pending doctors:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch pending doctors',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+/**
+ * @desc    Get detailed doctor information
+ * @route   GET /api/admin/doctors/:doctorId
+ * @access  Private (Admin only)
+ */
+const getDoctorDetails = async (req, res) => {
+  try {
+    const { doctorId } = req.params;
+
+    console.log(`📋 Admin fetching details for doctor: ${doctorId}`);
+
+    const doctor = await User.findById(doctorId).select('-passwordHash');
+    if (!doctor || doctor.role !== 'doctor') {
+      return res.status(404).json({
+        success: false,
+        message: 'Doctor not found'
+      });
+    }
+
+    // Get appointment statistics
+    const Appointment = require('../models/Appointment');
+    const uniquePatients = await Appointment.distinct('userId', {
+      $or: [
+        { providerId: doctor._id.toString() }, // providerId is stored as string
+        { providerName: { $regex: `${doctor.doctorInfo?.title || 'Dr.'} ${doctor.firstName} ${doctor.lastName}`, $options: 'i' } }
+      ]
+    });
+
+    const totalAppointments = await Appointment.countDocuments({
+      $or: [
+        { providerId: doctor._id.toString() }, // providerId is stored as string
+        { providerName: { $regex: `${doctor.doctorInfo?.title || 'Dr.'} ${doctor.firstName} ${doctor.lastName}`, $options: 'i' } }
+      ]
+    });
+
+    const doctorDetails = {
+      // Basic Information
+      id: doctor._id,
+      firstName: doctor.firstName,
+      lastName: doctor.lastName,
+      name: `${doctor.doctorInfo?.title || 'Dr.'} ${doctor.firstName} ${doctor.lastName}`,
+      email: doctor.email,
+      phone: doctor.phone,
+      dateOfBirth: doctor.dateOfBirth,
+      gender: doctor.gender,
+
+      // Professional Information
+      specialty: doctor.doctorInfo?.specialization,
+      subSpecialty: doctor.doctorInfo?.subSpecialty,
+      experience: doctor.doctorInfo?.yearsOfExperience,
+      licenseNumber: doctor.doctorInfo?.licenseNumber,
+      licenseState: doctor.doctorInfo?.licenseState,
+      licenseExpirationDate: doctor.doctorInfo?.licenseExpirationDate,
+
+      // Education & Training
+      medicalSchool: doctor.doctorInfo?.medicalSchool,
+      residency: doctor.doctorInfo?.residency,
+      fellowship: doctor.doctorInfo?.fellowship,
+      graduationYear: doctor.doctorInfo?.graduationYear,
+
+      // Practice Information
+      officeAddress: doctor.doctorInfo?.officeAddress,
+      telemedicineExperience: doctor.doctorInfo?.telemedicineExperience,
+      isAcceptingPatients: doctor.doctorInfo?.isAcceptingPatients,
+
+      // Application Status
+      approvalStatus: doctor.doctorInfo?.approvalStatus,
+      applicationSubmittedAt: doctor.doctorInfo?.applicationSubmittedAt,
+      approvedAt: doctor.doctorInfo?.approvedAt,
+      rejectedAt: doctor.doctorInfo?.rejectedAt,
+      rejectionReason: doctor.doctorInfo?.rejectionReason,
+      adminNotes: doctor.doctorInfo?.adminNotes,
+
+      // Documents
+      applicationDocuments: doctor.doctorInfo?.applicationDocuments || [],
+
+      // Statistics
+      patientCount: uniquePatients.length,
+      totalAppointments: totalAppointments,
+
+      // Account Information
+      joinDate: doctor.createdAt,
+      lastLoginAt: doctor.lastLoginAt,
+      lastLogoutAt: doctor.lastLogoutAt,
+      isOnline: (() => {
+        const now = new Date();
+        const thirtyMinutesAgo = new Date(now.getTime() - 30 * 60 * 1000);
+        const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+
+        if (doctor.lastLoginAt && doctor.lastLoginAt > thirtyMinutesAgo) {
+          if (doctor.lastLogoutAt) {
+            if (doctor.lastLoginAt > doctor.lastLogoutAt) {
+              return true; // Login is more recent than logout
+            } else {
+              return doctor.lastLogoutAt > fiveMinutesAgo; // 5-minute grace period after logout
+            }
+          } else {
+            return true; // No logout time recorded
+          }
+        }
+        return false;
+      })()
+    };
+
+    console.log(`✅ Fetched details for doctor: ${doctor.firstName} ${doctor.lastName}`);
+
+    res.json({
+      success: true,
+      doctor: doctorDetails
+    });
+
+  } catch (error) {
+    console.error('❌ Error fetching doctor details:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch doctor details',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+/**
+ * @desc    Update doctor availability status
+ * @route   PUT /api/admin/doctors/:doctorId/availability
+ * @access  Private (Admin only)
+ */
+const updateDoctorAvailability = async (req, res) => {
+  try {
+    const { doctorId } = req.params;
+    const { isAcceptingPatients } = req.body;
+
+    console.log(`📋 Admin updating doctor ${doctorId} availability to: ${isAcceptingPatients}`);
+
+    if (typeof isAcceptingPatients !== 'boolean') {
+      return res.status(400).json({
+        success: false,
+        message: 'isAcceptingPatients must be a boolean value'
+      });
+    }
+
+    const doctor = await User.findById(doctorId);
+    if (!doctor || doctor.role !== 'doctor') {
+      return res.status(404).json({
+        success: false,
+        message: 'Doctor not found'
+      });
+    }
+
+    // Update availability status
+    doctor.doctorInfo.isAcceptingPatients = isAcceptingPatients;
+    doctor.doctorInfo.availabilityUpdatedAt = new Date();
+    doctor.doctorInfo.availabilityUpdatedBy = req.user.id;
+
+    await doctor.save();
+
+    console.log(`✅ Doctor ${doctorId} availability updated: ${isAcceptingPatients ? 'Accepting' : 'Not Accepting'} patients`);
+
+    res.json({
+      success: true,
+      message: `Doctor availability updated to ${isAcceptingPatients ? 'accepting' : 'not accepting'} patients`,
+      doctor: {
+        id: doctor._id,
+        name: `${doctor.doctorInfo?.title || 'Dr.'} ${doctor.firstName} ${doctor.lastName}`,
+        email: doctor.email,
+        isAcceptingPatients: doctor.doctorInfo.isAcceptingPatients,
+        updatedAt: doctor.doctorInfo.availabilityUpdatedAt
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error updating doctor availability:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update doctor availability',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
 // Export all functions
 module.exports = {
   adminLogin,
@@ -522,9 +1100,13 @@ module.exports = {
   // Add other functions as we implement them
   updateUserStatus: (req, res) => res.status(501).json({ message: 'Not implemented yet' }),
   deleteUser: (req, res) => res.status(501).json({ message: 'Not implemented yet' }),
-  approveDoctorRegistration: (req, res) => res.status(501).json({ message: 'Not implemented yet' }),
-  rejectDoctorRegistration: (req, res) => res.status(501).json({ message: 'Not implemented yet' }),
-  getPendingDoctors: (req, res) => res.status(501).json({ message: 'Not implemented yet' }),
+  approveDoctorRegistration,
+  rejectDoctorRegistration,
+  updateDoctorApprovalStatus,
+  getPendingDoctors,
+  getDoctorDetails,
+  updateDoctorAvailability,
+  deleteDoctorAccount: (req, res) => res.status(501).json({ message: 'Not implemented yet' }),
   getSystemStats: (req, res) => res.status(501).json({ message: 'Not implemented yet' }),
   getUserAnalytics: (req, res) => res.status(501).json({ message: 'Not implemented yet' }),
   getHealthDataAnalytics: (req, res) => res.status(501).json({ message: 'Not implemented yet' }),

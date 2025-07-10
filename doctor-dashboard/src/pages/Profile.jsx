@@ -95,7 +95,7 @@ const Profile = () => {
       // Transform backend data to match our structure
       const transformedData = {
         personalInfo: {
-          title: userData.title || "Dr.",
+          title: userData.doctorInfo?.title || userData.title || "Dr.",
           firstName: userData.firstName || "",
           lastName: userData.lastName || "",
           profilePictureUrl: userData.profilePicture || null,
@@ -141,7 +141,7 @@ const Profile = () => {
       // Transform context data to form structure
       const transformedData = {
         personalInfo: {
-          title: profileData.title || "Dr.",
+          title: profileData.doctorInfo?.title || profileData.title || "Dr.",
           firstName: profileData.firstName || "",
           lastName: profileData.lastName || "",
           profilePictureUrl: profileData.profilePicture || null,

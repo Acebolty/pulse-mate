@@ -44,7 +44,7 @@ const WelcomeCard = ({ dashboardData = {}, loading = false }) => {
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2, duration: 0.6 }}
           >
-            Hello, Dr. {currentUser?.firstName || 'Doctor'}!
+            Hello, {currentUser?.doctorInfo?.title || 'Dr.'} {currentUser?.firstName || 'Doctor'}!
           </motion.h1>
           <motion.p
             className="text-sky-100 dark:text-white mb-6 text-lg" // Adjusted text color

@@ -2,7 +2,8 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const cloudinary = require('../config/cloudinaryConfig');
-const { signupUser, loginUser, doctorSignup } = require('../controllers/authController');
+const { signupUser, loginUser, doctorSignup, logoutUser } = require('../controllers/authController');
+const auth = require('../middleware/authMiddleware');
 
 // Configure multer for file uploads
 const upload = multer({
@@ -35,6 +36,9 @@ router.post('/signup', signupUser);
 // POST /api/auth/login - User Login
 router.post('/login', loginUser);
 
+// POST /api/auth/logout - User Logout
+router.post('/logout', auth, logoutUser);
+
 // POST /api/auth/doctor-signup - Doctor Registration with Documents
 router.post('/doctor-signup', doctorSignup);
 
@@ -51,13 +55,35 @@ router.post('/upload-document', upload.single('document'), async (req, res) => {
       return res.status(400).json({ message: 'Document type is required' });
     }
 
+    // File validation - Only images allowed for consistency and compatibility
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+    const maxSize = 5 * 1024 * 1024; // 5MB
+
+    if (!allowedTypes.includes(req.file.mimetype)) {
+      return res.status(400).json({
+        message: 'Invalid file type. Only JPEG and PNG image files are allowed. Please scan or convert your documents to image format.'
+      });
+    }
+
+    if (req.file.size > maxSize) {
+      return res.status(400).json({
+        message: 'File size too large. Maximum size is 5MB.'
+      });
+    }
+
     // Upload to Cloudinary
+    // Remove file extension from original filename to prevent double extensions
+    // (Cloudinary automatically adds the correct extension based on file type)
+    const fileNameWithoutExt = req.file.originalname.replace(/\.[^/.]+$/, "");
+
+    console.log(`📄 Uploading image: ${req.file.originalname}`);
+
     const uploadResult = await new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
-          resource_type: 'auto',
+          resource_type: 'image', // All documents are now images
           folder: `doctor-registration/${documentType}`,
-          public_id: `${Date.now()}_${req.file.originalname}`,
+          public_id: `${Date.now()}_${fileNameWithoutExt}`,
         },
         (error, result) => {
           if (error) reject(error);
@@ -66,6 +92,8 @@ router.post('/upload-document', upload.single('document'), async (req, res) => {
       );
       uploadStream.end(req.file.buffer);
     });
+
+    console.log(`📄 Image upload successful: ${uploadResult.secure_url}`);
 
     res.json({
       message: 'Document uploaded successfully',

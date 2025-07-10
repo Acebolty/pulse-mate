@@ -1,12 +1,20 @@
-// import api from './api'; // Not strictly needed for logout, but often auth services handle login/signup too
+import api from './api';
 
 /**
- * Logs the doctor out by clearing stored authentication data.
+ * Logs the doctor out by clearing stored authentication data and updating server.
  */
-export const logout = (navigate) => {
+export const logout = async (navigate) => {
+  try {
+    // Call backend logout endpoint to update lastLogoutAt timestamp
+    await api.post('/auth/logout');
+  } catch (error) {
+    console.error('Error during logout:', error);
+    // Continue with logout even if server call fails
+  }
+
   localStorage.removeItem('doctorAuthToken');
   localStorage.removeItem('doctorAuthUser');
-  
+
   // Dispatch a custom event to notify other parts of the app about the auth change
   // This is a simple way; a dedicated state management (Context, Redux, Zustand) is better for complex apps.
   window.dispatchEvent(new Event("doctorAuthChange"));

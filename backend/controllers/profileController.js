@@ -49,7 +49,7 @@ const updateUserProfile = async (req, res) => {
   if (phone !== undefined) updateFields.phone = phone;
   if (dateOfBirth !== undefined) updateFields.dateOfBirth = dateOfBirth;
   if (gender !== undefined) updateFields.gender = gender;
-  if (title !== undefined) updateFields.title = title;
+  if (title !== undefined) updateFields['doctorInfo.title'] = title;
   // Special handling for profilePicture to allow removal
   if (profilePicture !== undefined) { // If profilePicture is part of the request
     if (profilePicture === null || profilePicture === "") {

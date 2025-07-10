@@ -15,7 +15,7 @@ const DocumentUpload = ({
   onFileUpload, 
   uploadedFile = null,
   onRemove,
-  accept = ".pdf,.jpg,.jpeg,.png,.doc,.docx"
+  accept = ".jpg,.jpeg,.png"
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -56,18 +56,15 @@ const DocumentUpload = ({
       return;
     }
 
-    // Validate file type
+    // Validate file type - Only images allowed
     const allowedTypes = [
-      'application/pdf',
       'image/jpeg',
-      'image/jpg', 
-      'image/png',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      'image/jpg',
+      'image/png'
     ];
-    
+
     if (!allowedTypes.includes(file.type)) {
-      setError('Please upload a PDF, image, or Word document');
+      setError('Please upload a JPG or PNG image file. Scan or convert your documents to image format.');
       return;
     }
 
@@ -83,10 +80,8 @@ const DocumentUpload = ({
 
   const getFileIcon = (fileName) => {
     const extension = fileName?.split('.').pop()?.toLowerCase();
-    if (['pdf'].includes(extension)) return '📄';
     if (['jpg', 'jpeg', 'png'].includes(extension)) return '🖼️';
-    if (['doc', 'docx'].includes(extension)) return '📝';
-    return '📎';
+    return '🖼️'; // All files are now images
   };
 
   return (
@@ -137,7 +132,7 @@ const DocumentUpload = ({
                     {' '}or drag and drop
                   </p>
                   <p className="text-xs text-gray-500 dark:text-slate-500">
-                    PDF, PNG, JPG, DOC up to 10MB
+                    JPG, PNG images up to 5MB
                   </p>
                 </div>
               </>

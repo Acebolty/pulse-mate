@@ -284,6 +284,14 @@ const userSchema = new Schema({
         sessionTimeout: { type: String, default: '30-minutes' }, // Informational, actual timeout is server/token config
         loginAlerts: { type: Boolean, default: true } // Notify of new logins
     }
+  },
+
+  // Login tracking for online/offline status
+  lastLoginAt: {
+    type: Date
+  },
+  lastLogoutAt: {
+    type: Date
   }
 
 }, { timestamps: true }); // timestamps: true adds createdAt and updatedAt fields automatically

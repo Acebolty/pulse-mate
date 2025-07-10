@@ -150,7 +150,7 @@ const PendingApprovalPage = () => {
             </h3>
             <div className="space-y-1 text-sm text-gray-600 dark:text-slate-400">
               <p>📧 Email: support@pulsemate.com</p>
-              <p>📞 Phone: (234) 704 463 2134</p>
+              <p>📞 Phone: (+234) 704 463 2134</p>
               <p>🕒 Hours: Mon-Fri 9AM-6PM GMT+1</p>
             </div>
           </div>

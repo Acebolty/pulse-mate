@@ -21,15 +21,15 @@ const Step3Documents = ({
     {
       type: 'medical_license',
       title: 'Medical License',
-      description: 'Upload a clear copy of your current medical license (front and back if applicable)',
-      acceptedFormats: '.pdf, .jpg, .jpeg, .png',
+      description: 'Upload a clear scan/photo of your current medical license (front and back if applicable)',
+      acceptedFormats: '.jpg, .jpeg, .png',
       required: true
     },
     {
       type: 'cv_resume',
       title: 'CV/Resume',
-      description: 'Upload your current curriculum vitae or professional resume',
-      acceptedFormats: '.pdf, .doc, .docx',
+      description: 'Upload a scan or photo of your current curriculum vitae or professional resume',
+      acceptedFormats: '.jpg, .jpeg, .png',
       required: true
     },
     {
@@ -45,15 +45,15 @@ const Step3Documents = ({
     {
       type: 'board_certification',
       title: 'Board Certification',
-      description: 'Upload your board certification documents (if applicable)',
-      acceptedFormats: '.pdf, .jpg, .jpeg, .png',
+      description: 'Upload a scan/photo of your board certification documents (if applicable)',
+      acceptedFormats: '.jpg, .jpeg, .png',
       required: false
     },
     {
       type: 'government_id',
       title: 'Government ID',
-      description: 'Upload a copy of your government-issued ID for verification',
-      acceptedFormats: '.pdf, .jpg, .jpeg, .png',
+      description: 'Upload a scan/photo of your government-issued ID for verification',
+      acceptedFormats: '.jpg, .jpeg, .png',
       required: false
     }
   ];
@@ -61,24 +61,21 @@ const Step3Documents = ({
   const handleFileSelect = async (documentType, file) => {
     if (!file) return;
 
-    // Validate file size (10MB limit)
-    if (file.size > 10 * 1024 * 1024) {
-      alert('File size must be less than 10MB');
+    // Validate file size (5MB limit)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File size must be less than 5MB');
       return;
     }
 
-    // Validate file type
+    // Validate file type - Only images allowed
     const allowedTypes = [
-      'application/pdf',
       'image/jpeg',
-      'image/jpg', 
-      'image/png',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      'image/jpg',
+      'image/png'
     ];
 
     if (!allowedTypes.includes(file.type)) {
-      alert('Invalid file type. Please upload PDF, image, or Word document.');
+      alert('Invalid file type. Please upload JPG or PNG image files only. Scan or convert your documents to image format.');
       return;
     }
 
@@ -203,6 +200,24 @@ const Step3Documents = ({
         <p className="text-gray-600 dark:text-slate-400">
           Please upload the required documents for verification. All documents will be securely stored and reviewed by our team.
         </p>
+
+        {/* Image Format Notice */}
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              <span className="text-2xl">📱</span>
+            </div>
+            <div className="ml-3">
+              <h4 className="font-medium text-blue-800 dark:text-blue-200 mb-1">
+                📸 Image Format Required
+              </h4>
+              <p className="text-blue-700 dark:text-blue-300 text-sm">
+                All documents must be uploaded as <strong>JPG or PNG images</strong>. If you have PDF or Word documents,
+                please scan them or take clear photos with your phone/camera and save as image files.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {error && (
@@ -266,8 +281,9 @@ const Step3Documents = ({
         </h4>
         <ul className="text-yellow-700 dark:text-yellow-300 text-sm space-y-1">
           <li>• All documents must be clear and legible</li>
-          <li>• File size limit: 10MB per document</li>
-          <li>• Accepted formats: PDF, JPG, PNG, DOC, DOCX</li>
+          <li>• File size limit: 5MB per document</li>
+          <li>• Accepted formats: JPG, PNG images only</li>
+          <li>• Please scan or convert PDF/Word documents to image format</li>
           <li>• Documents will be securely stored and encrypted</li>
           <li>• You can replace documents by uploading new ones</li>
         </ul>
