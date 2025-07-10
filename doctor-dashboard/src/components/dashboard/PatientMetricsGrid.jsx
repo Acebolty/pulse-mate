@@ -166,25 +166,111 @@ const PatientMetricsGrid = () => {
     await fetchPatientDetailedHealthData(patient);
   };
 
-  // Helper method to fetch health data for patients
+  // Health score calculation function (similar to patient dashboard)
+  const calculateHealthScore = (healthData, healthTargets) => {
+    let score = 100;
+    let factors = [];
+
+    // Check heart rate against targets
+    if (healthData.heartRate && healthData.heartRate.value) {
+      const currentHR = healthData.heartRate.value;
+      const hrMin = healthTargets.heartRate.min;
+      const hrMax = healthTargets.heartRate.max;
+
+      if (currentHR < hrMin - 10 || currentHR > hrMax + 20) {
+        score -= 20;
+        factors.push(`Heart rate (${currentHR} bpm) outside optimal range (${hrMin}-${hrMax} bpm)`);
+      } else if (currentHR < hrMin || currentHR > hrMax) {
+        score -= 10;
+        factors.push(`Heart rate (${currentHR} bpm) outside target range (${hrMin}-${hrMax} bpm)`);
+      }
+    }
+
+    // Check blood pressure against targets
+    if (healthData.bloodPressure && healthData.bloodPressure.value) {
+      const currentSystolic = healthData.bloodPressure.value.systolic;
+      const currentDiastolic = healthData.bloodPressure.value.diastolic;
+      const systolicMin = healthTargets.bloodPressure.systolic.min;
+      const systolicMax = healthTargets.bloodPressure.systolic.max;
+      const diastolicMin = healthTargets.bloodPressure.diastolic.min;
+      const diastolicMax = healthTargets.bloodPressure.diastolic.max;
+
+      if (currentSystolic < systolicMin - 10 || currentSystolic > systolicMax + 20 ||
+          currentDiastolic < diastolicMin - 10 || currentDiastolic > diastolicMax + 20) {
+        score -= 20;
+        factors.push(`Blood pressure (${currentSystolic}/${currentDiastolic} mmHg) outside optimal range`);
+      } else if (currentSystolic < systolicMin || currentSystolic > systolicMax ||
+                 currentDiastolic < diastolicMin || currentDiastolic > diastolicMax) {
+        score -= 10;
+        factors.push(`Blood pressure (${currentSystolic}/${currentDiastolic} mmHg) outside target range`);
+      }
+    }
+
+    // Check glucose level against targets
+    if (healthData.glucose && healthData.glucose.value) {
+      const currentGlucose = healthData.glucose.value;
+      const glucoseMin = healthTargets.glucoseLevel.min;
+      const glucoseMax = healthTargets.glucoseLevel.max;
+
+      if (currentGlucose < glucoseMin - 20 || currentGlucose > glucoseMax + 50) {
+        score -= 20;
+        factors.push(`Glucose level (${currentGlucose} mg/dL) outside optimal range (${glucoseMin}-${glucoseMax} mg/dL)`);
+      } else if (currentGlucose < glucoseMin || currentGlucose > glucoseMax) {
+        score -= 10;
+        factors.push(`Glucose level (${currentGlucose} mg/dL) outside target range (${glucoseMin}-${glucoseMax} mg/dL)`);
+      }
+    }
+
+    // Check body temperature against targets
+    if (healthData.temperature && healthData.temperature.value) {
+      const currentTemp = healthData.temperature.value;
+      const tempMin = healthTargets.bodyTemperature.min;
+      const tempMax = healthTargets.bodyTemperature.max;
+
+      if (currentTemp < tempMin - 2 || currentTemp > tempMax + 2) {
+        score -= 20;
+        factors.push(`Body temperature (${currentTemp}°F) outside optimal range (${tempMin}-${tempMax}°F)`);
+      } else if (currentTemp < tempMin || currentTemp > tempMax) {
+        score -= 10;
+        factors.push(`Body temperature (${currentTemp}°F) outside target range (${tempMin}-${tempMax}°F)`);
+      }
+    }
+
+    // Ensure score doesn't go below 0
+    score = Math.max(0, score);
+
+    const getScoreLabel = (score) => {
+      if (score >= 90) return 'Excellent';
+      if (score >= 80) return 'Very Good';
+      if (score >= 70) return 'Good';
+      if (score >= 60) return 'Fair';
+      return 'Needs Attention';
+    };
+
+    return { score: Math.round(score), label: getScoreLabel(score), factors };
+  };
+
+  // Helper method to fetch health data for patients and calculate health score
   const fetchHealthDataForPatients = async (patients) => {
     const patientHealthPromises = patients.map(async (patient) => {
       try {
         console.log(`Fetching health data for patient: ${patient.name} (${patient.userId})`);
 
-        // Get latest health readings for each patient using the correct endpoint
-        const [heartRateRes, bloodPressureRes, glucoseRes, temperatureRes] = await Promise.allSettled([
+        // Get latest health readings and health targets for each patient
+        const [heartRateRes, bloodPressureRes, glucoseRes, temperatureRes, profileRes] = await Promise.allSettled([
           api.get(`/health-data/patient/${patient.userId}`, { params: { dataType: 'heartRate', limit: 1 } }),
           api.get(`/health-data/patient/${patient.userId}`, { params: { dataType: 'bloodPressure', limit: 1 } }),
           api.get(`/health-data/patient/${patient.userId}`, { params: { dataType: 'glucoseLevel', limit: 1 } }),
-          api.get(`/health-data/patient/${patient.userId}`, { params: { dataType: 'bodyTemperature', limit: 1 } })
+          api.get(`/health-data/patient/${patient.userId}`, { params: { dataType: 'bodyTemperature', limit: 1 } }),
+          api.get(`/users/${patient.userId}`)
         ]);
 
         console.log(`Health data responses for ${patient.name}:`, {
           heartRate: heartRateRes.status,
           bloodPressure: bloodPressureRes.status,
           glucose: glucoseRes.status,
-          temperature: temperatureRes.status
+          temperature: temperatureRes.status,
+          profile: profileRes.status
         });
 
         // Process health data
@@ -195,7 +281,19 @@ const PatientMetricsGrid = () => {
           temperature: temperatureRes.status === 'fulfilled' && temperatureRes.value.data.data?.[0] ? temperatureRes.value.data.data[0] : null
         };
 
+        // Get patient profile and health targets
+        const patientProfile = profileRes.status === 'fulfilled' ? profileRes.value.data : null;
+        const healthTargets = patientProfile?.healthTargets || {
+          heartRate: { min: 60, max: 100 },
+          bloodPressure: { systolic: { min: 90, max: 120 }, diastolic: { min: 60, max: 80 } },
+          glucoseLevel: { min: 70, max: 140 },
+          bodyTemperature: { min: 97.0, max: 99.5 }
+        };
+
         console.log(`Processed health data for ${patient.name}:`, healthData);
+
+        // Calculate health score
+        const healthScore = calculateHealthScore(healthData, healthTargets);
 
         // Debug blood pressure specifically
         if (healthData.bloodPressure) {
@@ -263,16 +361,18 @@ const PatientMetricsGrid = () => {
         return {
           id: patient.userId,
           name: patient.name,
-          keyMetric,
-          status,
+          keyMetric: `Health Score: ${healthScore.score}`,
+          status: healthScore.score >= 80 ? 'stable' : healthScore.score >= 60 ? 'warning' : 'critical',
           lastUpdate,
-          icon,
-          metricDetails,
-          gradient,
-          bgGradient: status === "critical" ? "from-red-50 to-pink-50" :
-                     status === "warning" ? "from-amber-50 to-orange-50" : "from-emerald-50 to-green-50",
-          bgGradientDark: status === "critical" ? "dark:from-red-900/50 dark:to-pink-900/50" :
-                         status === "warning" ? "dark:from-amber-900/50 dark:to-orange-900/50" : "dark:from-emerald-900/50 dark:to-green-900/50"
+          icon: ShieldCheckIcon,
+          metricDetails: healthScore.label,
+          healthScore: healthScore,
+          gradient: healthScore.score >= 80 ? "from-green-400 to-emerald-500" :
+                   healthScore.score >= 60 ? "from-amber-400 to-orange-500" : "from-red-400 to-pink-500",
+          bgGradient: healthScore.score >= 80 ? "from-emerald-50 to-green-50" :
+                     healthScore.score >= 60 ? "from-amber-50 to-orange-50" : "from-red-50 to-pink-50",
+          bgGradientDark: healthScore.score >= 80 ? "dark:from-emerald-900/50 dark:to-green-900/50" :
+                         healthScore.score >= 60 ? "dark:from-amber-900/50 dark:to-orange-900/50" : "dark:from-red-900/50 dark:to-pink-900/50"
         };
 
       } catch (err) {
@@ -311,8 +411,8 @@ const PatientMetricsGrid = () => {
         setLoading(true);
         setError(null);
 
-        // Get patients through appointments (proper medical workflow)
-        const appointmentsRes = await api.get('/appointments/doctor');
+        // Get patients through appointments (proper medical workflow) - request more appointments
+        const appointmentsRes = await api.get('/appointments/doctor?limit=100');
 
         // Handle different response structures
         const appointments = appointmentsRes.data?.data || appointmentsRes.data || [];
@@ -326,10 +426,32 @@ const PatientMetricsGrid = () => {
           return;
         }
 
-        // Extract unique patients from appointments
+        // Debug: Log all appointments and their statuses
+        console.log('All appointments received:', appointments.length);
+        appointments.forEach((apt, index) => {
+          console.log(`Appointment ${index + 1}:`, {
+            id: apt._id,
+            status: apt.status,
+            patient: apt.userId?.firstName || apt.userId || 'Unknown',
+            date: apt.dateTime
+          });
+        });
+
+        // Filter appointments to only include "Open Chat" status
+        const openChatAppointments = appointments.filter(appointment => {
+          const status = appointment.status;
+          const isOpenChat = status === 'Open Chat' || status === 'open_chat' || status === 'open chat';
+          console.log(`Checking appointment ${appointment._id}: status="${status}", isOpenChat=${isOpenChat}`);
+          return isOpenChat;
+        });
+
+        console.log('Filtered Open Chat appointments:', openChatAppointments.length);
+        console.log('Open Chat appointments:', openChatAppointments);
+
+        // Extract unique patients from Open Chat appointments only
         const uniquePatients = new Map();
 
-        appointments.forEach(appointment => {
+        openChatAppointments.forEach(appointment => {
           // Handle different data structures
           let userId, patientData, patientName;
 
@@ -363,6 +485,7 @@ const PatientMetricsGrid = () => {
         });
 
         if (uniquePatients.size === 0) {
+          console.log('No patients with Open Chat status found');
           setPatientsData([]);
           return;
         }
@@ -461,8 +584,8 @@ const PatientMetricsGrid = () => {
     return (
       <div className="bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl p-8 text-center">
         <UserGroupIcon className="w-16 h-16 text-gray-400 dark:text-slate-500 mx-auto mb-4" />
-        <h3 className="text-lg font-semibold text-gray-700 dark:text-slate-300 mb-2">No Patients Found</h3>
-        <p className="text-gray-500 dark:text-slate-400">No patients are currently under your care or have recent appointments.</p>
+        <h3 className="text-lg font-semibold text-gray-700 dark:text-slate-300 mb-2">No Active Chat Sessions</h3>
+        <p className="text-gray-500 dark:text-slate-400">No patients with active chat sessions found. Patients will appear here when their appointments have "Open Chat" status.</p>
       </div>
     );
   }

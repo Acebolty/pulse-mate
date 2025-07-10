@@ -197,9 +197,42 @@ const deleteAppointment = async (req, res) => {
 // @access  Private
 const getDoctorAppointments = async (req, res) => {
   try {
-    const { status, upcoming, past, limit = 10, page = 1, sortBy = 'dateTime', order = 'asc' } = req.query;
+    const { status, upcoming, past, limit = 100, page = 1, sortBy = 'dateTime', order = 'desc' } = req.query;
 
     console.log('🩺 getDoctorAppointments called for user:', req.user.id);
+
+    // DEBUG: Log ALL appointments in the database to find the missing one
+    console.log('🔍 DEBUG: Checking ALL appointments in database...');
+    const allAppointments = await Appointment.find({}).populate('userId', 'firstName lastName email');
+    console.log(`📋 DEBUG: Total appointments in database: ${allAppointments.length}`);
+
+    // Look for the specific appointment ID that should have "Open Chat" status
+    const targetAppointment = allAppointments.find(apt => apt._id.toString() === '686e42ccaa1b9865cc09e80a');
+    if (targetAppointment) {
+      console.log('🎯 DEBUG: Found target appointment:', {
+        id: targetAppointment._id,
+        status: targetAppointment.status,
+        providerId: targetAppointment.providerId,
+        providerName: targetAppointment.providerName,
+        patient: targetAppointment.userId ? `${targetAppointment.userId.firstName} ${targetAppointment.userId.lastName}` : 'Unknown',
+        dateTime: targetAppointment.dateTime
+      });
+    } else {
+      console.log('❌ DEBUG: Target appointment 686e42ccaa1b9865cc09e80a NOT FOUND in database');
+    }
+
+    // Show all "Open Chat" appointments
+    const openChatAppointments = allAppointments.filter(apt => apt.status === 'Open Chat');
+    console.log(`📋 DEBUG: Open Chat appointments found: ${openChatAppointments.length}`);
+    openChatAppointments.forEach(apt => {
+      console.log('💬 Open Chat appointment:', {
+        id: apt._id,
+        status: apt.status,
+        providerId: apt.providerId,
+        providerName: apt.providerName,
+        patient: apt.userId ? `${apt.userId.firstName} ${apt.userId.lastName}` : 'Unknown'
+      });
+    });
 
     // Get the current doctor's info
     const User = require('../models/User');
@@ -523,6 +556,48 @@ const handleChatSessionManagement = async (appointment, newStatus) => {
   }
 };
 
+// @desc    Debug: Get specific appointment by ID
+// @route   GET api/appointments/debug/:appointmentId
+// @access  Private
+const debugGetAppointment = async (req, res) => {
+  try {
+    const { appointmentId } = req.params;
+    console.log('🔍 Debug: Looking for appointment:', appointmentId);
+
+    const appointment = await Appointment.findById(appointmentId).populate('userId', 'firstName lastName email');
+
+    if (!appointment) {
+      console.log('❌ Debug: Appointment not found');
+      return res.status(404).json({ message: 'Appointment not found' });
+    }
+
+    console.log('✅ Debug: Appointment found:', {
+      id: appointment._id,
+      status: appointment.status,
+      providerId: appointment.providerId,
+      providerName: appointment.providerName,
+      patient: appointment.userId ? `${appointment.userId.firstName} ${appointment.userId.lastName}` : 'Unknown',
+      dateTime: appointment.dateTime
+    });
+
+    res.json({
+      success: true,
+      data: appointment,
+      debug: {
+        id: appointment._id,
+        status: appointment.status,
+        providerId: appointment.providerId,
+        providerName: appointment.providerName,
+        patient: appointment.userId ? `${appointment.userId.firstName} ${appointment.userId.lastName}` : 'Unknown',
+        dateTime: appointment.dateTime
+      }
+    });
+  } catch (error) {
+    console.error('❌ Debug appointment error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
 module.exports = {
   createAppointment,
   getAppointments,
@@ -532,5 +607,6 @@ module.exports = {
   getActiveSessions,
   getDoctorSessions,
   getAvailableDoctors,
-  getDoctorDashboardAnalytics
+  getDoctorDashboardAnalytics,
+  debugGetAppointment
 };

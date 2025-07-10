@@ -48,3 +48,13 @@ User Email: admin@pulsemate.com
 Chat ID: 6863b1e8f5a0b4eb647ce8b0
 Previous status: false
 2025-07-03T16:38:47.509Z - CHAT LINKED SUCCESSFULLY, chatRoomId=6863b1e8f5a0b4eb647ce8b0
+
+2025-07-10T12:37:10.798Z - 🚀 APPOINTMENT APPROVAL ROUTE CALLED!
+Appointment ID: 686e42ccaa1b9865cc09e80a
+User ID: 68628e5655158188e4bab80c
+User Email: admin@pulsemate.com
+2025-07-10T12:37:11.134Z - APPOINTMENT UPDATED: chatEnabled=true, sessionEndTime=null
+2025-07-10T12:37:11.296Z - LINKING EXISTING CHAT
+Chat ID: 6863b1e8f5a0b4eb647ce8b0
+Previous status: false
+2025-07-10T12:37:11.627Z - CHAT LINKED SUCCESSFULLY, chatRoomId=6863b1e8f5a0b4eb647ce8b0
