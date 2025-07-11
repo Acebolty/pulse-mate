@@ -439,45 +439,62 @@ const getDoctorDashboardAnalytics = async (req, res) => {
       return aptDate >= startOfToday && aptDate < endOfToday;
     });
 
-    // Approved appointments today
-    const approvedToday = todayAppointments.filter(apt => apt.status === 'approved').length;
+    // NEW DASHBOARD CARDS LOGIC
 
-    // Total approved appointments (all time)
-    const totalApproved = allAppointments.filter(apt => apt.status === 'approved').length;
+    // 1. Total Patients - unique patients who ever had appointments with this doctor (already calculated above)
+    // totalPatients is already correct
 
-    // Total appointments (all statuses)
-    const totalAppointments = allAppointments.length;
+    // 2. Open Appointments - appointments currently in 'Open Chat' status
+    const openAppointments = allAppointments.filter(apt => apt.status === 'Open Chat').length;
 
-    // Completed appointments today
-    const completedToday = todayAppointments.filter(apt =>
-      apt.status === 'completed' || apt.status === 'cancelled'
-    ).length;
+    // 3. Appointments in Waiting - appointments with 'Approved' status waiting for doctor to open
+    const appointmentsWaiting = allAppointments.filter(apt => apt.status === 'Approved').length;
 
-    // Get health alerts for doctor's patients
-    const Alert = require('../models/Alert');
-    const patientAlerts = await Alert.find({
-      userId: { $in: uniquePatientIds },
-      isRead: false
-    });
+    // 4. Recent Alerts - critical/warning alerts from patients currently in 'Open Chat' appointments
+    const openChatAppointments = allAppointments.filter(apt => apt.status === 'Open Chat');
+    const openChatPatientIds = openChatAppointments.map(apt => apt.userId._id.toString());
 
-    // Critical alerts requiring doctor review
-    const criticalAlerts = patientAlerts.filter(alert =>
-      alert.type === 'critical' || alert.priority === 'high'
-    ).length;
+    let recentAlerts = 0;
 
-    // Pending reviews (critical health alerts)
-    const pendingReviews = criticalAlerts;
+    // Only query alerts if there are patients in open chat sessions
+    if (openChatPatientIds.length > 0) {
+      try {
+        const Alert = require('../models/Alert');
+        const openChatPatientAlerts = await Alert.find({
+          userId: { $in: openChatPatientIds },
+          isRead: false,
+          $or: [
+            { type: 'critical' },
+            { type: 'warning' },
+            { priority: 'high' },
+            { priority: 'medium' }
+          ]
+        });
+        recentAlerts = openChatPatientAlerts.length;
+      } catch (alertError) {
+        console.error('Error fetching alerts:', alertError);
+        recentAlerts = 0; // Default to 0 if alert query fails
+      }
+    }
 
     const analytics = {
-      totalPatients,
+      // New dashboard cards
+      totalPatients,           // Card 1: Unique patients who ever had appointments with doctor
+      openAppointments,        // Card 2: Current 'Open Chat' appointments
+      appointmentsWaiting,     // Card 3: 'Approved' appointments waiting for doctor
+      recentAlerts,           // Card 4: Critical/warning alerts from open chat patients
+
+      // Legacy fields (keeping for backward compatibility)
       appointmentsToday: todayAppointments.length,
-      approvedToday,
-      totalApproved,
-      totalAppointments,
-      completedToday,
-      pendingReviews,
-      criticalAlerts,
-      systemStatus: totalAppointments > 0 ? 'All Systems Operational' : 'No Data Available'
+      approvedToday: todayAppointments.filter(apt => apt.status === 'Approved').length,
+      totalApproved: allAppointments.filter(apt => apt.status === 'Approved').length,
+      totalAppointments: allAppointments.length,
+      completedToday: todayAppointments.filter(apt =>
+        apt.status === 'Completed' || apt.status === 'Cancelled'
+      ).length,
+      pendingReviews: 0, // Deprecated
+      criticalAlerts: recentAlerts, // Use new recentAlerts logic
+      systemStatus: allAppointments.length > 0 ? 'All Systems Operational' : 'No Data Available'
     };
 
     console.log('📊 Doctor dashboard analytics:', analytics);
