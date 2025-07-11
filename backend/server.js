@@ -84,6 +84,10 @@ app.use('/api/simulation', simulationRoutes); // All routes will be prefixed wit
 const emailTestRoutes = require('./routes/emailTest');
 app.use('/api/email-test', emailTestRoutes); // All routes will be prefixed with /api/email-test
 
+// Import and use notification routes
+const notificationRoutes = require('./routes/notificationRoutes');
+app.use('/api/notifications', notificationRoutes); // All routes will be prefixed with /api/notifications
+
 // Import and use admin routes
 const adminRoutes = require('./routes/adminRoutes');
 console.log('📋 Admin routes loaded successfully');

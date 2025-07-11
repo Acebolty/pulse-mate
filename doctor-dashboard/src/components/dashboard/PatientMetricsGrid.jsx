@@ -206,33 +206,33 @@ const PatientMetricsGrid = () => {
       }
     }
 
-    // Check glucose level against targets
+    // Check glucose level against targets (matching patient dashboard logic)
     if (healthData.glucose && healthData.glucose.value) {
       const currentGlucose = healthData.glucose.value;
       const glucoseMin = healthTargets.glucoseLevel.min;
       const glucoseMax = healthTargets.glucoseLevel.max;
 
-      if (currentGlucose < glucoseMin - 20 || currentGlucose > glucoseMax + 50) {
+      if (currentGlucose > glucoseMax + 40 || currentGlucose < glucoseMin - 20) {
         score -= 20;
-        factors.push(`Glucose level (${currentGlucose} mg/dL) outside optimal range (${glucoseMin}-${glucoseMax} mg/dL)`);
-      } else if (currentGlucose < glucoseMin || currentGlucose > glucoseMax) {
+        factors.push(`Blood glucose (${Math.round(currentGlucose)} mg/dL) critically outside range`);
+      } else if (currentGlucose > glucoseMax || currentGlucose < glucoseMin) {
         score -= 10;
-        factors.push(`Glucose level (${currentGlucose} mg/dL) outside target range (${glucoseMin}-${glucoseMax} mg/dL)`);
+        factors.push(`Blood glucose (${Math.round(currentGlucose)} mg/dL) outside target range (${glucoseMin}-${glucoseMax} mg/dL)`);
       }
     }
 
-    // Check body temperature against targets
+    // Check body temperature against targets (matching patient dashboard logic)
     if (healthData.temperature && healthData.temperature.value) {
       const currentTemp = healthData.temperature.value;
       const tempMin = healthTargets.bodyTemperature.min;
       const tempMax = healthTargets.bodyTemperature.max;
 
-      if (currentTemp < tempMin - 2 || currentTemp > tempMax + 2) {
-        score -= 20;
-        factors.push(`Body temperature (${currentTemp}°F) outside optimal range (${tempMin}-${tempMax}°F)`);
-      } else if (currentTemp < tempMin || currentTemp > tempMax) {
-        score -= 10;
-        factors.push(`Body temperature (${currentTemp}°F) outside target range (${tempMin}-${tempMax}°F)`);
+      if (currentTemp > tempMax + 1 || currentTemp < tempMin - 1) {
+        score -= 15;
+        factors.push(`Body temperature (${currentTemp.toFixed(1)}°F) outside safe range`);
+      } else if (currentTemp > tempMax || currentTemp < tempMin) {
+        score -= 5;
+        factors.push(`Body temperature (${currentTemp.toFixed(1)}°F) outside target range (${tempMin}-${tempMax}°F)`);
       }
     }
 
@@ -294,6 +294,12 @@ const PatientMetricsGrid = () => {
 
         // Calculate health score
         const healthScore = calculateHealthScore(healthData, healthTargets);
+        console.log(`🩺 Doctor Dashboard - Health Score for ${patient.name}:`, {
+          score: healthScore.score,
+          factors: healthScore.factors,
+          healthData: healthData,
+          healthTargets: healthTargets
+        });
 
         // Debug blood pressure specifically
         if (healthData.bloodPressure) {

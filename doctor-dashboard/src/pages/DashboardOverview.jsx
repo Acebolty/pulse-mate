@@ -87,6 +87,18 @@ const DashboardOverview = () => {
 
   useEffect(() => {
     fetchDashboardData();
+
+    // Listen for notifications marked as read events to refresh dashboard
+    const handleNotificationsMarkedAsRead = () => {
+      console.log('📊 Dashboard: Received notifications marked as read event, refreshing dashboard data...');
+      fetchDashboardData();
+    };
+
+    window.addEventListener('notificationsMarkedAsRead', handleNotificationsMarkedAsRead);
+
+    return () => {
+      window.removeEventListener('notificationsMarkedAsRead', handleNotificationsMarkedAsRead);
+    };
   }, []);
 
   // Refresh data when returning to dashboard (e.g., from notifications)

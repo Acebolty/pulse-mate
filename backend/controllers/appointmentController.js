@@ -1,6 +1,7 @@
 const Appointment = require('../models/Appointment');
 const User = require('../models/User');
 const Chat = require('../models/Chat');
+const Notification = require('../models/Notification');
 
 // @desc    Create a new appointment for the logged-in user
 // @route   POST api/appointments
@@ -31,6 +32,50 @@ const createAppointment = async (req, res) => {
     });
 
     await newAppointment.save();
+
+    // Create notification for the doctor about the new appointment request
+    try {
+      // Get patient information for the notification
+      const patient = await User.findById(req.user.id).select('firstName lastName email');
+
+      // Find the doctor by providerId or providerName
+      let doctor = null;
+      if (providerId) {
+        doctor = await User.findById(providerId).select('_id firstName lastName');
+      } else {
+        // Try to find doctor by name (fallback)
+        doctor = await User.findOne({
+          role: 'doctor',
+          $or: [
+            { $expr: { $eq: [{ $concat: ['$firstName', ' ', '$lastName'] }, providerName] } },
+            { $expr: { $eq: [{ $concat: ['$doctorInfo.title', ' ', '$firstName', ' ', '$lastName'] }, providerName] } }
+          ]
+        }).select('_id firstName lastName');
+      }
+
+      if (doctor && patient) {
+        // Create notification data
+        const appointmentData = {
+          ...newAppointment.toObject(),
+          patientName: `${patient.firstName} ${patient.lastName}`
+        };
+
+        // Create notification for the doctor
+        await Notification.createAppointmentNotification(
+          appointmentData,
+          doctor._id,
+          'appointment_request'
+        );
+
+        console.log(`📧 Created appointment notification for doctor ${doctor._id}`);
+      } else {
+        console.warn('⚠️ Could not create notification - doctor or patient not found');
+      }
+    } catch (notificationError) {
+      console.error('Error creating appointment notification:', notificationError);
+      // Don't fail the appointment creation if notification fails
+    }
+
     res.status(201).json(newAppointment);
 
   } catch (error) {
@@ -460,9 +505,11 @@ const getDoctorDashboardAnalytics = async (req, res) => {
     if (openChatPatientIds.length > 0) {
       try {
         const Alert = require('../models/Alert');
+        const DoctorAlertRead = require('../models/DoctorAlertRead');
+
+        // Get all alerts for open chat patients
         const openChatPatientAlerts = await Alert.find({
           userId: { $in: openChatPatientIds },
-          isRead: false,
           $or: [
             { type: 'critical' },
             { type: 'warning' },
@@ -470,7 +517,17 @@ const getDoctorDashboardAnalytics = async (req, res) => {
             { priority: 'medium' }
           ]
         });
-        recentAlerts = openChatPatientAlerts.length;
+
+        // Get doctor's read status for these alerts
+        const doctorReadStatuses = await DoctorAlertRead.find({
+          doctorId,
+          alertId: { $in: openChatPatientAlerts.map(alert => alert._id) }
+        });
+
+        const readAlertIds = new Set(doctorReadStatuses.map(dr => dr.alertId.toString()));
+
+        // Count only alerts that doctor hasn't read yet
+        recentAlerts = openChatPatientAlerts.filter(alert => !readAlertIds.has(alert._id.toString())).length;
       } catch (alertError) {
         console.error('Error fetching alerts:', alertError);
         recentAlerts = 0; // Default to 0 if alert query fails

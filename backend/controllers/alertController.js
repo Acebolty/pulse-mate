@@ -107,15 +107,16 @@ const getPatientAlerts = async (req, res) => {
     const { limit = 10, type } = req.query;
     const doctorId = req.user.id;
 
-    // Verify the doctor has access to this patient (through appointments)
+    // Verify the doctor has access to this patient (through ACTIVE appointments only)
     const Appointment = require('../models/Appointment');
     const hasAccess = await Appointment.findOne({
       userId: patientId,
-      providerId: doctorId
+      providerId: doctorId,
+      status: 'Open Chat' // Only allow access if there's an active chat session
     });
 
     if (!hasAccess) {
-      return res.status(403).json({ message: 'Access denied. No appointment relationship with this patient.' });
+      return res.status(403).json({ message: 'Access denied. No active appointment with this patient.' });
     }
 
     const query = { userId: patientId };
@@ -156,17 +157,21 @@ const getDoctorNotifications = async (req, res) => {
 
     console.log('🔔 Getting doctor notifications for:', doctorId);
 
-    // Get all appointments for this doctor to find their patients
+    // Get ONLY active "Open Chat" appointments for this doctor
     const Appointment = require('../models/Appointment');
     const User = require('../models/User');
+    const DoctorAlertRead = require('../models/DoctorAlertRead');
 
-    const appointments = await Appointment.find({ providerId: doctorId })
+    const appointments = await Appointment.find({
+      providerId: doctorId,
+      status: 'Open Chat' // Only show alerts for patients with active chat sessions
+    })
       .populate('userId', 'firstName lastName email')
       .select('userId');
 
-    // Get unique patient IDs
+    // Get unique patient IDs from active appointments only
     const uniquePatientIds = [...new Set(appointments.map(apt => apt.userId._id.toString()))];
-    console.log('👥 Doctor has patients:', uniquePatientIds.length);
+    console.log('👥 Doctor has active "Open Chat" patients:', uniquePatientIds.length);
 
     if (uniquePatientIds.length === 0) {
       return res.json({
@@ -184,22 +189,39 @@ const getDoctorNotifications = async (req, res) => {
     .sort({ timestamp: -1 })
     .limit(parseInt(limit));
 
-    // Format alerts with patient names
+    // Get doctor's read status for these alerts
+    const doctorReadStatuses = await DoctorAlertRead.find({
+      doctorId,
+      alertId: { $in: alerts.map(alert => alert._id) }
+    });
+
+    const readAlertIds = new Set(doctorReadStatuses.map(dr => dr.alertId.toString()));
+
+    // Format alerts with patient names and doctor's read status
     const formattedAlerts = alerts.map(alert => ({
       ...alert.toObject(),
       patientName: alert.userId ? `${alert.userId.firstName} ${alert.userId.lastName}` : 'Unknown Patient',
       patientEmail: alert.userId?.email || '',
-      patientProfilePicture: alert.userId?.profilePicture || null
+      patientProfilePicture: alert.userId?.profilePicture || null,
+      isRead: readAlertIds.has(alert._id.toString()) // Doctor's read status, not patient's
     }));
 
     const totalAlerts = await Alert.countDocuments({
       userId: { $in: uniquePatientIds }
     });
 
-    const unreadCount = await Alert.countDocuments({
-      userId: { $in: uniquePatientIds },
-      isRead: false
+    // Count unread alerts based on doctor's read status, not patient's
+    const allPatientAlerts = await Alert.find({
+      userId: { $in: uniquePatientIds }
+    }).select('_id');
+
+    const allDoctorReadStatuses = await DoctorAlertRead.find({
+      doctorId,
+      alertId: { $in: allPatientAlerts.map(alert => alert._id) }
     });
+
+    const allReadAlertIds = new Set(allDoctorReadStatuses.map(dr => dr.alertId.toString()));
+    const unreadCount = allPatientAlerts.filter(alert => !allReadAlertIds.has(alert._id.toString())).length;
 
     console.log('📊 Doctor notifications:', {
       total: formattedAlerts.length,
@@ -230,7 +252,7 @@ const markPatientAlertAsRead = async (req, res) => {
 
     // First, verify the doctor has access to this alert through appointments
     const Appointment = require('../models/Appointment');
-    const User = require('../models/User');
+    const DoctorAlertRead = require('../models/DoctorAlertRead');
 
     // Get the alert to find the patient
     const alert = await Alert.findById(alertId);
@@ -248,18 +270,24 @@ const markPatientAlertAsRead = async (req, res) => {
       return res.status(403).json({ message: 'Access denied. No appointment relationship with this patient.' });
     }
 
-    // Mark the alert as read
-    const updatedAlert = await Alert.findByIdAndUpdate(
-      alertId,
-      { isRead: true },
-      { new: true }
-    ).populate('userId', 'firstName lastName email');
+    // Create or update doctor read status (separate from patient's read status)
+    const doctorRead = await DoctorAlertRead.findOneAndUpdate(
+      { doctorId, alertId },
+      {
+        doctorId,
+        alertId,
+        patientId: alert.userId,
+        readAt: new Date()
+      },
+      { upsert: true, new: true }
+    );
 
-    console.log('✅ Alert marked as read by doctor:', updatedAlert._id);
+    console.log('✅ Alert marked as read by doctor (separate tracking):', alertId);
 
     res.json({
       success: true,
-      alert: updatedAlert,
+      alert: alert,
+      doctorRead: doctorRead,
       message: 'Alert marked as read successfully'
     });
 
@@ -278,13 +306,16 @@ const markAllPatientAlertsAsRead = async (req, res) => {
 
     console.log('🩺 Doctor marking all patient alerts as read:', doctorId);
 
-    // Get all appointments for this doctor to find their patients
+    // Get ALL appointments for this doctor to find all their patients
     const Appointment = require('../models/Appointment');
 
-    const appointments = await Appointment.find({ providerId: doctorId })
+    const appointments = await Appointment.find({
+      providerId: doctorId
+      // Remove status restriction - doctor can mark alerts as read for all their patients
+    })
       .select('userId');
 
-    // Get unique patient IDs
+    // Get unique patient IDs from all appointments
     const uniquePatientIds = [...new Set(appointments.map(apt => apt.userId.toString()))];
 
     if (uniquePatientIds.length === 0) {
@@ -295,21 +326,43 @@ const markAllPatientAlertsAsRead = async (req, res) => {
       });
     }
 
-    // Mark all unread alerts for these patients as read
-    const result = await Alert.updateMany(
-      {
-        userId: { $in: uniquePatientIds },
-        isRead: false
-      },
-      { $set: { isRead: true } }
-    );
+    // Get all unread alerts for these patients (that doctor hasn't read yet)
+    const DoctorAlertRead = require('../models/DoctorAlertRead');
 
-    console.log('✅ Marked all patient alerts as read:', result.modifiedCount);
+    // Find alerts that doctor hasn't read yet
+    const unreadAlerts = await Alert.find({
+      userId: { $in: uniquePatientIds }
+    });
+
+    // Filter out alerts that doctor has already read
+    const doctorReadAlerts = await DoctorAlertRead.find({
+      doctorId,
+      alertId: { $in: unreadAlerts.map(alert => alert._id) }
+    });
+
+    const readAlertIds = new Set(doctorReadAlerts.map(dr => dr.alertId.toString()));
+    const alertsToMarkAsRead = unreadAlerts.filter(alert => !readAlertIds.has(alert._id.toString()));
+
+    // Create doctor read records for all unread alerts (separate from patient's read status)
+    const doctorReadRecords = alertsToMarkAsRead.map(alert => ({
+      doctorId,
+      alertId: alert._id,
+      patientId: alert.userId,
+      readAt: new Date()
+    }));
+
+    let insertedCount = 0;
+    if (doctorReadRecords.length > 0) {
+      const result = await DoctorAlertRead.insertMany(doctorReadRecords, { ordered: false });
+      insertedCount = result.length;
+    }
+
+    console.log('✅ Marked all patient alerts as read by doctor (separate tracking):', insertedCount);
 
     res.json({
       success: true,
-      message: `Marked ${result.modifiedCount} alerts as read`,
-      modifiedCount: result.modifiedCount
+      message: `Marked ${insertedCount} alerts as read`,
+      modifiedCount: insertedCount
     });
 
   } catch (error) {
