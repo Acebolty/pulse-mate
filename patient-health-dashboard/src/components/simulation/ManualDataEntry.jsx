@@ -86,8 +86,8 @@ const ManualDataEntry = ({ onClose, onDataAdded }) => {
       if (!formData.diastolic || formData.diastolic < 40 || formData.diastolic > 150) {
         errors.push('Diastolic BP must be between 40-150 mmHg');
       }
-      if (!formData.glucose || formData.glucose < 40 || formData.glucose > 400) {
-        errors.push('Glucose must be between 40-400 mg/dL');
+      if (!formData.glucose || formData.glucose < 40 || formData.glucose > 600) {
+        errors.push('Glucose must be between 40-600 mg/dL');
       }
       if (!formData.temperature || formData.temperature < 95 || formData.temperature > 110) {
         errors.push('Temperature must be between 95-110°F');
@@ -156,16 +156,11 @@ const ManualDataEntry = ({ onClose, onDataAdded }) => {
 
       await Promise.all(promises);
 
-      // Generate alerts based on the new data
-      const alertResponse = await api.post('/simulation/generate-alerts');
-      const alertsGenerated = alertResponse.data?.data?.alertsGenerated || 0;
-
-      // Notify other components about new alerts
-      window.dispatchEvent(new CustomEvent('alertsGenerated', {
+      // Notify other components about new health data (AlertContext will generate alerts)
+      window.dispatchEvent(new CustomEvent('healthDataAdded', {
         detail: {
           source: 'manualDataEntry',
-          entriesCount: healthDataEntries.length,
-          alertsCount: alertsGenerated
+          entriesCount: healthDataEntries.length
         }
       }));
 
@@ -306,7 +301,7 @@ const ManualDataEntry = ({ onClose, onDataAdded }) => {
               onChange={(e) => handleInputChange('glucose', e.target.value)}
               placeholder="e.g., 90"
               min="40"
-              max="400"
+              max="600"
               className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100"
             />
             <p className="text-xs text-gray-500 dark:text-slate-400">Normal: 70-100 mg/dL</p>

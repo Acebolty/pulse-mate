@@ -57,7 +57,7 @@ async function createHealthAlerts() {
         type: 'critical',
         priority: 'high',
         title: 'High Glucose Level',
-        message: 'Glucose level of 160 mg/dL detected. Please review medication and diet.',
+        message: 'Glucose level of 160 mg/dL detected. Please review your diet and consult your healthcare provider.',
         isRead: false,
         category: 'health',
         source: 'Health Monitoring System',

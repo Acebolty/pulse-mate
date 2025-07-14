@@ -55,7 +55,7 @@ const patientChatList = [
     patientId: "patient-maria-garcia",
     patientName: "Maria Garcia",
     patientAvatar: "https://randomuser.me/api/portraits/women/68.jpg",
-    lastMessage: "Feeling much better with the new medication, thanks!",
+    lastMessage: "Feeling much better with the new treatment plan, thanks!",
     lastMessageTime: "2024-01-21T16:45:00Z",
     unreadCount: 0,
     isOnline: true,

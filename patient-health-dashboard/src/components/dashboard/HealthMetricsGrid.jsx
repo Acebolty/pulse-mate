@@ -73,16 +73,32 @@ const HealthMetricsGrid = ({ latestMetrics = {} }) => {
     if (heartRate < 50) return "critical";
     if (heartRate < 60) return "warning";
     if (heartRate >= 60 && heartRate <= 100) return "good";
-    if (heartRate > 100 && heartRate <= 120) return "warning";
+    if (heartRate > 100 && heartRate <= 150) return "warning";
     return "critical";
+  };
+
+  // Helper function to calculate blood pressure status
+  const getBloodPressureStatus = (systolic, diastolic) => {
+    if (systolic >= 180 || diastolic >= 110) return "critical";
+    if (systolic < 70 || diastolic < 40) return "critical";
+    if (systolic >= 140 || diastolic >= 90) return "warning";
+    if (systolic < 90 || diastolic < 60) return "warning";
+    return "good";
   };
 
   // Helper function to calculate glucose status
   const getGlucoseStatus = (glucose) => {
-    if (glucose < 70) return "critical";
-    if (glucose >= 70 && glucose <= 100) return "good";
-    if (glucose > 100 && glucose <= 140) return "warning";
-    return "critical";
+    if (glucose < 54 || glucose > 400) return "critical";
+    if (glucose < 70 || glucose > 180) return "warning";
+    if (glucose >= 70 && glucose <= 140) return "good";
+    return "warning";
+  };
+
+  // Helper function to calculate temperature status
+  const getTemperatureStatus = (temp) => {
+    if (temp < 95.0 || temp >= 104.0) return "critical";
+    if (temp < 96.0 || temp > 100.4) return "warning";
+    return "good";
   };
 
 
@@ -132,7 +148,7 @@ const HealthMetricsGrid = ({ latestMetrics = {} }) => {
           name: "Blood Pressure",
           value: `${systolic}/${diastolic}`,
           unit: 'mmHg',
-          status: systolic > 140 || diastolic > 90 ? "warning" : systolic > 120 || diastolic > 80 ? "normal" : "good",
+          status: getBloodPressureStatus(systolic, diastolic),
           change: latestMetrics.bloodPressure.change || "First reading",
           icon: ArrowTrendingUpIcon,
           gradient: "from-red-400 to-pink-500",
@@ -151,7 +167,7 @@ const HealthMetricsGrid = ({ latestMetrics = {} }) => {
           : latestMetrics.bloodPressure.value - 40;
 
         bpMetric.value = `${systolic}/${diastolic}`;
-        bpMetric.status = systolic > 140 || diastolic > 90 ? "warning" : systolic > 120 || diastolic > 80 ? "normal" : "good";
+        bpMetric.status = getBloodPressureStatus(systolic, diastolic);
         bpMetric.change = latestMetrics.bloodPressure.change || "First reading";
         bpMetric.lastUpdated = formatTimestamp(latestMetrics.bloodPressure.timestamp);
       }
@@ -168,7 +184,7 @@ const HealthMetricsGrid = ({ latestMetrics = {} }) => {
           name: "Body Temperature",
           value: temp.toFixed(1),
           unit: '°F',
-          status: temp < 97.0 ? "warning" : temp > 99.0 && temp <= 100.4 ? "warning" : temp > 100.4 ? "critical" : "normal",
+          status: getTemperatureStatus(temp),
           change: latestMetrics.bodyTemperature.change || "First reading",
           icon: SunIcon,
           gradient: "from-orange-400 to-yellow-500",
@@ -182,7 +198,7 @@ const HealthMetricsGrid = ({ latestMetrics = {} }) => {
         const temp = parseFloat(latestMetrics.bodyTemperature.value.toFixed(1));
         tempMetric.value = temp.toFixed(1);
         tempMetric.unit = '°F';
-        tempMetric.status = temp < 97.0 ? "warning" : temp > 99.0 && temp <= 100.4 ? "warning" : temp > 100.4 ? "critical" : "normal";
+        tempMetric.status = getTemperatureStatus(temp);
         tempMetric.change = latestMetrics.bodyTemperature.change || "First reading";
         tempMetric.lastUpdated = formatTimestamp(latestMetrics.bodyTemperature.timestamp);
       }

@@ -41,9 +41,9 @@ router.post('/generate-historical', auth, async (req, res) => {
     // Save to database
     const savedData = await simulator.saveToDatabase(healthDataArray);
 
-    // Generate alerts based on the new data
-    const alertGenerator = new HealthAlertGenerator(userId);
-    const generatedAlerts = await alertGenerator.generateAlertsFromRecentData();
+    // Generate alerts based on the new data - DISABLED (using frontend AlertContext instead)
+    // const alertGenerator = new HealthAlertGenerator(userId);
+    // const generatedAlerts = await alertGenerator.generateAlertsFromRecentData();
 
     res.json({
       success: true,

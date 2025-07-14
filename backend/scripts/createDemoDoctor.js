@@ -46,13 +46,7 @@ const createDemoDoctor = async () => {
         weight: '180 lbs',
         allergies: [],
         chronicConditions: [],
-        medications: [],
-        primaryDoctor: {
-          name: 'Self',
-          specialty: 'Cardiology',
-          phone: '+1-555-0123',
-          email: 'doctor@pulsemate.com'
-        }
+
       },
       // Doctor-specific info stored in existing fields
       timezone: 'America/Los_Angeles',

@@ -11,12 +11,11 @@ import {
   ChartBarIcon,
   BellIcon,
   UserIcon,
-  BeakerIcon,
   XMarkIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
 } from "@heroicons/react/24/outline"
-// import { useAlerts } from "../../contexts/AlertContext"
+import { useAlerts } from "../../contexts/AlertContext"
 import { getCurrentUser } from "../../services/authService"
 import api from "../../services/api"
 
@@ -25,46 +24,10 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
   const [userData, setUserData] = useState(null)
   const [currentTip, setCurrentTip] = useState(null)
   const [healthStatus, setHealthStatus] = useState(null)
-  const [alerts, setAlerts] = useState([])
-
-  // Get unread count
-  const getUnreadCount = () => {
-    return alerts.filter(alert => !alert.isRead).length
-  }
-
-  // Get medication alert count
-  const getMedicationAlertCount = () => {
-    const medicationAlerts = alerts.filter(alert =>
-      !alert.isRead &&
-      (alert.title.toLowerCase().includes('medication') ||
-       alert.source === 'Medication Reminder System')
-    );
-
-    console.log('Sidebar - All alerts:', alerts.length);
-    console.log('Sidebar - Unread alerts:', alerts.filter(a => !a.isRead).length);
-    console.log('Sidebar - Medication alerts (unread):', medicationAlerts.length);
-    console.log('Sidebar - Medication alerts:', medicationAlerts);
-
-    return medicationAlerts.length;
-  }
-
+  const { alerts, getUnreadCount } = useAlerts()
   const unreadCount = getUnreadCount()
-  const medicationAlertCount = getMedicationAlertCount()
 
-  // Load alerts function
-  const loadAlerts = async () => {
-    try {
-      const response = await api.get('/alerts', {
-        params: { limit: 10, sortBy: 'timestamp', order: 'desc' }
-      })
-      const allAlerts = response.data.data || []
-      // Filter unread alerts on frontend to ensure we get the latest data
-      const unreadAlerts = allAlerts.filter(alert => !alert.isRead)
-      setAlerts(unreadAlerts)
-    } catch (error) {
-      console.error('Error loading alerts:', error)
-    }
-  }
+
 
   // Load user data and alerts
   useEffect(() => {
@@ -83,41 +46,9 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
     }
 
     loadUserData()
-    loadAlerts()
   }, [])
 
-  // Listen for alert updates from other components
-  useEffect(() => {
-    const handleAlertUpdate = () => {
-      // Refresh alerts when they're updated elsewhere
-      loadAlerts()
-    }
 
-    const handleAlertsGenerated = () => {
-      // Refresh alerts when new ones might have been generated
-      setTimeout(() => {
-        loadAlerts()
-      }, 1000) // Delay to ensure alerts are saved to database
-    }
-
-    window.addEventListener('alertUpdated', handleAlertUpdate)
-    window.addEventListener('alertsGenerated', handleAlertsGenerated)
-
-    return () => {
-      window.removeEventListener('alertUpdated', handleAlertUpdate)
-      window.removeEventListener('alertsGenerated', handleAlertsGenerated)
-    }
-  }, [])
-
-  // Also refresh alerts when user focuses back on the window (as a fallback)
-  useEffect(() => {
-    const handleWindowFocus = () => {
-      loadAlerts()
-    }
-
-    window.addEventListener('focus', handleWindowFocus)
-    return () => window.removeEventListener('focus', handleWindowFocus)
-  }, [])
 
   // Load health status using same calculation as ProfileNew.jsx
   useEffect(() => {
@@ -354,12 +285,11 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
     { name: "Dashboard", href: "/dashboard/overview", icon: HomeIcon },
     { name: "Health Metrics", href: "/dashboard/health-metrics", icon: HeartIcon },
     { name: "Appointments", href: "/dashboard/appointments", icon: CalendarIcon },
-    { name: "Medications", href: "/dashboard/medications", icon: BeakerIcon, badge: medicationAlertCount },
     { name: "Messages", href: "/dashboard/messages", icon: ChatBubbleLeftIcon, badge: 3 },
     { name: "Alerts", href: "/dashboard/alerts", icon: BellIcon, badge: unreadCount },
     { name: "Profile", href: "/dashboard/profile", icon: UserIcon },
     { name: "Settings", href: "/dashboard/settings", icon: Cog6ToothIcon },
-  ], [unreadCount, medicationAlertCount])
+  ], [unreadCount])
 
   useEffect(() => {
     const observer = new MutationObserver(() => {

@@ -1,7 +1,14 @@
 import { ExclamationTriangleIcon, InformationCircleIcon, CheckCircleIcon } from "@heroicons/react/24/outline"
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
+import { useAlerts } from '../../contexts/AlertContext';
 
-const RecentAlerts = ({ alerts = [] }) => {
+const RecentAlerts = ({ alerts: propAlerts = [] }) => {
+  const navigate = useNavigate();
+  const { alerts: contextAlerts } = useAlerts();
+
+  // Use AlertContext alerts if available, otherwise use prop alerts
+  const alerts = contextAlerts.length > 0 ? contextAlerts : propAlerts;
   // Helper function to format timestamp
   const formatTimestamp = (isoString) => {
     if (!isoString) return 'N/A';
@@ -19,21 +26,39 @@ const RecentAlerts = ({ alerts = [] }) => {
   // Map backend alert types to display types
   const mapAlertType = (backendType) => {
     switch (backendType) {
-      case 'critical': return 'warning';
+      case 'critical': return 'critical';
       case 'warning': return 'warning';
       case 'info': return 'info';
+      case 'success': return 'success';
       default: return 'info';
     }
   };
 
+  // Sort alerts by priority (critical first) and take the 3 most recent
+  const sortedAlerts = alerts.length > 0 ? [...alerts].sort((a, b) => {
+    // Priority order: critical > warning > info > success
+    const priority = { critical: 4, warning: 3, info: 2, success: 1 };
+    const aPriority = priority[a.type] || 0;
+    const bPriority = priority[b.type] || 0;
+
+    if (aPriority !== bPriority) {
+      return bPriority - aPriority; // Higher priority first
+    }
+
+    // If same priority, sort by timestamp (newest first)
+    const aTime = new Date(a.createdAt || a.timestamp);
+    const bTime = new Date(b.createdAt || b.timestamp);
+    return bTime - aTime;
+  }) : [];
+
   // Use real alerts if available, otherwise fall back to dummy data
-  const displayAlerts = alerts.length > 0 ? alerts.map(alert => ({
-    id: alert._id,
+  const displayAlerts = sortedAlerts.length > 0 ? sortedAlerts.slice(0, 3).map(alert => ({
+    id: alert._id || alert.id,
     type: mapAlertType(alert.type),
     title: alert.title,
     message: alert.message,
-    time: formatTimestamp(alert.createdAt),
-    action: "View Details",
+    time: formatTimestamp(alert.createdAt || alert.timestamp),
+    action: alert.type === 'info' && alert.title.includes('Daily Health Tasks') ? "View Progress" : "Contact Doctor",
   })) : [
     {
       id: 1,
@@ -47,6 +72,12 @@ const RecentAlerts = ({ alerts = [] }) => {
 
   const getAlertStyles = (type) => {
     switch (type) {
+      case "critical":
+        return {
+          icon: "🚨",
+          bg: "from-red-50 to-rose-50 border-red-200 dark:from-red-800/40 dark:to-rose-800/40 dark:border-red-600/50",
+          accent: "text-red-600 dark:text-red-400"
+        };
       case "warning":
         return {
           icon: "⚠️",
@@ -55,7 +86,7 @@ const RecentAlerts = ({ alerts = [] }) => {
         };
       case "info":
         return {
-          icon: "💊",
+          icon: "ℹ️",
           bg: "from-blue-50 to-cyan-50 border-blue-200 dark:from-blue-800/40 dark:to-cyan-800/40 dark:border-blue-600/50",
           accent: "text-blue-600 dark:text-blue-400"
         };
@@ -83,7 +114,10 @@ const RecentAlerts = ({ alerts = [] }) => {
     >
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-xl font-bold text-gray-900 dark:text-slate-100">Recent Alerts</h3>
-        <button className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 text-sm font-semibold hover:bg-indigo-50 dark:hover:bg-indigo-700/30 px-3 py-1 rounded-lg transition-colors">
+        <button
+          onClick={() => navigate('/dashboard/alerts')}
+          className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 text-sm font-semibold hover:bg-indigo-50 dark:hover:bg-indigo-700/30 px-3 py-1 rounded-lg transition-colors"
+        >
           View All
         </button>
       </div>
@@ -111,7 +145,19 @@ const RecentAlerts = ({ alerts = [] }) => {
                   <p className="text-sm text-gray-600 dark:text-slate-300 mt-1">{alert.message}</p>
                   <div className="flex items-center justify-between mt-3">
                     <span className="text-xs text-gray-500 dark:text-slate-400 font-medium">{alert.time}</span>
-                    <button className={`text-xs font-semibold ${styles.accent} hover:underline`}>
+                    <button
+                      onClick={() => {
+                        if (alert.action === "View Progress") {
+                          // For daily health tasks, scroll to welcome card or stay on dashboard
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        } else if (alert.action === "View All") {
+                          navigate('/dashboard/alerts');
+                        } else {
+                          navigate('/dashboard/appointments');
+                        }
+                      }}
+                      className={`text-xs font-semibold ${styles.accent} hover:underline`}
+                    >
                       {alert.action}
                     </button>
                   </div>

@@ -2,7 +2,7 @@ const HealthData = require('../models/HealthData');
 const Alert = require('../models/Alert');
 const User = require('../models/User');
 const emailService = require('../services/emailService');
-const medicationReminderService = require('../services/medicationReminderService'); // For anomaly detection
+
 
 // @desc    Add new health data for the logged-in user
 // @route   POST api/health-data
@@ -48,88 +48,84 @@ const addHealthData = async (req, res) => {
 
       let alertToCreate = null;
 
-      if (thresholdAlertsEnabled) {
-        if (dataType === 'bloodPressure' && typeof value === 'object' && value.systolic && value.diastolic) {
-          if (value.systolic > 140 || value.diastolic > 90) {
-            alertToCreate = { type: 'critical', title: 'High Blood Pressure Alert', message: `Critical blood pressure reading: ${value.systolic}/${value.diastolic} mmHg. Please consult your doctor.`, source: source || 'Blood Pressure Monitor' };
-          } else if (value.systolic > 130 || value.diastolic > 85) {
-            alertToCreate = { type: 'warning', title: 'Elevated Blood Pressure', message: `Blood pressure reading: ${value.systolic}/${value.diastolic} mmHg is elevated. Monitor closely.`, source: source || 'Blood Pressure Monitor' };
-          }
-        } else if (dataType === 'heartRate' && typeof value === 'number') {
-          if (value > 100) {
-            alertToCreate = { type: 'warning', title: 'High Heart Rate Detected', message: `Heart rate of ${value} bpm detected. If resting, please monitor.`, source: source || 'Heart Rate Monitor' };
-          } else if (value < 50 && value > 0) {
-            alertToCreate = { type: 'warning', title: 'Low Heart Rate Detected', message: `Heart rate of ${value} bpm detected. If experiencing symptoms, consult your doctor.`, source: source || 'Heart Rate Monitor' };
-          }
-        } else if (dataType === 'glucoseLevel' && typeof value === 'number') {
-          if (value > 180) {
-            alertToCreate = { type: 'warning', title: 'High Blood Glucose Alert', message: `Blood glucose level is ${value} ${unit}, which is high.`, source: source || 'Glucose Monitor' };
-          } else if (value < 70 && value > 0) {
-            alertToCreate = { type: 'critical', title: 'Low Blood Glucose Alert', message: `Blood glucose level is ${value} ${unit}, which is low. Please take appropriate action.`, source: source || 'Glucose Monitor' };
-          }
-        }
-      } else {
-        console.log(`Threshold alerts disabled for user ${req.user.id} - skipping alert generation for ${dataType}: ${JSON.stringify(value)}`);
-      }
+      // Backend alert generation DISABLED - using frontend AlertContext instead
+      // if (thresholdAlertsEnabled) {
+      //   if (dataType === 'bloodPressure' && typeof value === 'object' && value.systolic && value.diastolic) {
+      //     if (value.systolic > 140 || value.diastolic > 90) {
+      //       alertToCreate = { type: 'critical', title: 'High Blood Pressure Alert', message: `Critical blood pressure reading: ${value.systolic}/${value.diastolic} mmHg. Please consult your doctor.`, source: source || 'Blood Pressure Monitor' };
+      //     } else if (value.systolic > 130 || value.diastolic > 85) {
+      //       alertToCreate = { type: 'warning', title: 'Elevated Blood Pressure', message: `Blood pressure reading: ${value.systolic}/${value.diastolic} mmHg is elevated. Monitor closely.`, source: source || 'Blood Pressure Monitor' };
+      //     }
+      //   } else if (dataType === 'heartRate' && typeof value === 'number') {
+      //     if (value > 100) {
+      //       alertToCreate = { type: 'warning', title: 'High Heart Rate Detected', message: `Heart rate of ${value} bpm detected. If resting, please monitor.`, source: source || 'Heart Rate Monitor' };
+      //     } else if (value < 50 && value > 0) {
+      //       alertToCreate = { type: 'warning', title: 'Low Heart Rate Detected', message: `Heart rate of ${value} bpm detected. If experiencing symptoms, consult your doctor.`, source: source || 'Heart Rate Monitor' };
+      //     }
+      //   } else if (dataType === 'glucoseLevel' && typeof value === 'number') {
+      //     if (value > 180) {
+      //       alertToCreate = { type: 'warning', title: 'High Blood Glucose Alert', message: `Blood glucose level is ${value} ${unit}, which is high.`, source: source || 'Glucose Monitor' };
+      //     } else if (value < 70 && value > 0) {
+      //       alertToCreate = { type: 'critical', title: 'Low Blood Glucose Alert', message: `Blood glucose level is ${value} ${unit}, which is low. Please take appropriate action.`, source: source || 'Glucose Monitor' };
+      //     }
+      //   }
+      // } else {
+      //   console.log(`Threshold alerts disabled for user ${req.user.id} - skipping alert generation for ${dataType}: ${JSON.stringify(value)}`);
+      // }
 
-      if (alertToCreate) {
-        const newAlert = new Alert({ ...alertToCreate, userId: req.user.id });
-        await newAlert.save();
-        console.log('Alert created:', newAlert.title);
+      // Backend alert saving DISABLED - using frontend AlertContext instead
+      // if (alertToCreate) {
+      //   const newAlert = new Alert({ ...alertToCreate, userId: req.user.id });
+      //   await newAlert.save();
+      //   console.log('Alert created:', newAlert.title);
 
-        // Send email notification based on user's alert type preferences
-        try {
-          const user = await User.findById(req.user.id);
-          if (user && user.settings?.notifications?.emailNotifications && user.settings?.notifications?.healthAlerts) {
-            // Check if user wants emails for this specific alert type
-            const emailAlertTypes = user.settings?.notifications?.emailAlertTypes || {
-              critical: true, warning: true, info: false, success: false
-            };
+      //   // Send email notification based on user's alert type preferences
+      //   try {
+      //     const user = await User.findById(req.user.id);
+      //     if (user && user.settings?.notifications?.emailNotifications && user.settings?.notifications?.healthAlerts) {
+      //       // Check if user wants emails for this specific alert type
+      //       const emailAlertTypes = user.settings?.notifications?.emailAlertTypes || {
+      //         critical: true, warning: true, info: false, success: false
+      //       };
 
-            const shouldSendEmail = emailAlertTypes[newAlert.type];
+      //       const shouldSendEmail = emailAlertTypes[newAlert.type];
 
-            if (shouldSendEmail) {
-              const emailResult = await emailService.sendHealthAlert(
-                user.email,
-                user.firstName || 'User',
-                {
-                  title: newAlert.title,
-                  message: newAlert.message,
-                  type: newAlert.type,
-                  timestamp: newAlert.timestamp,
-                  source: newAlert.source,
-                  relatedDataType: dataType
-                }
-              );
+      //       if (shouldSendEmail) {
+      //         const emailResult = await emailService.sendHealthAlert(
+      //           user.email,
+      //           user.firstName || 'User',
+      //           {
+      //             title: newAlert.title,
+      //             message: newAlert.message,
+      //             type: newAlert.type,
+      //             timestamp: newAlert.timestamp,
+      //             source: newAlert.source,
+      //             relatedDataType: dataType
+      //           }
+      //         );
 
-              if (emailResult.success) {
-                console.log(`${newAlert.type.toUpperCase()} alert email sent automatically to:`, user.email);
-                if (emailResult.previewUrl) {
-                  console.log('Email preview:', emailResult.previewUrl);
-                }
-              } else {
-                console.error('Failed to send health alert email:', emailResult.error);
-              }
-            } else {
-              console.log(`Skipping email for ${newAlert.type} alert (user preference):`, newAlert.title);
-            }
-          }
-        } catch (emailError) {
-          console.error('Error sending health alert email:', emailError);
-          // Don't fail the whole request if email fails
-        }
-      }
+      //         if (emailResult.success) {
+      //           console.log(`${newAlert.type.toUpperCase()} alert email sent automatically to:`, user.email);
+      //           if (emailResult.previewUrl) {
+      //             console.log('Email preview:', emailResult.previewUrl);
+      //           }
+      //         } else {
+      //           console.error('Failed to send health alert email:', emailResult.error);
+      //         }
+      //       } else {
+      //         console.log(`Skipping email for ${newAlert.type} alert (user preference):`, newAlert.title);
+      //       }
+      //     }
+      //   } catch (emailError) {
+      //     console.error('Error sending health alert email:', emailError);
+      //     // Don't fail the whole request if email fails
+      //   }
+      // }
     } catch (alertError) {
       console.error('Error during anomaly detection or alert creation:', alertError);
     }
 
-    // Check for medication alerts (run in background)
-    try {
-      medicationReminderService.checkAndCreateMedicationAlerts(req.user.id);
-    } catch (medicationError) {
-      console.error('Error checking medication alerts:', medicationError);
-      // Don't fail the main request if medication check fails
-    }
+
 
     res.status(201).json(newHealthData);
 

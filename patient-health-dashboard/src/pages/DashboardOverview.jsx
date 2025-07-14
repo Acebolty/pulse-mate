@@ -10,7 +10,6 @@ import BodyTemperatureChart from "../components/dashboard/BodyTemperatureChart"
 import UpcomingAppointments from "../components/dashboard/UpcomingAppointments"
 import RecentAlerts from "../components/dashboard/RecentAlerts"
 import WeeklyVitalSigns from "../components/dashboard/WeeklyVitalSigns"
-import MedicationReminders from "../components/dashboard/MedicationReminders"
 import SimulationPanel from "../components/simulation/SimulationPanel"
 import { useAlerts } from "../contexts/AlertContext"
 
@@ -189,11 +188,10 @@ const DashboardOverview = () => {
         <BodyTemperatureChart />
       </div>
 
-      {/* Appointments, Alerts, and Medications */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+      {/* Appointments and Alerts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <UpcomingAppointments appointments={dashboardData.upcomingAppointments} />
         <RecentAlerts alerts={dashboardData.recentAlerts} />
-        <MedicationReminders />
       </div>
 
       {/* Simulation Control Button */}

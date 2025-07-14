@@ -9,39 +9,27 @@ const getHeartRateStatus = (heartRate) => {
   if (heartRate < 50) return "critical";
   if (heartRate < 60) return "warning";
   if (heartRate >= 60 && heartRate <= 100) return "stable";
-  if (heartRate > 100 && heartRate <= 120) return "warning";
+  if (heartRate > 100 && heartRate <= 150) return "warning";
   return "critical";
 };
 
 const getBloodPressureStatus = (systolic, diastolic) => {
-  console.log(`Evaluating BP: ${systolic}/${diastolic}`);
-
-  if (systolic >= 180 || diastolic >= 120) {
-    console.log('BP Status: CRITICAL (Stage 2 Hypertension)');
-    return "critical";
-  }
-  if (systolic >= 140 || diastolic >= 90) {
-    console.log('BP Status: WARNING (Stage 1 Hypertension)');
-    return "warning";
-  }
-  if (systolic >= 120 && systolic < 140) {
-    console.log('BP Status: WARNING (Elevated)');
-    return "warning";
-  }
-
-  console.log('BP Status: STABLE (Normal)');
+  if (systolic >= 180 || diastolic >= 110) return "critical";
+  if (systolic < 70 || diastolic < 40) return "critical";
+  if (systolic >= 140 || diastolic >= 90) return "warning";
+  if (systolic < 90 || diastolic < 60) return "warning";
   return "stable";
 };
 
 const getGlucoseStatus = (glucose) => {
-  if (glucose < 70 || glucose > 200) return "critical";
-  if (glucose < 80 || glucose > 140) return "warning";
+  if (glucose < 54 || glucose > 400) return "critical";
+  if (glucose < 70 || glucose > 180) return "warning";
   return "stable";
 };
 
 const getTemperatureStatus = (temp) => {
-  if (temp < 95 || temp > 103) return "critical";
-  if (temp < 97 || temp > 99.5) return "warning";
+  if (temp < 95.0 || temp >= 104.0) return "critical";
+  if (temp < 96.0 || temp > 100.4) return "warning";
   return "stable";
 };
 

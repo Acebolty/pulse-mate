@@ -13,7 +13,7 @@ class HealthAlertGenerator {
         diastolic: { normal: 80, high: 90, critical: 110 }
       },
       bodyTemperature: { low: 97.0, normal: 99.0, high: 100.4, critical: 103.0 },
-      glucoseLevel: { low: 70, normal: 100, high: 140, critical: 200 }
+      glucoseLevel: { low: 70, normal: 100, high: 140, critical: 400 }
     };
   }
 
@@ -208,8 +208,16 @@ class HealthAlertGenerator {
         if (value >= this.alertThresholds.glucoseLevel.critical) {
           alerts.push(this.createAlert(
             'critical',
-            'Critical Blood Glucose',
-            `Blood glucose ${value} mg/dL is critically high`,
+            'Severe Hyperglycemia Alert',
+            `CRITICAL: Blood glucose ${value} mg/dL is extremely high. Risk of diabetic ketoacidosis.`,
+            'glucoseLevel',
+            timestamp
+          ));
+        } else if (value < 54) {
+          alerts.push(this.createAlert(
+            'critical',
+            'Severe Hypoglycemia Alert',
+            `CRITICAL: Blood glucose ${value} mg/dL is dangerously low. Take immediate action.`,
             'glucoseLevel',
             timestamp
           ));

@@ -54,7 +54,7 @@ const createAdminUser = async () => {
           emailNotifications: true,
           smsNotifications: false,
           appointmentReminders: false,
-          medicationReminders: false,
+
           healthAlerts: true,
           labResults: false,
           messageNotifications: true,
