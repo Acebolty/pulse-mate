@@ -77,7 +77,7 @@ const formatTimestamp = (timestamp) => {
 
 const Alerts = () => {
   const navigate = useNavigate();
-  const { alerts, loading, markAsRead, markAllAsRead, deleteAlert } = useAlerts();
+  const { alerts, loading, markAsRead, markAllAsRead, deleteAlert, clearAllAlerts } = useAlerts();
   const [filter, setFilter] = useState("all");
   const [showSettings, setShowSettings] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
@@ -129,6 +129,7 @@ const Alerts = () => {
   };
 
   const filteredAlerts = getFilteredAlerts();
+  console.log(`📋 Alerts UI - Total: ${alerts.length}, Filter: ${filter}, Filtered: ${filteredAlerts.length}`);
 
   // Calculate counts
   const unreadCount = alerts.filter(alert => !alert.isRead).length;
@@ -144,6 +145,24 @@ const Alerts = () => {
   // Calculate trend
   const alertTrend = alertsThisWeek > 5 ? 'increasing' : alertsThisWeek < 2 ? 'decreasing' : 'stable';
 
+  // Enhanced mark as read handler with UX improvements
+  const handleMarkAsRead = (alertId) => {
+    const currentUnreadCount = alerts.filter(alert => !alert.isRead).length;
+    console.log(`🔄 Marking alert as read: ${alertId}, current filter: ${filter}, unread count: ${currentUnreadCount}`);
+
+    // Mark the alert as read
+    markAsRead(alertId);
+
+    // If we're on the "unread" filter and this was the last unread alert,
+    // switch to "all" filter so the user can still see their alerts
+    if (filter === 'unread' && currentUnreadCount === 1) {
+      console.log('🔄 Switching from unread to all filter to show read alerts');
+      setTimeout(() => {
+        setFilter('all');
+      }, 100); // Small delay to let the state update
+    }
+  };
+
   // Emergency action handler
   const handleEmergencyAction = (alert, action) => {
     console.log(`Emergency action: ${action} for alert:`, alert);
@@ -158,7 +177,7 @@ const Alerts = () => {
     }
 
     // Mark alert as read when action is taken
-    markAsRead(alert.id);
+    handleMarkAsRead(alert.id);
   };
 
   return (
@@ -191,6 +210,7 @@ const Alerts = () => {
             <ShieldCheckIcon className="w-5 h-5" />
             <span>Emergency Plans</span>
           </button>
+
           <button
             onClick={markAllAsRead}
             className="px-3 py-2 text-sm text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 hover:bg-green-50 dark:hover:bg-green-700/20 rounded-xl transition-colors"
@@ -612,10 +632,27 @@ const Alerts = () => {
           {!loading && !error && filteredAlerts.length === 0 && alerts.length > 0 && (
             <div className="p-8 text-center">
               <BellIcon className="w-12 h-12 text-gray-400 dark:text-slate-500 mx-auto mb-4" />
-              <p className="text-gray-500 dark:text-slate-400">No alerts found for the selected filter.</p>
-              <p className="text-sm text-gray-400 dark:text-slate-500 mt-2">
-                Try selecting a different filter or check "All Alerts" to see all generated alerts.
-              </p>
+              {filter === 'unread' ? (
+                <div>
+                  <p className="text-gray-500 dark:text-slate-400">Great! No unread alerts.</p>
+                  <p className="text-sm text-gray-400 dark:text-slate-500 mt-2">
+                    All your alerts have been read. Check the "All Alerts" tab to see your complete alert history.
+                  </p>
+                  <button
+                    onClick={() => setFilter('all')}
+                    className="mt-3 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    View All Alerts
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-gray-500 dark:text-slate-400">No alerts found for the selected filter.</p>
+                  <p className="text-sm text-gray-400 dark:text-slate-500 mt-2">
+                    Try selecting a different filter or check "All Alerts" to see all generated alerts.
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
@@ -716,7 +753,7 @@ const Alerts = () => {
                       <div className="flex items-center space-x-2">
                         {!alert.isRead && (
                           <button
-                            onClick={() => markAsRead(alert.id)}
+                            onClick={() => handleMarkAsRead(alert.id)}
                             className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium"
                           >
                             Mark as Read

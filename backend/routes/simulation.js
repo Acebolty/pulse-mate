@@ -346,6 +346,85 @@ router.delete('/clear-alerts', auth, async (req, res) => {
   }
 });
 
+// @route   GET /api/simulation/debug-alerts
+// @desc    Debug: Check current alerts in database
+// @access  Private
+router.get('/debug-alerts', auth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const User = require('../models/User');
+    const Alert = require('../models/Alert');
+    const DoctorAlertRead = require('../models/DoctorAlertRead');
+
+    // Get current user info
+    const user = await User.findById(userId).select('firstName lastName email role');
+
+    // Get all alerts for this user
+    const userAlerts = await Alert.find({ userId: userId }).sort({ timestamp: -1 });
+
+    // If user is a doctor, also get alerts for their patients
+    let patientAlerts = [];
+    if (user.role === 'doctor') {
+      const Appointment = require('../models/Appointment');
+
+      // Get patients with Open Chat appointments
+      const appointments = await Appointment.find({
+        providerId: userId,
+        status: 'Open Chat'
+      }).populate('userId', 'firstName lastName email');
+
+      const patientIds = appointments.map(apt => apt.userId._id);
+
+      if (patientIds.length > 0) {
+        patientAlerts = await Alert.find({
+          userId: { $in: patientIds }
+        }).populate('userId', 'firstName lastName email').sort({ timestamp: -1 });
+      }
+    }
+
+    res.json({
+      success: true,
+      user: {
+        id: user._id,
+        name: `${user.firstName} ${user.lastName}`,
+        email: user.email,
+        role: user.role
+      },
+      userAlerts: {
+        count: userAlerts.length,
+        alerts: userAlerts.map(alert => ({
+          id: alert._id,
+          type: alert.type,
+          title: alert.title,
+          message: alert.message,
+          timestamp: alert.timestamp,
+          isRead: alert.isRead
+        }))
+      },
+      patientAlerts: {
+        count: patientAlerts.length,
+        alerts: patientAlerts.map(alert => ({
+          id: alert._id,
+          type: alert.type,
+          title: alert.title,
+          message: alert.message,
+          timestamp: alert.timestamp,
+          isRead: alert.isRead,
+          patientName: alert.userId ? `${alert.userId.firstName} ${alert.userId.lastName}` : 'Unknown'
+        }))
+      }
+    });
+
+  } catch (error) {
+    console.error('Error debugging alerts:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to debug alerts',
+      error: error.message
+    });
+  }
+});
+
 // @route   DELETE /api/simulation/clear-data
 // @desc    Clear all simulated health data and alerts for the user
 // @access  Private

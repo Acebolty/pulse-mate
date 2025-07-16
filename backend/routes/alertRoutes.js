@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/authMiddleware');
 const {
+    createAlert,
     getAlerts,
     markAlertAsRead,
     markAllAlertsAsRead,
@@ -11,6 +12,11 @@ const {
     markPatientAlertAsRead,
     markAllPatientAlertsAsRead
 } = require('../controllers/alertController');
+
+// @route   POST api/alerts
+// @desc    Create a new alert for the logged-in user
+// @access  Private
+router.post('/', authMiddleware, createAlert);
 
 // @route   GET api/alerts
 // @desc    Get all alerts for the logged-in user, sorted by most recent

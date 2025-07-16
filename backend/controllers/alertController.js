@@ -1,5 +1,59 @@
 const Alert = require('../models/Alert');
 
+// @desc    Create a new alert for the logged-in user
+// @route   POST api/alerts
+// @access  Private
+const createAlert = async (req, res) => {
+  try {
+    const { type, title, message, timestamp, source } = req.body;
+
+    // Validate required fields
+    if (!type || !title || !message) {
+      return res.status(400).json({ message: 'Type, title, and message are required.' });
+    }
+
+    // Validate alert type
+    if (!['critical', 'warning', 'info', 'success'].includes(type)) {
+      return res.status(400).json({ message: 'Invalid alert type. Must be critical, warning, info, or success.' });
+    }
+
+    const alertTimestamp = timestamp ? new Date(timestamp) : new Date();
+
+    const newAlert = new Alert({
+      userId: req.user.id,
+      type,
+      title,
+      message,
+      timestamp: alertTimestamp,
+      source: source || 'System'
+    });
+
+    await newAlert.save();
+
+    console.log('✅ Alert created:', newAlert.title, 'for user:', req.user.id);
+
+    res.status(201).json({
+      success: true,
+      data: newAlert,
+      message: 'Alert created successfully'
+    });
+
+  } catch (error) {
+    // Handle duplicate key error (unique constraint violation)
+    if (error.code === 11000 && error.keyPattern && error.keyPattern.deduplicationHash) {
+      console.log('🔄 Duplicate alert detected (database constraint):', req.body.title, 'for user:', req.user.id);
+      return res.status(409).json({
+        success: false,
+        message: 'Duplicate alert detected within the last minute',
+        data: null
+      });
+    }
+
+    console.error('Error creating alert:', error);
+    res.status(500).json({ message: 'Server error while creating alert.' });
+  }
+};
+
 // @desc    Get all alerts for the logged-in user
 // @route   GET api/alerts
 // @access  Private
@@ -372,6 +426,7 @@ const markAllPatientAlertsAsRead = async (req, res) => {
 };
 
 module.exports = {
+  createAlert,
   getAlerts,
   markAlertAsRead,
   markAllAlertsAsRead,

@@ -37,8 +37,15 @@ const alertSchema = new Schema({
     type: String,
     trim: true,
     default: 'System'
+  },
+  // Deduplication hash to prevent duplicate alerts
+  // This will be a hash of userId + type + title + message + timestamp (rounded to minute)
+  deduplicationHash: {
+    type: String,
+    unique: true,
+    sparse: true // Allow null values, but enforce uniqueness when present
   }
-  // Actions are part of the frontend display logic in Alerts.jsx, 
+  // Actions are part of the frontend display logic in Alerts.jsx,
   // but if actions need to trigger backend processes, they might be stored differently or handled via specific API calls.
   // For now, not storing 'actions' array directly in this schema.
 }, { timestamps: true }); // timestamps: true adds createdAt and updatedAt
@@ -47,6 +54,24 @@ const alertSchema = new Schema({
 alertSchema.index({ userId: 1, timestamp: -1 });
 // Optional: index for unread alerts
 alertSchema.index({ userId: 1, isRead: 1, timestamp: -1 });
+
+// Pre-save middleware to generate deduplication hash
+alertSchema.pre('save', function(next) {
+  if (this.isNew || this.isModified('userId') || this.isModified('type') ||
+      this.isModified('title') || this.isModified('message') || this.isModified('timestamp')) {
+
+    // Round timestamp to nearest minute for deduplication
+    const timestamp = this.timestamp || new Date();
+    const roundedTimestamp = new Date(timestamp);
+    roundedTimestamp.setSeconds(0, 0); // Remove seconds and milliseconds
+
+    // Create a hash from the key fields
+    const crypto = require('crypto');
+    const hashInput = `${this.userId}-${this.type}-${this.title}-${this.message}-${roundedTimestamp.toISOString()}`;
+    this.deduplicationHash = crypto.createHash('sha256').update(hashInput).digest('hex');
+  }
+  next();
+});
 
 
 const Alert = mongoose.model('Alert', alertSchema);

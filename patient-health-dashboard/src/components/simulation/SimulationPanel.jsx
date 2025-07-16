@@ -155,9 +155,31 @@ const SimulationPanel = ({ onClose, onDataGenerated }) => {
       setError(null);
       setResult(null);
 
+      // Clear localStorage first
+      localStorage.removeItem('readAlerts');
+      localStorage.removeItem('alertReadStatus');
+      localStorage.removeItem('lastProcessedTime');
+
+      // Clear any other alert-related localStorage keys
+      Object.keys(localStorage).forEach(key => {
+        if (key.includes('alert') || key.includes('Alert')) {
+          localStorage.removeItem(key);
+        }
+      });
+
       const response = await api.delete('/simulation/clear-data');
-      setResult(response.data);
-      if (onDataGenerated) onDataGenerated();
+      setResult({
+        ...response.data,
+        message: response.data.message + ' (including localStorage)'
+      });
+
+      // Clear AlertContext state immediately to prevent regeneration
+      window.dispatchEvent(new CustomEvent('clearAllAlerts'));
+
+      // Small delay before calling onDataGenerated to ensure alerts are cleared first
+      setTimeout(() => {
+        if (onDataGenerated) onDataGenerated();
+      }, 100);
 
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to clear data');

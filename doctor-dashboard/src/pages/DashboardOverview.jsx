@@ -16,6 +16,8 @@ const DashboardOverview = () => {
     openAppointments: 0,
     appointmentsWaiting: 0,
     recentAlerts: 0,
+    criticalAlerts: 0,
+    warningAlerts: 0,
     systemStatus: 'Loading...'
   });
   const [loading, setLoading] = useState(true);
@@ -36,27 +38,61 @@ const DashboardOverview = () => {
           return;
         }
 
-        // Fetch doctor dashboard analytics from the new dedicated endpoint
+        // Fetch doctor dashboard analytics and detailed alerts
         console.log('📊 Fetching doctor dashboard analytics...');
-        const analyticsRes = await api.get('/appointments/doctor/analytics');
+        const [analyticsRes, alertsRes] = await Promise.allSettled([
+          api.get('/appointments/doctor/analytics'),
+          api.get('/alerts/doctor/notifications?limit=100')
+        ]);
 
-        if (analyticsRes.status === 200 && analyticsRes.data.success) {
-          const analytics = analyticsRes.data.data;
+        let dashboardStats = {
+          totalPatients: 0,
+          openAppointments: 0,
+          appointmentsWaiting: 0,
+          recentAlerts: 0,
+          criticalAlerts: 0,
+          warningAlerts: 0,
+          systemStatus: 'Loading...'
+        };
+
+        // Process analytics data
+        if (analyticsRes.status === 'fulfilled' && analyticsRes.value.status === 200 && analyticsRes.value.data.success) {
+          const analytics = analyticsRes.value.data.data;
           console.log('📊 Doctor dashboard analytics fetched:', analytics);
 
-          const dashboardStats = {
+          dashboardStats = {
+            ...dashboardStats,
             totalPatients: analytics.totalPatients || 0,
             openAppointments: analytics.openAppointments || 0,
             appointmentsWaiting: analytics.appointmentsWaiting || 0,
             recentAlerts: analytics.recentAlerts || 0,
             systemStatus: analytics.systemStatus || 'No Data Available'
           };
-
-          setDashboardData(dashboardStats);
-          setLastUpdated(new Date());
-        } else {
-          throw new Error('Failed to fetch analytics data');
         }
+
+        // Process detailed alerts to get critical vs warning breakdown
+        if (alertsRes.status === 'fulfilled' && alertsRes.value.status === 200) {
+          const alertsData = alertsRes.value.data;
+          console.log('🚨 Doctor alerts fetched:', alertsData);
+
+          if (alertsData.data && Array.isArray(alertsData.data)) {
+            const unreadAlerts = alertsData.data.filter(alert => !alert.isRead);
+            const criticalAlerts = unreadAlerts.filter(alert => alert.type === 'critical').length;
+            const warningAlerts = unreadAlerts.filter(alert => alert.type === 'warning').length;
+
+            dashboardStats = {
+              ...dashboardStats,
+              criticalAlerts,
+              warningAlerts,
+              recentAlerts: criticalAlerts + warningAlerts // Total unread alerts
+            };
+
+            console.log('🚨 Alert breakdown:', { criticalAlerts, warningAlerts, total: dashboardStats.recentAlerts });
+          }
+        }
+
+        setDashboardData(dashboardStats);
+        setLastUpdated(new Date());
 
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
@@ -78,6 +114,8 @@ const DashboardOverview = () => {
           openAppointments: 0,
           appointmentsWaiting: 0,
           recentAlerts: 0,
+          criticalAlerts: 0,
+          warningAlerts: 0,
           systemStatus: 'System Error'
         });
       } finally {
@@ -206,29 +244,39 @@ const DashboardOverview = () => {
         </div>
       </div>
       
-      {/* Critical Alerts Summary - Real Data */}
+      {/* Patient Alerts Summary - Real Data */}
       {!loading && dashboardData.recentAlerts > 0 && !alertsBannerDismissed && (
-        <div className="bg-red-50 dark:bg-red-700/20 border border-red-200 dark:border-red-600/40 rounded-xl p-4 shadow-md">
+        <div className={`${dashboardData.criticalAlerts > 0 ? 'bg-red-50 dark:bg-red-700/20 border-red-200 dark:border-red-600/40' : 'bg-orange-50 dark:bg-orange-700/20 border-orange-200 dark:border-orange-600/40'} border rounded-xl p-4 shadow-md`}>
           <div className="flex items-center space-x-3">
-            <ExclamationTriangleIcon className="w-6 h-6 text-red-500 dark:text-red-400" />
+            <ExclamationTriangleIcon className={`w-6 h-6 ${dashboardData.criticalAlerts > 0 ? 'text-red-500 dark:text-red-400' : 'text-orange-500 dark:text-orange-400'}`} />
             <div className="flex-1">
-              <h3 className="text-sm sm:text-base font-semibold text-red-800 dark:text-red-200">
-                {dashboardData.recentAlerts} Critical Patient Alert{dashboardData.recentAlerts > 1 ? 's' : ''}
+              <h3 className={`text-sm sm:text-base font-semibold ${dashboardData.criticalAlerts > 0 ? 'text-red-800 dark:text-red-200' : 'text-orange-800 dark:text-orange-200'}`}>
+                {dashboardData.criticalAlerts > 0 && (
+                  <>
+                    {dashboardData.criticalAlerts} Critical Patient Alert{dashboardData.criticalAlerts > 1 ? 's' : ''}
+                    {dashboardData.warningAlerts > 0 && ` + ${dashboardData.warningAlerts} Warning${dashboardData.warningAlerts > 1 ? 's' : ''}`}
+                  </>
+                )}
+                {dashboardData.criticalAlerts === 0 && dashboardData.warningAlerts > 0 && (
+                  <>
+                    {dashboardData.warningAlerts} Warning Patient Alert{dashboardData.warningAlerts > 1 ? 's' : ''}
+                  </>
+                )}
               </h3>
-              <p className="text-xs sm:text-sm text-red-700 dark:text-red-300">
-                From patients currently in active chat sessions. Please review immediately.
+              <p className={`text-xs sm:text-sm ${dashboardData.criticalAlerts > 0 ? 'text-red-700 dark:text-red-300' : 'text-orange-700 dark:text-orange-300'}`}>
+                From patients currently in active chat sessions. Please review {dashboardData.criticalAlerts > 0 ? 'immediately' : 'when convenient'}.
               </p>
             </div>
             <div className="flex items-center space-x-2">
               <button
                 onClick={() => navigate('/notifications')}
-                className="px-3 py-1.5 text-xs sm:text-sm bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
+                className={`px-3 py-1.5 text-xs sm:text-sm ${dashboardData.criticalAlerts > 0 ? 'bg-red-500 hover:bg-red-600' : 'bg-orange-500 hover:bg-orange-600'} text-white rounded-lg transition-colors`}
               >
                 View Alerts
               </button>
               <button
                 onClick={() => setAlertsBannerDismissed(true)}
-                className="p-1.5 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-100 dark:hover:bg-red-800/30 rounded-lg transition-colors"
+                className={`p-1.5 ${dashboardData.criticalAlerts > 0 ? 'text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-100 dark:hover:bg-red-800/30' : 'text-orange-500 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300 hover:bg-orange-100 dark:hover:bg-orange-800/30'} rounded-lg transition-colors`}
                 title="Dismiss alerts banner"
               >
                 <XMarkIcon className="w-4 h-4" />
@@ -239,13 +287,17 @@ const DashboardOverview = () => {
       )}
 
       {/* Dismissed Alerts Summary - Minimized State */}
-      {!loading && dashboardData.criticalAlertsCount > 0 && alertsBannerDismissed && (
+      {!loading && dashboardData.recentAlerts > 0 && alertsBannerDismissed && (
         <div className="bg-gray-50 dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700/50 rounded-xl p-3 shadow-sm">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <ExclamationTriangleIcon className="w-4 h-4 text-gray-500 dark:text-slate-400" />
               <span className="text-sm text-gray-600 dark:text-slate-400">
-                {dashboardData.criticalAlertsCount} critical alert{dashboardData.criticalAlertsCount > 1 ? 's' : ''} (dismissed)
+                {dashboardData.criticalAlerts > 0 && `${dashboardData.criticalAlerts} critical`}
+                {dashboardData.criticalAlerts > 0 && dashboardData.warningAlerts > 0 && ', '}
+                {dashboardData.warningAlerts > 0 && `${dashboardData.warningAlerts} warning`}
+                {' alert'}
+                {dashboardData.recentAlerts > 1 ? 's' : ''} (dismissed)
               </span>
             </div>
             <button

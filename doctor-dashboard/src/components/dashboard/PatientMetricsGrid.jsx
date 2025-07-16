@@ -250,7 +250,7 @@ const PatientMetricsGrid = () => {
           api.get(`/health-data/patient/${patient.userId}`, { params: { dataType: 'bloodPressure', limit: 1 } }),
           api.get(`/health-data/patient/${patient.userId}`, { params: { dataType: 'glucoseLevel', limit: 1 } }),
           api.get(`/health-data/patient/${patient.userId}`, { params: { dataType: 'bodyTemperature', limit: 1 } }),
-          api.get(`/users/${patient.userId}`)
+          api.get(`/profile/patient/${patient.userId}`)
         ]);
 
         console.log(`Health data responses for ${patient.name}:`, {
