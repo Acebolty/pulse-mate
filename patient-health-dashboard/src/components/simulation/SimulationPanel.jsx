@@ -59,8 +59,8 @@ const SimulationPanel = ({ onClose, onDataGenerated }) => {
 
       setResult(response.data);
 
-      // Notify other components about potential new alerts
-      window.dispatchEvent(new CustomEvent('alertsGenerated', {
+      // Notify other components about new health data (AlertContext will generate alerts)
+      window.dispatchEvent(new CustomEvent('healthDataGenerated', {
         detail: { source: 'historicalGeneration', days: days }
       }));
 
@@ -87,8 +87,8 @@ const SimulationPanel = ({ onClose, onDataGenerated }) => {
       console.log('Real-time data generated:', response.data);
       setResult(response.data);
 
-      // Notify other components about potential new alerts
-      window.dispatchEvent(new CustomEvent('alertsGenerated', {
+      // Notify other components about new health data (AlertContext will generate alerts)
+      window.dispatchEvent(new CustomEvent('healthDataGenerated', {
         detail: { source: 'realtimeGeneration', entriesCount: response.data.data?.entriesCreated || 0 }
       }));
 

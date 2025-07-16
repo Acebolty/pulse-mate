@@ -1,6 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useNavigate } from "react-router-dom"
+import { useAlerts } from "../contexts/AlertContext"
 
 import {
   ExclamationTriangleIcon,
@@ -24,292 +26,9 @@ import {
 import { motion } from "framer-motion"
 import api from "../services/api"
 
-// Smart Alert Generation System
-const generateSmartAlerts = (healthData) => {
-  const alerts = [];
-  const now = new Date();
+// Legacy alert generation - removed (now using AlertContext)
 
-  // Process each health metric for alerts
-  Object.entries(healthData).forEach(([dataType, readings]) => {
-    if (readings.length === 0) return;
 
-    const latestReading = readings[0]; // Most recent reading
-    const alertId = `${dataType}-${latestReading.timestamp}`;
-
-    switch (dataType) {
-      case 'heartRate':
-        const hr = latestReading.value;
-        if (hr < 50) {
-          alerts.push({
-            id: alertId,
-            type: "critical",
-            title: "Severe Bradycardia Alert",
-            message: `Critical: Heart rate ${hr} bpm detected. This is dangerously low and requires immediate medical attention.`,
-            timestamp: latestReading.timestamp,
-            isRead: false,
-            source: "Heart Rate Monitor",
-            dataType: "heartRate",
-            value: hr,
-            actions: ["Call Emergency", "Contact Doctor", "View Trends"],
-            emergencyLevel: "immediate",
-            recommendations: [
-              "Seek immediate medical attention",
-              "Do not drive yourself to hospital",
-              "Call emergency services if experiencing chest pain or dizziness"
-            ]
-          });
-        } else if (hr < 60) {
-          alerts.push({
-            id: alertId,
-            type: "warning",
-            title: "Bradycardia Warning",
-            message: `Heart rate ${hr} bpm is below normal range. Monitor closely and consult healthcare provider.`,
-            timestamp: latestReading.timestamp,
-            isRead: false,
-            source: "Heart Rate Monitor",
-            dataType: "heartRate",
-            value: hr,
-            actions: ["Contact Doctor", "View Trends", "Monitor"],
-            emergencyLevel: "moderate",
-            recommendations: [
-              "Monitor symptoms like dizziness or fatigue",
-              "Contact your doctor within 24 hours",
-              "Avoid strenuous activity until cleared"
-            ]
-          });
-        } else if (hr > 120) {
-          alerts.push({
-            id: alertId,
-            type: "critical",
-            title: "Severe Tachycardia Alert",
-            message: `Critical: Heart rate ${hr} bpm is dangerously high. Seek immediate medical evaluation.`,
-            timestamp: latestReading.timestamp,
-            isRead: false,
-            source: "Heart Rate Monitor",
-            dataType: "heartRate",
-            value: hr,
-            actions: ["Call Emergency", "Contact Doctor", "View Trends"],
-            emergencyLevel: "immediate",
-            recommendations: [
-              "Seek immediate medical attention",
-              "Sit down and rest immediately",
-              "Call emergency services if experiencing chest pain"
-            ]
-          });
-        } else if (hr > 100) {
-          alerts.push({
-            id: alertId,
-            type: "warning",
-            title: "Tachycardia Warning",
-            message: `Heart rate ${hr} bpm is elevated. Monitor for symptoms and consider medical consultation.`,
-            timestamp: latestReading.timestamp,
-            isRead: false,
-            source: "Heart Rate Monitor",
-            dataType: "heartRate",
-            value: hr,
-            actions: ["Contact Doctor", "View Trends", "Rest"],
-            emergencyLevel: "moderate",
-            recommendations: [
-              "Rest and avoid caffeine",
-              "Monitor for chest pain or shortness of breath",
-              "Contact doctor if symptoms persist"
-            ]
-          });
-        }
-        break;
-
-      case 'bloodPressure':
-        const systolic = typeof latestReading.value === 'object' ? latestReading.value.systolic : latestReading.value;
-        const diastolic = typeof latestReading.value === 'object' ? latestReading.value.diastolic : latestReading.value - 40;
-
-        if (systolic >= 180 || diastolic >= 110) {
-          alerts.push({
-            id: alertId,
-            type: "critical",
-            title: "Hypertensive Crisis Alert",
-            message: `CRITICAL: Blood pressure ${systolic}/${diastolic} mmHg indicates hypertensive crisis. Seek emergency medical care immediately.`,
-            timestamp: latestReading.timestamp,
-            isRead: false,
-            source: "Blood Pressure Monitor",
-            dataType: "bloodPressure",
-            value: `${systolic}/${diastolic}`,
-            actions: ["Call Emergency", "Contact Doctor", "View Trends"],
-            emergencyLevel: "immediate",
-            recommendations: [
-              "Call 911 or go to emergency room immediately",
-              "Do not wait - this is a medical emergency",
-              "Bring your medication list to the hospital"
-            ]
-          });
-        } else if (systolic >= 140 || diastolic >= 90) {
-          alerts.push({
-            id: alertId,
-            type: "warning",
-            title: "High Blood Pressure Alert",
-            message: `Blood pressure ${systolic}/${diastolic} mmHg is elevated. Contact your healthcare provider for evaluation.`,
-            timestamp: latestReading.timestamp,
-            isRead: false,
-            source: "Blood Pressure Monitor",
-            dataType: "bloodPressure",
-            value: `${systolic}/${diastolic}`,
-            actions: ["Contact Doctor", "View Trends", "Lifestyle Changes"],
-            emergencyLevel: "moderate",
-            recommendations: [
-              "Contact your doctor within 24-48 hours",
-              "Reduce sodium intake",
-              "Monitor blood pressure regularly"
-            ]
-          });
-        } else if (systolic < 90 || diastolic < 60) {
-          alerts.push({
-            id: alertId,
-            type: "warning",
-            title: "Low Blood Pressure Alert",
-            message: `Blood pressure ${systolic}/${diastolic} mmHg is below normal. Monitor for symptoms of hypotension.`,
-            timestamp: latestReading.timestamp,
-            isRead: false,
-            source: "Blood Pressure Monitor",
-            dataType: "bloodPressure",
-            value: `${systolic}/${diastolic}`,
-            actions: ["Contact Doctor", "View Trends", "Monitor Symptoms"],
-            emergencyLevel: "moderate",
-            recommendations: [
-              "Monitor for dizziness or fainting",
-              "Increase fluid intake",
-              "Contact doctor if symptoms worsen"
-            ]
-          });
-        }
-        break;
-
-      case 'glucoseLevel':
-        const glucose = latestReading.value;
-        if (glucose < 70) {
-          alerts.push({
-            id: alertId,
-            type: "critical",
-            title: "Severe Hypoglycemia Alert",
-            message: `CRITICAL: Blood glucose ${glucose} mg/dL is dangerously low. Take immediate action to raise blood sugar.`,
-            timestamp: latestReading.timestamp,
-            isRead: false,
-            source: "Glucose Monitor",
-            dataType: "glucoseLevel",
-            value: glucose,
-            actions: ["Treat Immediately", "Contact Doctor", "Emergency Protocol"],
-            emergencyLevel: "immediate",
-            recommendations: [
-              "Consume 15g fast-acting carbs immediately",
-              "Recheck glucose in 15 minutes",
-              "Call emergency services if unconscious"
-            ]
-          });
-        } else if (glucose > 250) {
-          alerts.push({
-            id: alertId,
-            type: "critical",
-            title: "Severe Hyperglycemia Alert",
-            message: `CRITICAL: Blood glucose ${glucose} mg/dL is extremely high. Risk of diabetic ketoacidosis. Seek immediate medical care.`,
-            timestamp: latestReading.timestamp,
-            isRead: false,
-            source: "Glucose Monitor",
-            dataType: "glucoseLevel",
-            value: glucose,
-            actions: ["Call Emergency", "Contact Doctor", "Check Ketones"],
-            emergencyLevel: "immediate",
-            recommendations: [
-              "Seek immediate medical attention",
-              "Check for ketones if possible",
-              "Do not exercise with high blood sugar"
-            ]
-          });
-        } else if (glucose > 180) {
-          alerts.push({
-            id: alertId,
-            type: "warning",
-            title: "High Blood Glucose Alert",
-            message: `Blood glucose ${glucose} mg/dL is elevated. Take steps to lower blood sugar and monitor closely.`,
-            timestamp: latestReading.timestamp,
-            isRead: false,
-            source: "Glucose Monitor",
-            dataType: "glucoseLevel",
-            value: glucose,
-            actions: ["Contact Doctor", "Medication Check", "Lifestyle Adjustment"],
-            emergencyLevel: "moderate",
-            recommendations: [
-              "Check medication timing and dosage",
-              "Increase water intake",
-              "Contact doctor if levels remain high"
-            ]
-          });
-        }
-        break;
-
-      case 'bodyTemperature':
-        const temp = latestReading.value;
-        if (temp >= 103.0) {
-          alerts.push({
-            id: alertId,
-            type: "critical",
-            title: "High Fever Alert",
-            message: `CRITICAL: Body temperature ${temp.toFixed(1)}°F indicates high fever. Seek immediate medical attention.`,
-            timestamp: latestReading.timestamp,
-            isRead: false,
-            source: "Temperature Monitor",
-            dataType: "bodyTemperature",
-            value: temp.toFixed(1),
-            actions: ["Call Emergency", "Contact Doctor", "Fever Protocol"],
-            emergencyLevel: "immediate",
-            recommendations: [
-              "Seek immediate medical attention",
-              "Take fever-reducing medication as directed",
-              "Stay hydrated and rest"
-            ]
-          });
-        } else if (temp >= 100.4) {
-          alerts.push({
-            id: alertId,
-            type: "warning",
-            title: "Fever Detected",
-            message: `Body temperature ${temp.toFixed(1)}°F indicates fever. Monitor symptoms and consider medical consultation.`,
-            timestamp: latestReading.timestamp,
-            isRead: false,
-            source: "Temperature Monitor",
-            dataType: "bodyTemperature",
-            value: temp.toFixed(1),
-            actions: ["Contact Doctor", "Monitor Symptoms", "Fever Care"],
-            emergencyLevel: "moderate",
-            recommendations: [
-              "Rest and stay hydrated",
-              "Take temperature regularly",
-              "Contact doctor if fever persists"
-            ]
-          });
-        } else if (temp < 95.0) {
-          alerts.push({
-            id: alertId,
-            type: "warning",
-            title: "Low Body Temperature Alert",
-            message: `Body temperature ${temp.toFixed(1)}°F is below normal. Monitor for signs of hypothermia.`,
-            timestamp: latestReading.timestamp,
-            isRead: false,
-            source: "Temperature Monitor",
-            dataType: "bodyTemperature",
-            value: temp.toFixed(1),
-            actions: ["Warm Up", "Contact Doctor", "Monitor"],
-            emergencyLevel: "moderate",
-            recommendations: [
-              "Warm up gradually with blankets",
-              "Drink warm fluids",
-              "Seek medical attention if shivering persists"
-            ]
-          });
-        }
-        break;
-    }
-  });
-
-  return alerts.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-};
 
 const getAlertIcon = (type) => {
   switch (type) {
@@ -357,8 +76,8 @@ const formatTimestamp = (timestamp) => {
 }
 
 const Alerts = () => {
-  const [alerts, setAlerts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  const { alerts, loading, markAsRead, markAllAsRead, deleteAlert } = useAlerts();
   const [filter, setFilter] = useState("all");
   const [showSettings, setShowSettings] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
@@ -366,117 +85,18 @@ const Alerts = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [error, setError] = useState(null);
 
-  // Fetch alerts from backend API
-  const fetchAlerts = async () => {
-    try {
-      setLoading(true);
-      const response = await api.get('/alerts', {
-        params: { limit: 50, sortBy: 'timestamp', order: 'desc' }
-      });
 
-      // Map backend alert format to frontend format
-      const mappedAlerts = (response.data.data || []).map(alert => ({
-        id: alert._id,
-        _id: alert._id,
-        type: alert.type,
-        title: alert.title,
-        message: alert.message,
-        timestamp: alert.timestamp || alert.createdAt,
-        isRead: alert.isRead,
-        source: alert.source,
-        // Add default values for frontend-specific fields
-        emergencyLevel: alert.type === 'critical' ? 'immediate' : 'normal',
-        actions: getDefaultActions(alert.type),
-        recommendations: getDefaultRecommendations(alert.type)
-      }));
-
-      setAlerts(mappedAlerts);
-      setError(null);
-    } catch (err) {
-      console.error('Error fetching alerts:', err);
-      setError('Failed to load alerts');
-      setAlerts([]);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Get default actions based on alert type
   const getDefaultActions = (type) => {
-    switch (type) {
-      case 'critical':
-        return ['Call Emergency', 'Contact Doctor', 'View Trends'];
-      case 'warning':
-        return ['Contact Doctor', 'View Trends', 'Schedule Appointment'];
-      default:
-        return ['View Details', 'Dismiss'];
-    }
+    return ['Contact Doctor'];
   };
 
-  // Get default recommendations based on alert type
-  const getDefaultRecommendations = (type) => {
-    switch (type) {
-      case 'critical':
-        return [
-          'Seek immediate medical attention',
-          'Do not ignore this alert',
-          'Contact your healthcare provider'
-        ];
-      case 'warning':
-        return [
-          'Monitor your health closely',
-          'Consider contacting your doctor',
-          'Follow your treatment plan'
-        ];
-      default:
-        return [
-          'Continue monitoring your health',
-          'Maintain healthy habits'
-        ];
-    }
-  };
 
-  // Mark alert as read
-  const markAsRead = async (alertId) => {
-    try {
-      await api.put(`/alerts/${alertId}/read`);
-      setAlerts(prev => prev.map(alert =>
-        alert._id === alertId ? { ...alert, isRead: true } : alert
-      ));
 
-      // Notify other components about the alert update
-      window.dispatchEvent(new CustomEvent('alertUpdated', {
-        detail: { alertId, action: 'markAsRead' }
-      }));
-    } catch (err) {
-      console.error('Error marking alert as read:', err);
-    }
-  };
 
-  // Mark all alerts as read
-  const markAllAsRead = async () => {
-    try {
-      await api.put('/alerts/read-all/action');
-      setAlerts(prev => prev.map(alert => ({ ...alert, isRead: true })));
 
-      // Notify other components about the alert update
-      window.dispatchEvent(new CustomEvent('alertUpdated', {
-        detail: { action: 'markAllAsRead' }
-      }));
-    } catch (err) {
-      console.error('Error marking all alerts as read:', err);
-    }
-  };
 
-  // Get unread count
-  const getUnreadCount = () => {
-    return alerts.filter(alert => !alert.isRead).length;
-  };
-
-  // Get critical unread count
-  const getCriticalUnreadCount = () => {
-    return alerts.filter(alert => !alert.isRead && alert.type === 'critical').length;
-  };
 
   // Dark mode listener
   useEffect(() => {
@@ -488,9 +108,7 @@ const Alerts = () => {
     return () => observer.disconnect();
   }, []);
 
-  useEffect(() => {
-    fetchAlerts();
-  }, []); // Fetch once on component mount
+
 
 
 
@@ -513,8 +131,8 @@ const Alerts = () => {
   const filteredAlerts = getFilteredAlerts();
 
   // Calculate counts
-  const unreadCount = getUnreadCount();
-  const criticalCount = getCriticalUnreadCount();
+  const unreadCount = alerts.filter(alert => !alert.isRead).length;
+  const criticalCount = alerts.filter(alert => !alert.isRead && alert.type === 'critical').length;
 
   // Calculate alerts this week
   const now = new Date();
@@ -531,16 +149,9 @@ const Alerts = () => {
     console.log(`Emergency action: ${action} for alert:`, alert);
 
     switch (action) {
-      case 'Call Emergency':
-        // In a real app, this could integrate with phone dialer
-        alert('Emergency services: 911\nThis would normally dial emergency services.');
-        break;
       case 'Contact Doctor':
-        alert('Contacting your healthcare provider...\nThis would normally send an alert to your doctor.');
-        break;
-      case 'Treat Immediately':
-        // Show emergency treatment protocol
-        setShowEmergencyPlans(true);
+        // Navigate to appointments page for quick appointment booking
+        navigate('/dashboard/appointments');
         break;
       default:
         console.log(`Action: ${action}`);
@@ -834,7 +445,7 @@ const Alerts = () => {
               <div className="space-y-3 text-sm text-gray-600 dark:text-slate-300">
                 <div className="flex items-start space-x-2">
                   <span className="font-semibold text-purple-600 dark:text-purple-400">1.</span>
-                  <span>Take fever-reducing medication as directed</span>
+                  <span>Take appropriate fever-reducing measures as directed by healthcare provider</span>
                 </div>
                 <div className="flex items-start space-x-2">
                   <span className="font-semibold text-purple-600 dark:text-purple-400">2.</span>

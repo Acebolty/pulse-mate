@@ -44,29 +44,31 @@ const getHeartRateStatus = (heartRate) => {
   if (heartRate < 50) return "critical";
   if (heartRate < 60) return "warning";
   if (heartRate >= 60 && heartRate <= 100) return "good";
-  if (heartRate > 100 && heartRate <= 120) return "warning";
+  if (heartRate > 100 && heartRate <= 150) return "warning";
   return "critical";
 };
 
 const getBloodPressureStatus = (systolic, diastolic) => {
   if (systolic >= 180 || diastolic >= 110) return "critical";
+  if (systolic < 70 || diastolic < 40) return "critical";
   if (systolic >= 140 || diastolic >= 90) return "warning";
+  if (systolic < 90 || diastolic < 60) return "warning";
   if (systolic >= 120 || diastolic >= 80) return "normal";
   return "good";
 };
 
 const getGlucoseStatus = (glucose) => {
-  if (glucose < 70) return "critical";
-  if (glucose >= 70 && glucose <= 100) return "good";
-  if (glucose > 100 && glucose <= 140) return "warning";
-  return "critical";
+  if (glucose < 54 || glucose > 400) return "critical";
+  if (glucose < 70 || glucose > 180) return "warning";
+  if (glucose >= 70 && glucose <= 140) return "good";
+  return "warning";
 };
 
 const getTemperatureStatus = (temp) => {
-  if (temp < 97.0) return "warning";
-  if (temp >= 97.0 && temp <= 99.0) return "normal";
-  if (temp > 99.0 && temp <= 100.4) return "warning";
-  return "critical";
+  if (temp < 95.0 || temp >= 104.0) return "critical";
+  if (temp < 96.0 || temp > 100.4) return "warning";
+  if (temp >= 97.0 && temp <= 99.0) return "good";
+  return "normal";
 };
 
 const HealthMetrics = () => {

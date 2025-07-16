@@ -39,8 +39,8 @@ const upcomingAppointments = [
     status: "confirmed",
     location: "Health Center - Room 205",
     address: "123 Medical Plaza, Suite 205",
-    notes: "Bring previous lab results and current medication list",
-    preparation: ["Fasting for 12 hours", "Bring insurance card", "List of current medications"],
+    notes: "Bring previous lab results and medical history",
+    preparation: ["Fasting for 12 hours", "Bring insurance card", "List of current health concerns"],
   },
   {
     id: 2,

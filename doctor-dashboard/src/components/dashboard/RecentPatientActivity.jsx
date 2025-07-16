@@ -135,9 +135,14 @@ const RecentPatientActivity = () => {
           return;
         }
 
-        // Get unique patient IDs and their names
+        // Get unique patient IDs and their names - ONLY from "Open Chat" appointments
         const patientMap = new Map();
         appointments.forEach(apt => {
+          // Only include patients with "Open Chat" status
+          if (apt.status !== 'Open Chat') {
+            return; // Skip this appointment if not in active chat
+          }
+
           // Handle different data structures
           let userId, patientName;
 
@@ -163,7 +168,13 @@ const RecentPatientActivity = () => {
           }
         });
 
-        // Fetch recent health data for all patients
+        // If no patients in active chat sessions, show empty state
+        if (patientMap.size === 0) {
+          setActivities([]);
+          return;
+        }
+
+        // Fetch recent health data for patients in active chat sessions only
         const allActivities = [];
 
         for (const [userId, patientName] of patientMap) {
@@ -251,7 +262,9 @@ const RecentPatientActivity = () => {
           <div className="text-center py-8">
             <DocumentArrowDownIcon className="w-16 h-16 text-gray-400 dark:text-slate-500 mx-auto mb-4" />
             <p className="text-gray-500 dark:text-slate-400 font-medium">No recent patient activity</p>
-            <p className="text-gray-400 dark:text-slate-500 text-sm mt-1">Patient health updates will appear here</p>
+            <p className="text-gray-400 dark:text-slate-500 text-sm mt-1">
+              Activity from patients in active chat sessions will appear here
+            </p>
           </div>
         ) : (
           // Activities list

@@ -8,7 +8,6 @@ import Settings from "./pages/Settings"
 
 
 import Alerts from "./pages/Alerts"
-import Medications from "./pages/Medications"
 import Profile from "./pages/ProfileNew"
 import LoginPage from "./pages/LoginPage"
 import SignupPage from "./pages/SignupPage"
@@ -42,7 +41,6 @@ function App() {
                   <Route path="overview" element={<DashboardOverview />} />
                   <Route path="health-metrics" element={<HealthMetrics />} />
                   <Route path="appointments" element={<Appointments />} />
-                  <Route path="medications" element={<Medications />} />
                   <Route path="messages" element={<Messages />} />
                   <Route path="alerts" element={<Alerts />} />
                   <Route path="profile" element={<Profile />} />

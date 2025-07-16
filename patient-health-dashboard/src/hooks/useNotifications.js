@@ -131,17 +131,7 @@ export const useNotifications = () => {
     });
   }, [addNotification]);
 
-  /**
-   * Add medication reminder
-   */
-  const addMedicationReminder = useCallback((title, message, medicationData = {}) => {
-    return addNotification('medication_reminder', title, message, {
-      priority: 'high',
-      category: 'medication',
-      data: medicationData,
-      actions: ['Mark Taken', 'Snooze', 'Skip']
-    });
-  }, [addNotification]);
+
 
   /**
    * Add health task reminder
@@ -212,7 +202,6 @@ export const useNotifications = () => {
     // Specific notification types
     addHealthAlert,
     addAppointmentReminder,
-    addMedicationReminder,
     addHealthTaskReminder,
     addEmergencyAlert,
     

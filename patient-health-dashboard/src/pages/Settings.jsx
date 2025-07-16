@@ -29,7 +29,6 @@ const initialSettingsData = {
   notifications: {
     emailNotifications: true,
     appointmentReminders: true,
-    medicationReminders: true,
     healthAlerts: true,
     messageNotifications: true,
     weeklyHealthSummary: true,
@@ -165,94 +164,11 @@ const Settings = () => {
     }
   };
 
-  const handleTestMedicationReminder = async () => {
-    setLoading(true);
-    setError('');
-    setSuccessMessage('');
 
-    try {
-      const response = await api.post('/email-test/send-medication-reminder');
 
-      if (response.data.success) {
-        setSuccessMessage('Test medication reminder sent successfully! Check your inbox.');
-        if (response.data.previewUrl) {
-          console.log('Email preview URL:', response.data.previewUrl);
-        }
-      } else {
-        setError('Failed to send medication reminder: ' + response.data.message);
-      }
-    } catch (err) {
-      console.error('Error sending medication reminder:', err);
-      const errorMessage = err.response?.data?.message || 'Failed to send medication reminder. Please try again.';
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
-      // Clear messages after 5 seconds
-      setTimeout(() => {
-        setSuccessMessage('');
-        setError('');
-      }, 5000);
-    }
-  };
 
-  const handleTestDailySummary = async () => {
-    setLoading(true);
-    setError('');
-    setSuccessMessage('');
 
-    try {
-      const response = await api.post('/email-test/send-daily-medication-summary');
 
-      if (response.data.success) {
-        setSuccessMessage('Test daily medication summary sent successfully! Check your inbox.');
-        if (response.data.previewUrl) {
-          console.log('Email preview URL:', response.data.previewUrl);
-        }
-      } else {
-        setError('Failed to send daily summary: ' + response.data.message);
-      }
-    } catch (err) {
-      console.error('Error sending daily summary:', err);
-      const errorMessage = err.response?.data?.message || 'Failed to send daily summary. Please try again.';
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
-      // Clear messages after 5 seconds
-      setTimeout(() => {
-        setSuccessMessage('');
-        setError('');
-      }, 5000);
-    }
-  };
-
-  const handleTestMedicationAlerts = async () => {
-    setLoading(true);
-    setError('');
-    setSuccessMessage('');
-
-    try {
-      const response = await api.post('/email-test/generate-medication-alerts');
-
-      if (response.data.success) {
-        setSuccessMessage(`Generated ${response.data.alertsCreated} medication alerts! Check your dashboard and alerts page.`);
-        // Trigger alert refresh in sidebar
-        window.dispatchEvent(new CustomEvent('alertsGenerated'));
-      } else {
-        setError('Failed to generate medication alerts: ' + response.data.message);
-      }
-    } catch (err) {
-      console.error('Error generating medication alerts:', err);
-      const errorMessage = err.response?.data?.message || 'Failed to generate medication alerts. Please try again.';
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
-      // Clear messages after 5 seconds
-      setTimeout(() => {
-        setSuccessMessage('');
-        setError('');
-      }, 5000);
-    }
-  };
 
   const saveSettings = async () => {
     setError('');
@@ -750,54 +666,6 @@ const Settings = () => {
                     </label>
                   </div>
 
-
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100 mb-3 sm:mb-4">Medication & Treatment</h3>
-                <div className="space-y-3 sm:space-y-4">
-                  {/* Medication Reminders */}
-                  <div className="flex flex-col items-start space-y-2 p-3 sm:p-4 border border-gray-200 dark:border-slate-700 dark:bg-slate-700/30 rounded-lg sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-                    <div className="flex-1">
-                      <h4 className="text-sm font-medium text-gray-900 dark:text-slate-200">Medication Reminders</h4>
-                      <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400">Never miss your medication schedule</p>
-                      {settingsData.notifications.medicationReminders && (
-                        <div className="mt-2 space-x-2">
-                          <button
-                            onClick={handleTestMedicationReminder}
-                            disabled={loading}
-                            className="px-3 py-1 text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-md hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-colors disabled:opacity-50"
-                          >
-                            Test Email
-                          </button>
-                          <button
-                            onClick={handleTestDailySummary}
-                            disabled={loading}
-                            className="px-3 py-1 text-xs bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-md hover:bg-indigo-200 dark:hover:bg-indigo-900/50 transition-colors disabled:opacity-50"
-                          >
-                            Test Summary
-                          </button>
-                          <button
-                            onClick={handleTestMedicationAlerts}
-                            disabled={loading}
-                            className="px-3 py-1 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-md hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors disabled:opacity-50"
-                          >
-                            Test Alerts
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer mt-1 sm:mt-0 self-end sm:self-center">
-                      <input
-                        type="checkbox"
-                        checked={settingsData.notifications.medicationReminders}
-                        onChange={(e) => handleSettingChange("notifications", "medicationReminders", e.target.checked)}
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-gray-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 dark:after:border-slate-500 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600 dark:peer-checked:bg-green-500"></div>
-                    </label>
-                  </div>
 
                   {/* Health Task Reminders */}
                   <div className="flex flex-col items-start space-y-2 p-3 sm:p-4 border border-gray-200 dark:border-slate-700 dark:bg-slate-700/30 rounded-lg sm:flex-row sm:items-center sm:justify-between sm:space-y-0">

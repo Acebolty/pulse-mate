@@ -18,6 +18,7 @@ const Header = ({ onMenuClick, isCollapsed }) => {
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
   const [currentUser, setCurrentUser] = useState(null)
+  const [markingAllAsRead, setMarkingAllAsRead] = useState(false)
   const navigate = useNavigate()
   const { profileData, displayName, profilePicture } = useDoctorProfile()
 
@@ -64,11 +65,17 @@ const Header = ({ onMenuClick, isCollapsed }) => {
         setLoading(true)
         console.log('📱 Fetching real notifications...')
 
-        // Fetch both alerts and appointments
-        const [alertsRes, appointmentsRes] = await Promise.allSettled([
-          api.get('/alerts?limit=10'),
+        // Fetch notifications, alerts and appointments (same endpoints as main Notifications page)
+        const [notificationsRes, alertsRes, appointmentsRes] = await Promise.allSettled([
+          api.get('/notifications/doctor?limit=10'),
+          api.get('/alerts/doctor/notifications?limit=10'),
           api.get('/appointments/doctor')
         ])
+
+        // Process appointment notifications
+        const appointmentNotificationsData = notificationsRes.status === 'fulfilled' ? notificationsRes.value.data : {}
+        const appointmentNotifications = Array.isArray(appointmentNotificationsData.data) ? appointmentNotificationsData.data :
+                                       Array.isArray(appointmentNotificationsData) ? appointmentNotificationsData : []
 
         // Process health alerts
         const alertsData = alertsRes.status === 'fulfilled' ? alertsRes.value.data : {}
@@ -80,55 +87,34 @@ const Header = ({ onMenuClick, isCollapsed }) => {
         const appointments = Array.isArray(appointmentsData.data) ? appointmentsData.data :
                            Array.isArray(appointmentsData) ? appointmentsData : []
 
-        console.log('📱 Found:', alerts.length, 'health alerts,', appointments.length, 'appointments')
+        console.log('📱 Found:', appointmentNotifications.length, 'appointment notifications,', alerts.length, 'health alerts')
 
-        // Create appointment notifications (today and tomorrow)
-        const today = new Date()
-        const tomorrow = new Date(today)
-        tomorrow.setDate(tomorrow.getDate() + 1)
+        // Format appointment notifications from API
+        const formattedAppointmentNotifications = appointmentNotifications.map(notification => ({
+          id: notification._id,
+          title: notification.title,
+          message: notification.message,
+          timestamp: notification.createdAt,
+          isRead: notification.isRead || false,
+          type: notification.type,
+          priority: notification.priority || 'normal',
+          patientName: notification.patientName || 'Unknown Patient'
+        }))
 
-        const appointmentNotifications = appointments
-          .filter(apt => {
-            const aptDate = new Date(apt.dateTime)
-            return aptDate >= today && aptDate <= tomorrow && apt.status === 'Confirmed'
-          })
-          .map(apt => {
-            const aptDate = new Date(apt.dateTime)
-            const patientName = apt.userId?.firstName && apt.userId?.lastName
-              ? `${apt.userId.firstName} ${apt.userId.lastName}`
-              : 'Unknown Patient'
-
-            const isToday = aptDate.toDateString() === today.toDateString()
-            const timeStr = aptDate.toLocaleTimeString('en-US', {
-              hour: 'numeric',
-              minute: '2-digit',
-              hour12: true
-            })
-
-            return {
-              id: `apt-${apt._id}`,
-              title: isToday ? `Today's Appointment` : `Tomorrow's Appointment`,
-              message: `${patientName} - ${apt.reason || 'Consultation'} at ${timeStr}`,
-              timestamp: apt.dateTime,
-              isRead: false,
-              type: 'appointment',
-              priority: 'medium'
-            }
-          })
-
-        // Format health alerts
-        const healthNotifications = alerts.map(alert => ({
+        // Format health alerts (now with patient names from backend)
+        const formattedHealthNotifications = alerts.map(alert => ({
           id: alert._id,
-          title: alert.title || 'Health Alert',
-          message: alert.message || alert.description || 'New health data',
+          title: alert.type === 'critical' ? `Critical: ${alert.title || 'Health Alert'}` : `Warning: ${alert.title || 'Health Alert'}`,
+          message: alert.message || alert.description || 'Health data requires review',
           timestamp: alert.createdAt || alert.timestamp,
           isRead: alert.isRead || false,
-          type: alert.type || 'health',
-          priority: alert.priority || 'medium'
+          type: alert.type === 'critical' ? 'critical_alert' : 'health_metric_warning',
+          priority: alert.priority || 'medium',
+          patientName: alert.patientName || 'Unknown Patient'
         }))
 
         // Combine all notifications
-        const allNotifications = [...appointmentNotifications, ...healthNotifications]
+        const allNotifications = [...formattedAppointmentNotifications, ...formattedHealthNotifications]
 
         // Sort by timestamp (most recent first)
         allNotifications.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
@@ -138,8 +124,8 @@ const Header = ({ onMenuClick, isCollapsed }) => {
 
         console.log('📱 Total notifications:', allNotifications.length)
         console.log('📱 Unread count:', unreadCount)
-        console.log('📱 Appointment notifications:', appointmentNotifications.length)
-        console.log('📱 Health notifications:', healthNotifications.length)
+        console.log('📱 Appointment notifications:', formattedAppointmentNotifications.length)
+        console.log('📱 Health notifications:', formattedHealthNotifications.length)
 
         setNotifications(allNotifications)
         setNotificationCount(unreadCount)
@@ -157,18 +143,78 @@ const Header = ({ onMenuClick, isCollapsed }) => {
 
     // Refresh every 30 seconds
     const interval = setInterval(fetchNotifications, 30000)
-    return () => clearInterval(interval)
+
+    // Listen for mark all as read events from other components
+    const handleNotificationsMarkedAsRead = () => {
+      console.log('📱 Header: Received notifications marked as read event, performing silent refresh...');
+
+      // Immediately update UI to show 0 notifications for instant feedback
+      setNotificationCount(0);
+      setNotifications([]);
+
+      // Then fetch fresh data from backend to ensure consistency
+      fetchNotifications();
+    };
+
+    window.addEventListener('notificationsMarkedAsRead', handleNotificationsMarkedAsRead);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('notificationsMarkedAsRead', handleNotificationsMarkedAsRead);
+    }
   }, [])
 
   // Mark all notifications as read
   const markAllAsRead = async () => {
     try {
-      await api.put('/alerts/read-all')
-      setNotifications(notifications.map(n => ({ ...n, isRead: true })))
-      setNotificationCount(0)
-      console.log('✅ Marked all notifications as read')
+      setMarkingAllAsRead(true); // Show loading state
+      console.log('📱 Header: Marking all notifications as read...');
+
+      // Mark both notification types as read (doctor-specific endpoints)
+      const [notificationsRes, alertsRes] = await Promise.allSettled([
+        api.put('/notifications/read-all'),
+        api.put('/alerts/doctor/read-all')
+      ]);
+
+      // Check if at least one succeeded
+      const notificationsSuccess = notificationsRes.status === 'fulfilled' && notificationsRes.value.data.success;
+      const alertsSuccess = alertsRes.status === 'fulfilled' && alertsRes.value.data.success;
+
+      if (notificationsSuccess || alertsSuccess) {
+        // Update frontend state immediately
+        setNotifications(notifications.map(n => ({ ...n, isRead: true })));
+        setNotificationCount(0);
+
+        console.log('✅ Header: Marked all notifications as read');
+        console.log('📧 Notifications:', notificationsSuccess ? 'Success' : 'Failed');
+        console.log('🚨 Alerts:', alertsSuccess ? 'Success' : 'Failed');
+
+        // Silent refresh: Trigger updates in other components after a small delay
+        setTimeout(() => {
+          console.log('🔄 Header: Triggering silent refresh of sidebar and main page...');
+          window.dispatchEvent(new CustomEvent('notificationsMarkedAsRead'));
+          setMarkingAllAsRead(false); // Reset loading state after silent refresh
+        }, 500);
+
+      } else {
+        setMarkingAllAsRead(false); // Reset loading state on failure
+        throw new Error('Failed to mark notifications as read');
+      }
     } catch (err) {
-      console.error('❌ Error marking all as read:', err)
+      console.error('❌ Header: Error marking all notifications as read:', err);
+
+      // Still update frontend for better UX
+      setNotifications(notifications.map(n => ({ ...n, isRead: true })));
+      setNotificationCount(0);
+
+      // Still trigger the silent refresh for UI updates
+      setTimeout(() => {
+        console.log('🔄 Header: Triggering silent refresh (fallback after error)...');
+        window.dispatchEvent(new CustomEvent('notificationsMarkedAsRead'));
+        setMarkingAllAsRead(false); // Reset loading state after silent refresh
+      }, 500);
+
+      console.warn('⚠️ Header: Updated frontend but backend update may have failed');
     }
   }
 
@@ -288,6 +334,11 @@ const Header = ({ onMenuClick, isCollapsed }) => {
                               <p className="text-xs text-gray-500 dark:text-slate-400 truncate mt-0.5">
                                 {notification.message}
                               </p>
+                              {notification.patientName && (
+                                <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">
+                                  Patient: <span className="font-medium">{notification.patientName}</span>
+                                </p>
+                              )}
                               <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">
                                 {timeAgo}
                               </p>
@@ -307,9 +358,13 @@ const Header = ({ onMenuClick, isCollapsed }) => {
                           markAllAsRead()
                           setShowNotifications(false)
                         }}
-                        className="flex-1 text-center px-3 py-2 text-sm text-blue-600 dark:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-700/30 transition-colors rounded"
+                        disabled={markingAllAsRead}
+                        className="flex-1 text-center px-3 py-2 text-sm text-blue-600 dark:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-700/30 transition-colors rounded disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                       >
-                        Mark All Read
+                        {markingAllAsRead && (
+                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600 dark:border-blue-500"></div>
+                        )}
+                        <span>{markingAllAsRead ? 'Marking...' : 'Mark All Read'}</span>
                       </button>
                     )}
                     <button

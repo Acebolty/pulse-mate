@@ -13,6 +13,10 @@ import {
   XMarkIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  LightBulbIcon,
+  AcademicCapIcon,
+  ChatBubbleOvalLeftEllipsisIcon,
+  ClipboardDocumentCheckIcon,
 } from "@heroicons/react/24/outline"
 import api from "../../services/api"
 import { useDoctorProfile } from "../../contexts/DoctorProfileContext"
@@ -23,9 +27,121 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
   const [notificationCount, setNotificationCount] = useState(0)
   const [appointmentCount, setAppointmentCount] = useState(0)
   const [currentUser, setCurrentUser] = useState(null)
+  const [currentTip, setCurrentTip] = useState(null)
 
   // Use the doctor profile context for real-time data
   const { profileData, displayName, profilePicture } = useDoctorProfile()
+
+  // Professional tips for doctors
+  const professionalTips = [
+    // Clinical Insights
+    {
+      icon: AcademicCapIcon,
+      category: "Clinical Insight",
+      title: "Evidence-Based Care",
+      message: "Studies show patients are 40% more likely to follow treatment plans when doctors explain the 'why' behind recommendations.",
+      color: "blue"
+    },
+    {
+      icon: ClipboardDocumentCheckIcon,
+      category: "Clinical Insight",
+      title: "Diagnostic Accuracy",
+      message: "Taking an extra 30 seconds to review patient history can improve diagnostic accuracy by 25%.",
+      color: "green"
+    },
+    {
+      icon: AcademicCapIcon,
+      category: "Clinical Insight",
+      title: "Medication Adherence",
+      message: "Patients who understand their medication's purpose are 60% more likely to take it as prescribed.",
+      color: "purple"
+    },
+
+    // Communication Strategies
+    {
+      icon: ChatBubbleOvalLeftEllipsisIcon,
+      category: "Communication Tip",
+      title: "Teach-Back Method",
+      message: "Ask patients to repeat instructions in their own words to ensure understanding and improve compliance.",
+      color: "indigo"
+    },
+    {
+      icon: ChatBubbleOvalLeftEllipsisIcon,
+      category: "Communication Tip",
+      title: "Active Listening",
+      message: "Maintain eye contact and nod to show engagement. Patients feel more heard and trust increases by 35%.",
+      color: "teal"
+    },
+    {
+      icon: ChatBubbleOvalLeftEllipsisIcon,
+      category: "Communication Tip",
+      title: "Empathy Building",
+      message: "Use phrases like 'I understand this must be concerning' to validate patient emotions and build rapport.",
+      color: "pink"
+    },
+
+    // Practice Efficiency
+    {
+      icon: ClipboardDocumentCheckIcon,
+      category: "Practice Tip",
+      title: "Pre-Consultation Review",
+      message: "Reviewing patient health trends before consultations can reduce session time by 25% and improve care quality.",
+      color: "orange"
+    },
+    {
+      icon: ClipboardDocumentCheckIcon,
+      category: "Practice Tip",
+      title: "Documentation Efficiency",
+      message: "Document key points during the consultation to reduce post-visit admin time by up to 40%.",
+      color: "red"
+    },
+    {
+      icon: LightBulbIcon,
+      category: "Practice Tip",
+      title: "Time Management",
+      message: "Schedule complex cases earlier in the day when your cognitive energy is highest for better outcomes.",
+      color: "yellow"
+    },
+
+    // Telemedicine Best Practices
+    {
+      icon: ChatBubbleLeftIcon,
+      category: "Telehealth Tip",
+      title: "Virtual Presence",
+      message: "Look at the camera, not the screen, to maintain eye contact and build better patient rapport in virtual consultations.",
+      color: "blue"
+    },
+    {
+      icon: ChatBubbleLeftIcon,
+      category: "Telehealth Tip",
+      title: "Technical Setup",
+      message: "Good lighting and clear audio improve patient satisfaction scores by 45% in telehealth appointments.",
+      color: "green"
+    },
+
+    // Doctor Wellness
+    {
+      icon: HeartIcon,
+      category: "Doctor Wellness",
+      title: "Burnout Prevention",
+      message: "Take 2 minutes between patients for deep breathing. Physician burnout affects 50% of doctors - self-care matters.",
+      color: "red"
+    },
+    {
+      icon: HeartIcon,
+      category: "Doctor Wellness",
+      title: "Work-Life Balance",
+      message: "Set boundaries with work communications after hours. Well-rested doctors make 23% fewer diagnostic errors.",
+      color: "purple"
+    },
+    {
+      icon: HeartIcon,
+      category: "Doctor Wellness",
+      title: "Stress Management",
+      message: "Practice the 4-7-8 breathing technique between difficult cases to reset your mental state and maintain focus.",
+      color: "teal"
+    }
+  ]
 
   // Get current user data
   useEffect(() => {
@@ -39,11 +155,17 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
       try {
         console.log('📋 Sidebar: Fetching counts...')
 
-        // Fetch both alerts and appointments
-        const [alertsRes, appointmentsRes] = await Promise.allSettled([
-          api.get('/alerts?limit=50'),
+        // Fetch notifications, alerts and appointments (same endpoints as Header and Notifications page)
+        const [notificationsRes, alertsRes, appointmentsRes] = await Promise.allSettled([
+          api.get('/notifications/doctor?limit=50'),
+          api.get('/alerts/doctor/notifications?limit=50'),
           api.get('/appointments/doctor')
         ])
+
+        // Process appointment notifications
+        const appointmentNotificationsData = notificationsRes.status === 'fulfilled' ? notificationsRes.value.data : {}
+        const appointmentNotifications = Array.isArray(appointmentNotificationsData.data) ? appointmentNotificationsData.data :
+                                       Array.isArray(appointmentNotificationsData) ? appointmentNotificationsData : []
 
         // Process health alerts
         const alertsData = alertsRes.status === 'fulfilled' ? alertsRes.value.data : {}
@@ -62,26 +184,20 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
           return aptDate.toDateString() === today && apt.status === 'Confirmed'
         }).length
 
-        // Count appointment notifications (today + tomorrow)
-        const tomorrow = new Date()
-        tomorrow.setDate(tomorrow.getDate() + 1)
-
-        const appointmentNotifications = appointments.filter(apt => {
-          const aptDate = new Date(apt.dateTime)
-          return aptDate >= new Date() && aptDate <= tomorrow && apt.status === 'Confirmed'
-        }).length
+        // Count unread appointment notifications
+        const unreadAppointmentNotifications = appointmentNotifications.filter(notif => !notif.isRead).length
 
         // Count unread health alerts
         const unreadHealthAlerts = alerts.filter(alert => !alert.isRead).length
 
-        // Total notification count = appointment notifications + unread health alerts
-        const totalNotifications = appointmentNotifications + unreadHealthAlerts
+        // Total notification count = unread appointment notifications + unread health alerts
+        const totalNotifications = unreadAppointmentNotifications + unreadHealthAlerts
 
         console.log('📋 Sidebar counts:')
         console.log('  - Health alerts:', alerts.length, '(', unreadHealthAlerts, 'unread)')
         console.log('  - Total appointments:', appointments.length)
         console.log('  - Today appointments:', todayAppointments)
-        console.log('  - Appointment notifications:', appointmentNotifications)
+        console.log('  - Appointment notifications:', appointmentNotifications.length, '(', unreadAppointmentNotifications, 'unread)')
         console.log('  - Total notifications:', totalNotifications)
 
         setNotificationCount(totalNotifications)
@@ -98,7 +214,24 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
 
     // Refresh every 30 seconds
     const interval = setInterval(fetchCounts, 30000)
-    return () => clearInterval(interval)
+
+    // Listen for mark all as read events from other components
+    const handleNotificationsMarkedAsRead = () => {
+      console.log('📋 Sidebar: Received notifications marked as read event, performing silent refresh...');
+
+      // Immediately update UI to show 0 notifications for instant feedback
+      setNotificationCount(0);
+
+      // Then fetch fresh data from backend to ensure consistency
+      fetchCounts();
+    };
+
+    window.addEventListener('notificationsMarkedAsRead', handleNotificationsMarkedAsRead);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('notificationsMarkedAsRead', handleNotificationsMarkedAsRead);
+    }
   }, [])
 
   // Dynamic navigation with real counts
@@ -109,6 +242,21 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
     { name: "Messages", href: "/messages", icon: ChatBubbleLeftIcon }, // Remove dummy badge
     { name: "Profile", href: "/profile", icon: UserIcon },
   ]
+
+  // Rotate professional tips every 45 seconds
+  useEffect(() => {
+    const getRandomTip = () => {
+      const randomIndex = Math.floor(Math.random() * professionalTips.length)
+      setCurrentTip(professionalTips[randomIndex])
+    }
+
+    // Set initial tip
+    getRandomTip()
+
+    // Rotate tips every 45 seconds
+    const interval = setInterval(getRandomTip, 45000)
+    return () => clearInterval(interval)
+  }, [])
 
   console.log('📋 Sidebar counts:', { notificationCount, appointmentCount })
   console.log('📋 Sidebar navigation with badges:', navigation.map(item => ({
@@ -259,18 +407,89 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
           ))}
         </nav>
 
-        {/* Bottom section - optional help or upgrade card */}
-        {!isCollapsed && (
+        {/* Professional Tips Section */}
+        {!isCollapsed && currentTip && (
           <div className="flex-shrink-0 p-4">
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-700 dark:to-slate-700/80 rounded-xl p-4 border border-blue-100 dark:border-slate-600">
+            <div className={`bg-gradient-to-br rounded-xl p-4 border transition-all duration-500 ${
+              currentTip.color === 'blue' ? 'from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-100 dark:border-blue-800' :
+              currentTip.color === 'green' ? 'from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-100 dark:border-green-800' :
+              currentTip.color === 'purple' ? 'from-purple-50 to-violet-50 dark:from-purple-900/20 dark:to-violet-900/20 border-purple-100 dark:border-purple-800' :
+              currentTip.color === 'indigo' ? 'from-indigo-50 to-blue-50 dark:from-indigo-900/20 dark:to-blue-900/20 border-indigo-100 dark:border-indigo-800' :
+              currentTip.color === 'teal' ? 'from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 border-teal-100 dark:border-teal-800' :
+              currentTip.color === 'pink' ? 'from-pink-50 to-rose-50 dark:from-pink-900/20 dark:to-rose-900/20 border-pink-100 dark:border-pink-800' :
+              currentTip.color === 'orange' ? 'from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 border-orange-100 dark:border-orange-800' :
+              currentTip.color === 'red' ? 'from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20 border-red-100 dark:border-red-800' :
+              currentTip.color === 'yellow' ? 'from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 border-yellow-100 dark:border-yellow-800' :
+              'from-blue-50 to-indigo-50 dark:from-slate-700 dark:to-slate-700/80 border-blue-100 dark:border-slate-600'
+            }`}>
               <div className="flex items-center space-x-2 mb-2">
-                <div className="w-8 h-8 bg-blue-100 dark:bg-slate-600 rounded-lg flex items-center justify-center">
-                  <HeartIcon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                  currentTip.color === 'blue' ? 'bg-blue-100 dark:bg-blue-800' :
+                  currentTip.color === 'green' ? 'bg-green-100 dark:bg-green-800' :
+                  currentTip.color === 'purple' ? 'bg-purple-100 dark:bg-purple-800' :
+                  currentTip.color === 'indigo' ? 'bg-indigo-100 dark:bg-indigo-800' :
+                  currentTip.color === 'teal' ? 'bg-teal-100 dark:bg-teal-800' :
+                  currentTip.color === 'pink' ? 'bg-pink-100 dark:bg-pink-800' :
+                  currentTip.color === 'orange' ? 'bg-orange-100 dark:bg-orange-800' :
+                  currentTip.color === 'red' ? 'bg-red-100 dark:bg-red-800' :
+                  currentTip.color === 'yellow' ? 'bg-yellow-100 dark:bg-yellow-800' :
+                  'bg-blue-100 dark:bg-slate-600'
+                }`}>
+                  <currentTip.icon className={`w-4 h-4 ${
+                    currentTip.color === 'blue' ? 'text-blue-600 dark:text-blue-300' :
+                    currentTip.color === 'green' ? 'text-green-600 dark:text-green-300' :
+                    currentTip.color === 'purple' ? 'text-purple-600 dark:text-purple-300' :
+                    currentTip.color === 'indigo' ? 'text-indigo-600 dark:text-indigo-300' :
+                    currentTip.color === 'teal' ? 'text-teal-600 dark:text-teal-300' :
+                    currentTip.color === 'pink' ? 'text-pink-600 dark:text-pink-300' :
+                    currentTip.color === 'orange' ? 'text-orange-600 dark:text-orange-300' :
+                    currentTip.color === 'red' ? 'text-red-600 dark:text-red-300' :
+                    currentTip.color === 'yellow' ? 'text-yellow-600 dark:text-yellow-300' :
+                    'text-blue-600 dark:text-blue-400'
+                  }`} />
                 </div>
-                <span className="text-sm font-semibold text-blue-800 dark:text-slate-200">Health Tip</span>
+                <span className={`text-sm font-semibold ${
+                  currentTip.color === 'blue' ? 'text-blue-800 dark:text-blue-200' :
+                  currentTip.color === 'green' ? 'text-green-800 dark:text-green-200' :
+                  currentTip.color === 'purple' ? 'text-purple-800 dark:text-purple-200' :
+                  currentTip.color === 'indigo' ? 'text-indigo-800 dark:text-indigo-200' :
+                  currentTip.color === 'teal' ? 'text-teal-800 dark:text-teal-200' :
+                  currentTip.color === 'pink' ? 'text-pink-800 dark:text-pink-200' :
+                  currentTip.color === 'orange' ? 'text-orange-800 dark:text-orange-200' :
+                  currentTip.color === 'red' ? 'text-red-800 dark:text-red-200' :
+                  currentTip.color === 'yellow' ? 'text-yellow-800 dark:text-yellow-200' :
+                  'text-blue-800 dark:text-slate-200'
+                }`}>
+                  {currentTip.category}
+                </span>
               </div>
-              <p className="text-xs text-blue-700 dark:text-slate-300 leading-relaxed">
-                Remember to stay hydrated and take regular breaks!
+              <h4 className={`text-xs font-medium mb-1 ${
+                currentTip.color === 'blue' ? 'text-blue-700 dark:text-blue-300' :
+                currentTip.color === 'green' ? 'text-green-700 dark:text-green-300' :
+                currentTip.color === 'purple' ? 'text-purple-700 dark:text-purple-300' :
+                currentTip.color === 'indigo' ? 'text-indigo-700 dark:text-indigo-300' :
+                currentTip.color === 'teal' ? 'text-teal-700 dark:text-teal-300' :
+                currentTip.color === 'pink' ? 'text-pink-700 dark:text-pink-300' :
+                currentTip.color === 'orange' ? 'text-orange-700 dark:text-orange-300' :
+                currentTip.color === 'red' ? 'text-red-700 dark:text-red-300' :
+                currentTip.color === 'yellow' ? 'text-yellow-700 dark:text-yellow-300' :
+                'text-blue-700 dark:text-slate-300'
+              }`}>
+                {currentTip.title}
+              </h4>
+              <p className={`text-xs leading-relaxed ${
+                currentTip.color === 'blue' ? 'text-blue-600 dark:text-blue-400' :
+                currentTip.color === 'green' ? 'text-green-600 dark:text-green-400' :
+                currentTip.color === 'purple' ? 'text-purple-600 dark:text-purple-400' :
+                currentTip.color === 'indigo' ? 'text-indigo-600 dark:text-indigo-400' :
+                currentTip.color === 'teal' ? 'text-teal-600 dark:text-teal-400' :
+                currentTip.color === 'pink' ? 'text-pink-600 dark:text-pink-400' :
+                currentTip.color === 'orange' ? 'text-orange-600 dark:text-orange-400' :
+                currentTip.color === 'red' ? 'text-red-600 dark:text-red-400' :
+                currentTip.color === 'yellow' ? 'text-yellow-600 dark:text-yellow-400' :
+                'text-blue-700 dark:text-slate-300'
+              }`}>
+                {currentTip.message}
               </p>
             </div>
           </div>

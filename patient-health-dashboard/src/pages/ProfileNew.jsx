@@ -42,11 +42,6 @@ const Profile = () => {
   // States for adding new medical info
   const [newAllergy, setNewAllergy] = useState('');
   const [newCondition, setNewCondition] = useState('');
-  const [newMedication, setNewMedication] = useState({
-    name: '',
-    dosage: '',
-    frequency: ''
-  });
 
   // Profile data state
   const [profileData, setProfileData] = useState({
@@ -75,14 +70,7 @@ const Profile = () => {
       height: "",
       weight: "",
       allergies: [],
-      chronicConditions: [],
-      medications: [],
-      primaryDoctor: {
-        name: "",
-        specialty: "",
-        phone: "",
-        email: ""
-      }
+      chronicConditions: []
     }
   });
 
@@ -136,14 +124,7 @@ const Profile = () => {
               height: "",
               weight: "",
               allergies: [],
-              chronicConditions: [],
-              medications: [],
-              primaryDoctor: {
-                name: "",
-                specialty: "",
-                phone: "",
-                email: ""
-              }
+              chronicConditions: []
             }
           });
 
@@ -487,28 +468,7 @@ const Profile = () => {
     }));
   };
 
-  const addMedication = () => {
-    if (newMedication.name.trim() && newMedication.dosage.trim() && newMedication.frequency.trim()) {
-      setProfileData(prev => ({
-        ...prev,
-        medicalInfo: {
-          ...prev.medicalInfo,
-          medications: [...(prev.medicalInfo?.medications || []), { ...newMedication }]
-        }
-      }));
-      setNewMedication({ name: '', dosage: '', frequency: '' });
-    }
-  };
 
-  const removeMedication = (index) => {
-    setProfileData(prev => ({
-      ...prev,
-      medicalInfo: {
-        ...prev.medicalInfo,
-        medications: prev.medicalInfo?.medications?.filter((_, i) => i !== index) || []
-      }
-    }));
-  };
 
   const handleRemoveProfilePicture = async () => {
     if (!profileData.profilePicture) return;
@@ -1035,42 +995,7 @@ const Profile = () => {
                   </div>
                 </div>
 
-                {/* Primary Doctor */}
-                <div className="mb-6">
-                  <h4 className="text-md font-medium text-gray-900 dark:text-slate-100 mb-3">Primary Doctor</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Doctor Name</label>
-                      <input
-                        type="text"
-                        value={profileData.medicalInfo?.primaryDoctor?.name || ""}
-                        onChange={(e) => handleInputChange('name', e.target.value, 'medicalInfo', 'primaryDoctor')}
-                        disabled={!isEditing}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent disabled:bg-gray-50 dark:disabled:bg-slate-800 disabled:text-gray-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Specialty</label>
-                      <input
-                        type="text"
-                        value={profileData.medicalInfo?.primaryDoctor?.specialty || ""}
-                        onChange={(e) => handleInputChange('specialty', e.target.value, 'medicalInfo', 'primaryDoctor')}
-                        disabled={!isEditing}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent disabled:bg-gray-50 dark:disabled:bg-slate-800 disabled:text-gray-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Phone</label>
-                      <input
-                        type="tel"
-                        value={profileData.medicalInfo?.primaryDoctor?.phone || ""}
-                        onChange={(e) => handleInputChange('phone', e.target.value, 'medicalInfo', 'primaryDoctor')}
-                        disabled={!isEditing}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent disabled:bg-gray-50 dark:disabled:bg-slate-800 disabled:text-gray-500"
-                      />
-                    </div>
-                  </div>
-                </div>
+
 
                 {/* Allergies and Conditions */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1154,72 +1079,6 @@ const Profile = () => {
                         </div>
                       )}
                     </div>
-                  </div>
-                </div>
-
-                {/* Current Medications */}
-                <div className="mt-6">
-                  <h4 className="text-md font-medium text-gray-900 dark:text-slate-100 mb-3">Current Medications</h4>
-                  <div className="space-y-3">
-                    {(profileData.medicalInfo?.medications || []).map((medication, index) => (
-                      <div key={index} className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/40 rounded-lg p-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-4">
-                              <span className="font-medium text-gray-900 dark:text-slate-100">{medication.name}</span>
-                              <span className="text-sm text-gray-600 dark:text-slate-400">{medication.dosage}</span>
-                              <span className="text-sm text-gray-600 dark:text-slate-400">{medication.frequency}</span>
-                            </div>
-                          </div>
-                          {isEditing && (
-                            <button
-                              onClick={() => removeMedication(index)}
-                              className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
-                            >
-                              <span className="sr-only">Remove medication</span>
-                              ×
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                    {(profileData.medicalInfo?.medications || []).length === 0 && (
-                      <p className="text-sm text-gray-500 dark:text-slate-400 italic">No medications recorded</p>
-                    )}
-                    {isEditing && (
-                      <div className="bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-lg p-4">
-                        <h5 className="text-sm font-medium text-gray-900 dark:text-slate-100 mb-3">Add New Medication</h5>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                          <input
-                            type="text"
-                            value={newMedication.name}
-                            onChange={(e) => setNewMedication(prev => ({ ...prev, name: e.target.value }))}
-                            placeholder="Medication name"
-                            className="px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                          />
-                          <input
-                            type="text"
-                            value={newMedication.dosage}
-                            onChange={(e) => setNewMedication(prev => ({ ...prev, dosage: e.target.value }))}
-                            placeholder="Dosage (e.g., 10mg)"
-                            className="px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                          />
-                          <input
-                            type="text"
-                            value={newMedication.frequency}
-                            onChange={(e) => setNewMedication(prev => ({ ...prev, frequency: e.target.value }))}
-                            placeholder="Frequency (e.g., Once daily)"
-                            className="px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                          />
-                        </div>
-                        <button
-                          onClick={addMedication}
-                          className="mt-3 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-                        >
-                          Add Medication
-                        </button>
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>

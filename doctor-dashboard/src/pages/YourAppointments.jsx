@@ -1426,31 +1426,7 @@ const YourAppointments = () => {
                   </div>
                 </div>
 
-                {/* Current Medications */}
-                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4">
-                  <h3 className="text-lg font-semibold text-gray-800 dark:text-slate-100 mb-4 flex items-center">
-                    <BriefcaseIcon className="w-5 h-5 mr-2" />
-                    Current Medications
-                  </h3>
-                  <div className="space-y-2">
-                    {patientHealthData?.profile?.medicalInfo?.medications?.length > 0 ? (
-                      patientHealthData.profile.medicalInfo.medications.map((medication, index) => (
-                        <div key={index} className="flex justify-between items-center">
-                          <span className="text-sm text-gray-700 dark:text-slate-300">
-                            {medication.name} {medication.dosage}
-                          </span>
-                          <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400 px-2 py-1 rounded-full">
-                            {medication.frequency || 'As needed'}
-                          </span>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-sm text-gray-500 dark:text-slate-400 text-center py-2">
-                        {healthDataLoading ? 'Loading medications...' : 'No current medications on file'}
-                      </div>
-                    )}
-                  </div>
-                </div>
+
 
                 {/* Recent Vitals */}
                 <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-4">

@@ -183,19 +183,7 @@ const userSchema = new Schema({
     height: { type: String, trim: true }, // e.g., "5'10\"" or "178cm"
     weight: { type: String, trim: true }, // e.g., "175 lbs" or "79 kg"
     allergies: [{ type: String, trim: true }],
-    chronicConditions: [{ type: String, trim: true }],
-    medications: [{
-      name: { type: String, trim: true },
-      dosage: { type: String, trim: true },
-      frequency: { type: String, trim: true },
-      _id: false // Don't create separate _id for each medication entry
-    }],
-    primaryDoctor: {
-      name: { type: String, trim: true },
-      specialty: { type: String, trim: true },
-      phone: { type: String, trim: true },
-      email: { type: String, trim: true, lowercase: true }
-    }
+    chronicConditions: [{ type: String, trim: true }]
   },
 
   // Health targets for monitoring and alerts
@@ -246,7 +234,7 @@ const userSchema = new Schema({
       emailNotifications: { type: Boolean, default: true },
       smsNotifications: { type: Boolean, default: false },
       appointmentReminders: { type: Boolean, default: true },
-      medicationReminders: { type: Boolean, default: true },
+
       healthAlerts: { type: Boolean, default: true }, // For critical health notifications and warnings
       labResults: { type: Boolean, default: true }, // Notifications for new lab results
       messageNotifications: { type: Boolean, default: true }, // Notifications for new messages
@@ -344,7 +332,6 @@ userSchema.pre('save', function(next) {
           emailNotifications: true,
           smsNotifications: false,
           appointmentReminders: true,
-          medicationReminders: true,
           healthAlerts: true,
           labResults: true,
           messageNotifications: true,
@@ -384,23 +371,12 @@ userSchema.pre('save', function(next) {
       this.medicalInfo = {
         allergies: [],
         chronicConditions: [],
-        medications: [],
-        primaryDoctor: { 
-          // Ensure primaryDoctor sub-fields also have defaults or are explicitly empty if desired
-          name: '', 
-          specialty: '', 
-          phone: '', 
-          email: '' 
-        }
+
       };
     } else { 
       // Ensure nested structures within medicalInfo exist if medicalInfo is partially provided
       if (this.medicalInfo.allergies === undefined) this.medicalInfo.allergies = [];
       if (this.medicalInfo.chronicConditions === undefined) this.medicalInfo.chronicConditions = [];
-      if (this.medicalInfo.medications === undefined) this.medicalInfo.medications = [];
-      if (this.medicalInfo.primaryDoctor === undefined) {
-        this.medicalInfo.primaryDoctor = { name: '', specialty: '', phone: '', email: '' };
-      }
     }
   }
   next();

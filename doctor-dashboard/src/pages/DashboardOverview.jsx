@@ -4,7 +4,7 @@ import WelcomeCard from "../components/dashboard/WelcomeCard";
 import PatientMetricsGrid from "../components/dashboard/PatientMetricsGrid";
 import UpcomingAppointments from "../components/dashboard/UpcomingAppointments";
 import RecentPatientActivity from "../components/dashboard/RecentPatientActivity";
-import { ExclamationTriangleIcon, UserGroupIcon, ChatBubbleLeftIcon, ClipboardDocumentListIcon, CheckCircleIcon, XMarkIcon, ArrowPathIcon } from "@heroicons/react/24/outline";
+import { ExclamationTriangleIcon, UserGroupIcon, ChatBubbleLeftIcon, ClipboardDocumentListIcon, CheckCircleIcon, XMarkIcon, ClockIcon } from "@heroicons/react/24/outline";
 import api from "../services/api";
 
 const DashboardOverview = () => {
@@ -13,13 +13,10 @@ const DashboardOverview = () => {
   // State for real dashboard data
   const [dashboardData, setDashboardData] = useState({
     totalPatients: 0,
-    messagesToday: 0,
-    newMessages: 0,
-    pendingLabReviews: 0,
-    systemStatus: 'Loading...',
-    criticalAlertsCount: 0,
-    appointmentsToday: 0,
-    completedToday: 0
+    openAppointments: 0,
+    appointmentsWaiting: 0,
+    recentAlerts: 0,
+    systemStatus: 'Loading...'
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -49,16 +46,10 @@ const DashboardOverview = () => {
 
           const dashboardStats = {
             totalPatients: analytics.totalPatients || 0,
-            messagesToday: 0, // Will be updated when messaging system is implemented
-            newMessages: 0,
-            pendingLabReviews: analytics.pendingReviews || 0,
-            systemStatus: analytics.systemStatus || 'No Data Available',
-            criticalAlertsCount: analytics.criticalAlerts || 0,
-            appointmentsToday: analytics.appointmentsToday || 0,
-            completedToday: analytics.completedToday || 0,
-            approvedToday: analytics.approvedToday || 0,
-            totalApproved: analytics.totalApproved || 0,
-            totalAppointments: analytics.totalAppointments || 0
+            openAppointments: analytics.openAppointments || 0,
+            appointmentsWaiting: analytics.appointmentsWaiting || 0,
+            recentAlerts: analytics.recentAlerts || 0,
+            systemStatus: analytics.systemStatus || 'No Data Available'
           };
 
           setDashboardData(dashboardStats);
@@ -84,13 +75,10 @@ const DashboardOverview = () => {
         // Set fallback data
         setDashboardData({
           totalPatients: 0,
-          messagesToday: 0,
-          newMessages: 0,
-          pendingLabReviews: 0,
-          systemStatus: 'System Error',
-          criticalAlertsCount: 0,
-          appointmentsToday: 0,
-          completedToday: 0
+          openAppointments: 0,
+          appointmentsWaiting: 0,
+          recentAlerts: 0,
+          systemStatus: 'System Error'
         });
       } finally {
         setLoading(false);
@@ -99,6 +87,18 @@ const DashboardOverview = () => {
 
   useEffect(() => {
     fetchDashboardData();
+
+    // Listen for notifications marked as read events to refresh dashboard
+    const handleNotificationsMarkedAsRead = () => {
+      console.log('📊 Dashboard: Received notifications marked as read event, refreshing dashboard data...');
+      fetchDashboardData();
+    };
+
+    window.addEventListener('notificationsMarkedAsRead', handleNotificationsMarkedAsRead);
+
+    return () => {
+      window.removeEventListener('notificationsMarkedAsRead', handleNotificationsMarkedAsRead);
+    };
   }, []);
 
   // Refresh data when returning to dashboard (e.g., from notifications)
@@ -112,12 +112,12 @@ const DashboardOverview = () => {
     return () => window.removeEventListener('focus', handleFocus);
   }, []);
 
-  // Auto-refresh dashboard data every 30 seconds for real-time updates
+  // Auto-refresh dashboard data every 1 minute for real-time updates
   useEffect(() => {
     const interval = setInterval(() => {
       console.log('🔄 Auto-refreshing dashboard data...');
       fetchDashboardData();
-    }, 30000); // 30 seconds
+    }, 60000); // 1 minute (60 seconds)
 
     return () => clearInterval(interval);
   }, []);
@@ -139,29 +139,8 @@ const DashboardOverview = () => {
     <div className="space-y-6 p-4 sm:p-6"> {/* Added padding to the main container */}
 
       {/* Welcome Section - Clean Layout */}
-      <div className="flex items-center justify-between">
-        <div className="flex-1">
-          <WelcomeCard dashboardData={dashboardData} loading={loading} />
-        </div>
-
-        {/* Refresh Button - Clean and Simple */}
-        <div className="ml-4">
-          <button
-            onClick={() => {
-              console.log('🔄 Manual refresh triggered');
-              fetchDashboardData();
-            }}
-            disabled={loading}
-            className={`p-2 rounded-lg transition-all duration-200 ${
-              loading
-                ? 'bg-gray-100 dark:bg-slate-700 text-gray-400 dark:text-slate-500 cursor-not-allowed'
-                : 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50'
-            }`}
-            title="Refresh dashboard data"
-          >
-            <ArrowPathIcon className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
-          </button>
-        </div>
+      <div>
+        <WelcomeCard dashboardData={dashboardData} loading={loading} />
       </div>
 
       {/* Quick Stats Grid - Real Data */}
@@ -173,6 +152,9 @@ const DashboardOverview = () => {
               <p className="text-2xl font-bold text-gray-800 dark:text-slate-100">
                 {loading ? '...' : dashboardData.totalPatients}
               </p>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
+                Unique patients with appointments
+              </p>
             </div>
             <UserGroupIcon className="w-8 h-8 text-blue-500" />
           </div>
@@ -181,12 +163,12 @@ const DashboardOverview = () => {
         <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm p-5 rounded-xl shadow-md border border-gray-100 dark:border-slate-700/50">
           <div className="flex items-center justify-between">
             <div>
-              <h4 className="text-sm font-medium text-gray-500 dark:text-slate-400 mb-1">Appointments Today</h4>
+              <h4 className="text-sm font-medium text-gray-500 dark:text-slate-400 mb-1">Open Appointments</h4>
               <p className="text-2xl font-bold text-gray-800 dark:text-slate-100">
-                {loading ? '...' : dashboardData.appointmentsToday}
-                {!loading && dashboardData.completedToday > 0 && (
-                  <span className="text-sm text-green-500 ml-2">({dashboardData.completedToday} completed)</span>
-                )}
+                {loading ? '...' : dashboardData.openAppointments}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
+                Currently in chat session
               </p>
             </div>
             <ChatBubbleLeftIcon className="w-8 h-8 text-green-500" />
@@ -196,39 +178,45 @@ const DashboardOverview = () => {
         <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm p-5 rounded-xl shadow-md border border-gray-100 dark:border-slate-700/50">
           <div className="flex items-center justify-between">
             <div>
-              <h4 className="text-sm font-medium text-gray-500 dark:text-slate-400 mb-1">Pending Alerts</h4>
+              <h4 className="text-sm font-medium text-gray-500 dark:text-slate-400 mb-1">Appointments in Waiting</h4>
               <p className="text-2xl font-bold text-gray-800 dark:text-slate-100">
-                {loading ? '...' : dashboardData.pendingLabReviews}
+                {loading ? '...' : dashboardData.appointmentsWaiting}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
+                Approved, waiting to open
               </p>
             </div>
-            <ClipboardDocumentListIcon className="w-8 h-8 text-orange-500" />
+            <ClockIcon className="w-8 h-8 text-yellow-500" />
           </div>
         </div>
 
         <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm p-5 rounded-xl shadow-md border border-gray-100 dark:border-slate-700/50">
           <div className="flex items-center justify-between">
             <div>
-              <h4 className="text-sm font-medium text-gray-500 dark:text-slate-400 mb-1">System Status</h4>
-              <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
-                {loading ? 'Loading...' : dashboardData.systemStatus}
+              <h4 className="text-sm font-medium text-gray-500 dark:text-slate-400 mb-1">Recent Alerts</h4>
+              <p className="text-2xl font-bold text-gray-800 dark:text-slate-100">
+                {loading ? '...' : dashboardData.recentAlerts}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
+                From active chat patients
               </p>
             </div>
-            <CheckCircleIcon className="w-8 h-8 text-emerald-500" />
+            <ExclamationTriangleIcon className="w-8 h-8 text-orange-500" />
           </div>
         </div>
       </div>
       
       {/* Critical Alerts Summary - Real Data */}
-      {!loading && dashboardData.criticalAlertsCount > 0 && !alertsBannerDismissed && (
+      {!loading && dashboardData.recentAlerts > 0 && !alertsBannerDismissed && (
         <div className="bg-red-50 dark:bg-red-700/20 border border-red-200 dark:border-red-600/40 rounded-xl p-4 shadow-md">
           <div className="flex items-center space-x-3">
             <ExclamationTriangleIcon className="w-6 h-6 text-red-500 dark:text-red-400" />
             <div className="flex-1">
               <h3 className="text-sm sm:text-base font-semibold text-red-800 dark:text-red-200">
-                {dashboardData.criticalAlertsCount} Critical Patient Alert{dashboardData.criticalAlertsCount > 1 ? 's' : ''}
+                {dashboardData.recentAlerts} Critical Patient Alert{dashboardData.recentAlerts > 1 ? 's' : ''}
               </h3>
               <p className="text-xs sm:text-sm text-red-700 dark:text-red-300">
-                Please review immediately in the notifications page or individual patient dashboards.
+                From patients currently in active chat sessions. Please review immediately.
               </p>
             </div>
             <div className="flex items-center space-x-2">

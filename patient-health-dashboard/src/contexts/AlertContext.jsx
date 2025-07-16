@@ -19,7 +19,7 @@ const generateSmartAlertsWithSettings = (healthData, userSettings) => {
 
   // Get user-defined thresholds or use defaults
   const thresholds = userSettings?.health?.alertThresholds || {
-    heartRate: { low: 50, high: 120 },
+    heartRate: { low: 60, high: 120 },
     bloodPressure: { systolic: 140, diastolic: 90 },
     bodyTemperature: { low: 96.0, high: 100.4 },
     glucoseLevel: { low: 70, high: 180 }
@@ -38,47 +38,47 @@ const generateSmartAlertsWithSettings = (healthData, userSettings) => {
         const hr = reading.value;
         const hrThresholds = thresholds.heartRate;
 
-        // Critical low (below user threshold - 10)
-        if (hr < (hrThresholds.low - 10)) {
+        // Critical low (severe bradycardia - medically dangerous)
+        if (hr < 50) {
           alerts.push({
             id: alertId,
             type: "critical",
             title: "Severe Bradycardia Alert",
-            message: `Critical: Heart rate ${hr} bpm detected. This is dangerously low and requires immediate medical attention.`,
+            message: `CRITICAL: Heart rate ${hr} bpm is dangerously low. This requires immediate medical attention.`,
             timestamp: reading.timestamp,
             isRead: false,
             source: "Heart Rate Monitor",
             dataType: "heartRate",
             value: hr,
-            actions: ["Call Emergency", "Contact Doctor", "View Trends"],
+            actions: ["Contact Doctor"],
             emergencyLevel: "immediate"
           });
         } else if (hr < hrThresholds.low) {
           alerts.push({
             id: alertId,
             type: "warning",
-            title: "Low Heart Rate Alert",
-            message: `Heart rate ${hr} bpm is below your target range (${hrThresholds.low}-${hrThresholds.high} bpm). Monitor closely and consult healthcare provider if symptoms occur.`,
+            title: "Low Heart Rate Detected",
+            message: `Heart rate of ${hr} bpm is below normal range. Monitor for symptoms and consult your doctor if concerned.`,
             timestamp: reading.timestamp,
             isRead: false,
             source: "Heart Rate Monitor",
             dataType: "heartRate",
             value: hr,
-            actions: ["Contact Doctor", "View Trends", "Monitor"],
+            actions: ["Contact Doctor"],
             emergencyLevel: "moderate"
           });
-        } else if (hr > (hrThresholds.high + 20)) {
+        } else if (hr > 150) {
           alerts.push({
             id: alertId,
             type: "critical",
             title: "Severe Tachycardia Alert",
-            message: `Critical: Heart rate ${hr} bpm is dangerously high. Seek immediate medical evaluation.`,
+            message: `CRITICAL: Heart rate ${hr} bpm is dangerously high. Seek immediate medical evaluation.`,
             timestamp: reading.timestamp,
             isRead: false,
             source: "Heart Rate Monitor",
             dataType: "heartRate",
             value: hr,
-            actions: ["Call Emergency", "Contact Doctor", "View Trends"],
+            actions: ["Contact Doctor"],
             emergencyLevel: "immediate"
           });
         } else if (hr > hrThresholds.high) {
@@ -92,7 +92,7 @@ const generateSmartAlertsWithSettings = (healthData, userSettings) => {
             source: "Heart Rate Monitor",
             dataType: "heartRate",
             value: hr,
-            actions: ["Contact Doctor", "View Trends", "Rest"],
+            actions: ["Contact Doctor"],
             emergencyLevel: "moderate"
           });
         }
@@ -115,7 +115,7 @@ const generateSmartAlertsWithSettings = (healthData, userSettings) => {
             source: "Blood Pressure Monitor",
             dataType: "bloodPressure",
             value: `${systolic}/${diastolic}`,
-            actions: ["Call Emergency", "Contact Doctor", "View Trends"],
+            actions: ["Contact Doctor"],
             emergencyLevel: "immediate"
           });
         } else if (systolic >= bpThresholds.systolic || diastolic >= bpThresholds.diastolic) {
@@ -129,8 +129,22 @@ const generateSmartAlertsWithSettings = (healthData, userSettings) => {
             source: "Blood Pressure Monitor",
             dataType: "bloodPressure",
             value: `${systolic}/${diastolic}`,
-            actions: ["Contact Doctor", "View Trends", "Lifestyle Changes"],
+            actions: ["Contact Doctor"],
             emergencyLevel: "moderate"
+          });
+        } else if (systolic < 70 || diastolic < 40) {
+          alerts.push({
+            id: alertId,
+            type: "critical",
+            title: "Severe Hypotension Alert",
+            message: `CRITICAL: Blood pressure ${systolic}/${diastolic} mmHg is dangerously low. Risk of shock. Seek immediate medical attention.`,
+            timestamp: reading.timestamp,
+            isRead: false,
+            source: "Blood Pressure Monitor",
+            dataType: "bloodPressure",
+            value: `${systolic}/${diastolic}`,
+            actions: ["Contact Doctor"],
+            emergencyLevel: "immediate"
           });
         } else if (systolic < 90 || diastolic < 60) {
           alerts.push({
@@ -143,8 +157,8 @@ const generateSmartAlertsWithSettings = (healthData, userSettings) => {
             source: "Blood Pressure Monitor",
             dataType: "bloodPressure",
             value: `${systolic}/${diastolic}`,
-            actions: ["Monitor Symptoms", "Contact Doctor", "View Trends"],
-            emergencyLevel: "low"
+            actions: ["Contact Doctor"],
+            emergencyLevel: "moderate"
           });
         }
         break;
@@ -165,7 +179,7 @@ const generateSmartAlertsWithSettings = (healthData, userSettings) => {
             source: "Glucose Monitor",
             dataType: "glucoseLevel",
             value: glucose,
-            actions: ["Treat Immediately", "Contact Doctor", "Emergency Protocol"],
+            actions: ["Contact Doctor"],
             emergencyLevel: "immediate"
           });
         } else if (glucose < glucoseThresholds.low) {
@@ -179,7 +193,7 @@ const generateSmartAlertsWithSettings = (healthData, userSettings) => {
             source: "Glucose Monitor",
             dataType: "glucoseLevel",
             value: glucose,
-            actions: ["Treat Low Glucose", "Contact Doctor", "View Trends"],
+            actions: ["Contact Doctor"],
             emergencyLevel: "moderate"
           });
         } else if (glucose > 400) {
@@ -193,7 +207,7 @@ const generateSmartAlertsWithSettings = (healthData, userSettings) => {
             source: "Glucose Monitor",
             dataType: "glucoseLevel",
             value: glucose,
-            actions: ["Call Emergency", "Contact Doctor", "Check Ketones"],
+            actions: ["Contact Doctor"],
             emergencyLevel: "immediate"
           });
         } else if (glucose > glucoseThresholds.high) {
@@ -207,7 +221,7 @@ const generateSmartAlertsWithSettings = (healthData, userSettings) => {
             source: "Glucose Monitor",
             dataType: "glucoseLevel",
             value: glucose,
-            actions: ["Contact Doctor", "Medication Check", "Lifestyle Adjustment"],
+            actions: ["Contact Doctor"],
             emergencyLevel: "moderate"
           });
         }
@@ -229,7 +243,7 @@ const generateSmartAlertsWithSettings = (healthData, userSettings) => {
             source: "Temperature Monitor",
             dataType: "bodyTemperature",
             value: temp.toFixed(1),
-            actions: ["Call Emergency", "Cool Down", "Contact Doctor"],
+            actions: ["Contact Doctor"],
             emergencyLevel: "immediate"
           });
         } else if (temp > tempThresholds.high) {
@@ -243,7 +257,7 @@ const generateSmartAlertsWithSettings = (healthData, userSettings) => {
             source: "Temperature Monitor",
             dataType: "bodyTemperature",
             value: temp.toFixed(1),
-            actions: ["Monitor Symptoms", "Contact Doctor", "Rest"],
+            actions: ["Contact Doctor"],
             emergencyLevel: "moderate"
           });
         } else if (temp < 95.0) {
@@ -257,7 +271,7 @@ const generateSmartAlertsWithSettings = (healthData, userSettings) => {
             source: "Temperature Monitor",
             dataType: "bodyTemperature",
             value: temp.toFixed(1),
-            actions: ["Call Emergency", "Warm Up", "Contact Doctor"],
+            actions: ["Contact Doctor"],
             emergencyLevel: "immediate"
           });
         } else if (temp < tempThresholds.low) {
@@ -271,7 +285,7 @@ const generateSmartAlertsWithSettings = (healthData, userSettings) => {
             source: "Temperature Monitor",
             dataType: "bodyTemperature",
             value: temp.toFixed(1),
-            actions: ["Monitor Symptoms", "Warm Up", "Contact Doctor"],
+            actions: ["Contact Doctor"],
             emergencyLevel: "low"
           });
         }
@@ -304,7 +318,21 @@ export const AlertProvider = ({ children }) => {
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(false);
   // Use default settings since we removed the settings context
-  const settings = {};
+  const settings = {
+    notifications: {
+      healthAlerts: true, // Enable health alerts by default
+      appointmentReminders: true,
+      medicationReminders: true
+    },
+    health: {
+      alertThresholds: {
+        heartRate: { low: 60, high: 120 }, // Warning thresholds (Critical: <50, >150)
+        bloodPressure: { systolic: 140, diastolic: 90 }, // Warning thresholds (Critical: <70/40, ≥180/110)
+        bodyTemperature: { low: 96.0, high: 100.4 }, // Warning thresholds (Critical: <95°F, ≥104°F)
+        glucoseLevel: { low: 70, high: 180 } // Warning thresholds (Critical: <54, >400)
+      }
+    }
+  };
 
   // Load read status from localStorage
   const loadReadStatus = () => {
@@ -452,7 +480,36 @@ export const AlertProvider = ({ children }) => {
     return alerts.filter(alert => !alert.isRead && alert.type === 'critical').length;
   };
 
-  // Load alerts with read status on mount
+  // Auto-fetch and generate alerts on mount
+  React.useEffect(() => {
+    console.log('AlertContext: Auto-fetching alerts on mount...');
+    fetchAndGenerateAlerts();
+  }, []); // Only run once on mount
+
+  // Listen for health data updates to refresh alerts
+  React.useEffect(() => {
+    const handleHealthDataUpdate = (event) => {
+      console.log('AlertContext: Health data updated, refreshing alerts...', event.detail);
+      setTimeout(() => {
+        fetchAndGenerateAlerts();
+      }, 500); // Small delay to ensure data is saved
+    };
+
+    // Listen for various health data events
+    console.log('AlertContext: Setting up event listeners for health data updates...');
+    window.addEventListener('healthDataAdded', handleHealthDataUpdate);
+    window.addEventListener('healthDataGenerated', handleHealthDataUpdate);
+    window.addEventListener('alertsGenerated', handleHealthDataUpdate);
+
+    return () => {
+      console.log('AlertContext: Removing event listeners...');
+      window.removeEventListener('healthDataAdded', handleHealthDataUpdate);
+      window.removeEventListener('healthDataGenerated', handleHealthDataUpdate);
+      window.removeEventListener('alertsGenerated', handleHealthDataUpdate);
+    };
+  }, []);
+
+  // Load alerts with read status when alerts change
   React.useEffect(() => {
     if (alerts.length > 0) {
       const savedReadStatus = loadReadStatus();

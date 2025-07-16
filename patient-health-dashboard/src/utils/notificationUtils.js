@@ -13,8 +13,7 @@ export const shouldShowNotification = (notificationType, userSettings) => {
       return notificationSettings.healthAlerts !== false;
     case 'appointment_reminder':
       return notificationSettings.appointmentReminders !== false;
-    case 'medication_reminder':
-      return notificationSettings.medicationReminders !== false;
+
     case 'message_notification':
       return notificationSettings.messageNotifications !== false;
     case 'anomaly_detection':
@@ -37,7 +36,6 @@ export const getNotificationPreferences = (userSettings) => {
   return {
     healthAlerts: notificationSettings.healthAlerts !== false,
     appointmentReminders: notificationSettings.appointmentReminders !== false,
-    medicationReminders: notificationSettings.medicationReminders !== false,
     messageNotifications: notificationSettings.messageNotifications !== false,
     anomalyDetection: notificationSettings.anomalyDetection === true,
     healthTaskReminders: notificationSettings.healthTaskReminders === true,
@@ -63,8 +61,6 @@ export const filterNotifications = (notifications, userSettings) => {
         return shouldShowNotification('health_alert', userSettings);
       case 'appointment':
         return shouldShowNotification('appointment_reminder', userSettings);
-      case 'medication':
-        return shouldShowNotification('medication_reminder', userSettings);
       case 'message':
         return shouldShowNotification('message_notification', userSettings);
       case 'anomaly':
@@ -229,8 +225,6 @@ export const getTypeIcon = (type) => {
       return '🏥';
     case 'appointment':
       return '📅';
-    case 'medication':
-      return '💊';
     case 'message':
       return '💬';
     case 'emergency':

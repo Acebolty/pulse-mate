@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
+import { useLocation } from "react-router-dom"
 import {
   ChatBubbleLeftRightIcon,
   PaperAirplaneIcon,
@@ -13,7 +14,8 @@ import {
   CheckIcon,
   ClockIcon,
   ExclamationTriangleIcon,
-  ArrowLeftIcon, // For mobile back button
+  ArrowLeftIcon,
+  CalendarIcon,
 } from "@heroicons/react/24/outline"
 import { motion } from "framer-motion"
 import api from "../services/api"
@@ -53,7 +55,7 @@ const patientChatList = [
     patientId: "patient-maria-garcia",
     patientName: "Maria Garcia",
     patientAvatar: "https://randomuser.me/api/portraits/women/68.jpg",
-    lastMessage: "Feeling much better with the new medication, thanks!",
+    lastMessage: "Feeling much better with the new treatment plan, thanks!",
     lastMessageTime: "2024-01-21T16:45:00Z",
     unreadCount: 0,
     isOnline: true,
@@ -128,6 +130,9 @@ const Messages = () => {
   const [currentMessages, setCurrentMessages] = useState([]);
   const [messageInput, setMessageInput] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Get navigation state for patient selection from notifications
+  const location = useLocation();
 
   const [showChatListPane, setShowChatListPane] = useState(true);
   const [loading, setLoading] = useState(true);
@@ -274,6 +279,34 @@ const Messages = () => {
 
     return () => clearInterval(interval);
   }, []);
+
+  // Handle patient selection from notification navigation
+  useEffect(() => {
+    if (location.state?.fromNotification && location.state?.patientName && chatList.length > 0) {
+      const targetPatientName = location.state.patientName;
+      console.log('🔍 Looking for patient from notification:', targetPatientName);
+
+      // Find the chat for this patient
+      const targetChat = chatList.find(chat =>
+        chat.patientName.toLowerCase() === targetPatientName.toLowerCase()
+      );
+
+      if (targetChat) {
+        console.log('✅ Found patient chat, selecting:', targetChat.patientName);
+        setSelectedChat(targetChat);
+        // On mobile, hide chat list when selecting a chat
+        if (window.innerWidth < 768) {
+          setShowChatListPane(false);
+        }
+      } else {
+        console.log('❌ Patient chat not found for:', targetPatientName);
+        console.log('Available chats:', chatList.map(c => c.patientName));
+      }
+
+      // Clear the navigation state to prevent re-triggering
+      window.history.replaceState({}, document.title);
+    }
+  }, [chatList, location.state]);
 
   // Fetch active appointment sessions for doctor
   const fetchAppointmentSessions = async () => {

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useNavigate } from "react-router-dom"
 import {
   BellIcon,
   ClockIcon,
@@ -37,7 +38,7 @@ const dummyNotificationsData = [
     type: "appointment_request",
     patientName: "Robert Smith",
     title: "New Appointment Request",
-    message: "Robert Smith has requested a virtual consultation for 'Medication Refill'. Preferred date: Jan 25.",
+    message: "Robert Smith has requested a virtual consultation for 'Health Check-up'. Preferred date: Jan 25.",
     timestamp: "2024-01-22T13:45:00Z",
     isRead: false,
     source: "Patient Portal",
@@ -48,7 +49,7 @@ const dummyNotificationsData = [
     type: "new_message",
     patientName: "Maria Garcia",
     title: "New Message Received",
-    message: "Maria Garcia: 'Hi Dr. Eve, I'm experiencing mild side effects from the new medication we discussed...'",
+    message: "Maria Garcia: 'Hi Dr. Eve, I wanted to follow up on our last consultation and discuss my recent symptoms...'",
     timestamp: "2024-01-22T19:00:00Z",
     isRead: true,
     source: "Secure Messaging",
@@ -182,7 +183,47 @@ const Notifications = () => {
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState("all"); // all, unread, critical_alert, appointment, message, health_metric
   const [showSettings, setShowSettings] = useState(false); // Placeholder for future settings
+  const [markingAllAsRead, setMarkingAllAsRead] = useState(false); // Loading state for Mark All Read button
+  const navigate = useNavigate();
   const [isDarkMode, setIsDarkMode] = useState(false);
+
+  // Handle notification action clicks
+  const handleNotificationAction = (action, notification) => {
+    switch (action) {
+      case 'View Appointment':
+        // Navigate to appointments page with appointment data if available
+        const appointmentId = notification.originalData?.relatedId || notification.originalData?.data?.appointmentId;
+        if (appointmentId) {
+          // Navigate with state to potentially highlight the specific appointment
+          navigate('/your_appointments', {
+            state: {
+              highlightAppointmentId: appointmentId,
+              fromNotification: true
+            }
+          });
+        } else {
+          navigate('/your_appointments');
+        }
+        // Note: User can manually mark as read using the "Mark as Read" button if needed
+        break;
+      case 'Mark as Read':
+        markAsRead(notification.id);
+        break;
+      case 'Contact Patient':
+        // Navigate to messages page with patient context
+        console.log('Contacting patient:', notification.patientName);
+        navigate('/messages', {
+          state: {
+            patientName: notification.patientName,
+            patientEmail: notification.patientEmail,
+            fromNotification: true
+          }
+        });
+        break;
+      default:
+        console.log('Unhandled action:', action);
+    }
+  };
 
   // Fetch real notifications/alerts from API
   useEffect(() => {
@@ -191,13 +232,18 @@ const Notifications = () => {
         setLoading(true);
         console.log('🔔 Fetching notifications/alerts...');
 
-        // Fetch doctor notifications (alerts with patient names) and appointments
-        const [alertsRes, appointmentsRes] = await Promise.allSettled([
+        // Fetch doctor notifications (both appointment and health alerts) and appointments
+        const [notificationsRes, alertsRes, appointmentsRes] = await Promise.allSettled([
+          api.get('/notifications/doctor?limit=50'),
           api.get('/alerts/doctor/notifications?limit=50'),
           api.get('/appointments/doctor')
         ]);
 
-        // Process alerts
+        // Process notifications (appointment requests, etc.)
+        const notificationsData = notificationsRes.status === 'fulfilled' ? notificationsRes.value.data : {};
+        const appointmentNotifications = Array.isArray(notificationsData.data) ? notificationsData.data : Array.isArray(notificationsData) ? notificationsData : [];
+
+        // Process health alerts
         const alertsData = alertsRes.status === 'fulfilled' ? alertsRes.value.data : {};
         const alerts = Array.isArray(alertsData.data) ? alertsData.data : Array.isArray(alertsData) ? alertsData : [];
 
@@ -205,10 +251,26 @@ const Notifications = () => {
         const appointmentsData = appointmentsRes.status === 'fulfilled' ? appointmentsRes.value.data : {};
         const appointments = Array.isArray(appointmentsData.data) ? appointmentsData.data : Array.isArray(appointmentsData) ? appointmentsData : [];
 
-        console.log('🚨 Alerts fetched:', alerts.length);
+        console.log('📧 Appointment notifications fetched:', appointmentNotifications.length);
+        console.log('🚨 Health alerts fetched:', alerts.length);
         console.log('📅 Appointments fetched:', appointments.length);
 
-        // Convert alerts to notification format (now with patient names from backend)
+        // Convert appointment notifications to notification format
+        const formattedAppointmentNotifications = appointmentNotifications.map(notification => ({
+          id: notification._id,
+          type: notification.type,
+          patientName: notification.patientName || 'Unknown Patient',
+          title: notification.title,
+          message: notification.message,
+          timestamp: notification.createdAt,
+          isRead: notification.isRead || false,
+          source: notification.source || 'Appointment System',
+          actions: ["View Appointment", "Mark as Read"],
+          priority: notification.priority || 'normal',
+          originalData: notification
+        }));
+
+        // Convert health alerts to notification format (now with patient names from backend)
         const alertNotifications = alerts.map(alert => ({
           id: alert._id,
           type: alert.type === 'critical' ? 'critical_alert' : 'health_metric_warning',
@@ -218,7 +280,7 @@ const Notifications = () => {
           timestamp: alert.createdAt || alert.timestamp,
           isRead: alert.isRead || false,
           source: alert.source || 'Health Monitor',
-          actions: ["View Details", "Mark as Read", "Contact Patient"],
+          actions: ["Mark as Read", "Contact Patient"],
           priority: alert.priority || (alert.type === 'critical' ? 'high' : 'medium'),
           patientEmail: alert.patientEmail || '',
           patientProfilePicture: alert.patientProfilePicture || null
@@ -229,7 +291,7 @@ const Notifications = () => {
         const tomorrow = new Date(today);
         tomorrow.setDate(tomorrow.getDate() + 1);
 
-        const appointmentNotifications = appointments
+        const appointmentReminders = appointments
           .filter(apt => {
             const aptDate = new Date(apt.dateTime);
             return aptDate >= today && aptDate <= tomorrow && (apt.status === 'Approved' || apt.status === 'Confirmed');
@@ -252,13 +314,13 @@ const Notifications = () => {
               timestamp: apt.dateTime,
               isRead: false, // Appointment reminders are always unread initially
               source: 'Appointment System',
-              actions: ["View Details", "Reschedule", "Contact Patient"],
+              actions: ["Reschedule", "Contact Patient"],
               priority: 'medium'
             };
           });
 
-        // Combine all notifications
-        const formattedNotifications = [...alertNotifications, ...appointmentNotifications];
+        // Combine all notifications (appointment requests + health alerts + appointment reminders)
+        const formattedNotifications = [...formattedAppointmentNotifications, ...alertNotifications, ...appointmentReminders];
 
         // Sort by most recent first
         formattedNotifications.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
@@ -304,26 +366,43 @@ const Notifications = () => {
 
   const markAsRead = async (notificationId) => {
     try {
-      console.log('🩺 Doctor marking alert as read:', notificationId);
+      // Find the notification to determine its type
+      const notification = notifications.find(n => n.id === notificationId);
+      if (!notification) {
+        console.error('Notification not found:', notificationId);
+        return;
+      }
 
-      // Use doctor-specific endpoint for marking patient alerts as read
-      const response = await api.put(`/alerts/doctor/${notificationId}/read`);
+      console.log('🩺 Doctor marking notification as read:', notificationId, 'Type:', notification.type);
+
+      let response;
+
+      // Use different endpoints based on notification type
+      if (notification.type.includes('appointment')) {
+        // For appointment notifications, use the general notifications endpoint
+        response = await api.put(`/notifications/${notificationId}/read`);
+      } else {
+        // For health alerts, use the alerts endpoint
+        response = await api.put(`/alerts/doctor/${notificationId}/read`);
+      }
 
       if (response.data.success) {
         // Update in frontend
         setNotifications(notifications.map((n) => (n.id === notificationId ? { ...n, isRead: true } : n)));
-        console.log('✅ Alert marked as read by doctor:', notificationId);
+        console.log('✅ Notification marked as read by doctor:', notificationId);
       } else {
-        throw new Error('Failed to mark alert as read');
+        throw new Error('Failed to mark notification as read');
       }
     } catch (err) {
       console.error('❌ Error marking notification as read:', err);
 
       // Check if it's an authorization error
       if (err.response?.status === 403) {
-        alert('You do not have permission to mark this alert as read. You can only mark alerts for your assigned patients.');
+        alert('You do not have permission to mark this notification as read.');
       } else if (err.response?.status === 404) {
-        alert('Alert not found or already processed.');
+        // For 404 errors, just update the frontend state since the notification might already be processed
+        console.warn('⚠️ Notification not found on server, updating frontend state');
+        setNotifications(notifications.map((n) => (n.id === notificationId ? { ...n, isRead: true } : n)));
       } else {
         // Still update frontend for better UX, but show warning
         setNotifications(notifications.map((n) => (n.id === notificationId ? { ...n, isRead: true } : n)));
@@ -334,23 +413,52 @@ const Notifications = () => {
 
   const markAllAsRead = async () => {
     try {
-      console.log('🩺 Doctor marking all patient alerts as read...');
+      setMarkingAllAsRead(true); // Show loading state
+      console.log('🩺 Doctor marking all notifications as read...');
 
-      // Use doctor-specific endpoint for marking all patient alerts as read
-      const response = await api.put('/alerts/doctor/read-all');
+      // Mark both notification types as read (doctor-specific endpoints)
+      const [notificationsRes, alertsRes] = await Promise.allSettled([
+        api.put('/notifications/read-all'),
+        api.put('/alerts/doctor/read-all')
+      ]);
 
-      if (response.data.success) {
-        // Update in frontend
+      // Check if at least one succeeded
+      const notificationsSuccess = notificationsRes.status === 'fulfilled' && notificationsRes.value.data.success;
+      const alertsSuccess = alertsRes.status === 'fulfilled' && alertsRes.value.data.success;
+
+      if (notificationsSuccess || alertsSuccess) {
+        // Update frontend state immediately
         setNotifications(notifications.map((n) => ({ ...n, isRead: true })));
-        console.log('✅ Marked all patient alerts as read:', response.data.modifiedCount);
+
+        console.log('✅ Marked all notifications as read');
+        console.log('📧 Notifications:', notificationsSuccess ? 'Success' : 'Failed');
+        console.log('🚨 Alerts:', alertsSuccess ? 'Success' : 'Failed');
+
+        // Silent refresh: Trigger updates in other components after a small delay
+        // This ensures backend has processed the request
+        setTimeout(() => {
+          console.log('🔄 Triggering silent refresh of sidebar and header...');
+          window.dispatchEvent(new CustomEvent('notificationsMarkedAsRead'));
+          setMarkingAllAsRead(false); // Reset loading state after silent refresh
+        }, 500); // 500ms delay to ensure backend processing
+
       } else {
-        throw new Error('Failed to mark all alerts as read');
+        setMarkingAllAsRead(false); // Reset loading state on failure
+        throw new Error('Failed to mark notifications as read');
       }
     } catch (err) {
       console.error('❌ Error marking all notifications as read:', err);
 
       // Still update frontend for better UX, but show warning
       setNotifications(notifications.map((n) => ({ ...n, isRead: true })));
+
+      // Still trigger the silent refresh for UI updates
+      setTimeout(() => {
+        console.log('🔄 Triggering silent refresh (fallback after error)...');
+        window.dispatchEvent(new CustomEvent('notificationsMarkedAsRead'));
+        setMarkingAllAsRead(false); // Reset loading state after silent refresh
+      }, 500);
+
       console.warn('⚠️ Updated frontend but backend update may have failed');
     }
   };
@@ -376,16 +484,19 @@ const Notifications = () => {
           <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-slate-100">Notifications</h1>
           <p className="text-sm md:text-base text-gray-600 dark:text-slate-300 mt-1">
             {unreadCount > 0 ? `${unreadCount} new update${unreadCount > 1 ? 's' : ''}` : 'No new updates'}
-            {criticalUnreadCount > 0 && <span className="text-red-500 dark:text-red-400"> • {criticalUnreadCount} critical</span>}
+            {criticalUnreadCount > 0 && <span className="text-red-500 dark:text-red-400"> • {criticalUnreadCount} patient alerts</span>}
           </p>
         </div>
         <div className="flex items-center space-x-2 sm:space-x-3">
           <button
             onClick={markAllAsRead}
-            disabled={unreadCount === 0}
-            className="px-3 py-1.5 sm:px-4 sm:py-2 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-700/20 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={unreadCount === 0 || markingAllAsRead}
+            className="px-3 py-1.5 sm:px-4 sm:py-2 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-700/20 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
           >
-            Mark All Read
+            {markingAllAsRead && (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 dark:border-blue-400"></div>
+            )}
+            <span>{markingAllAsRead ? 'Marking as Read...' : 'Mark All Read'}</span>
           </button>
           <button
             onClick={() => setShowSettings(!showSettings)} // Placeholder action
@@ -403,10 +514,8 @@ const Notifications = () => {
           <nav className="flex space-x-2 sm:space-x-4 md:space-x-6 px-2 sm:px-4">
             <button onClick={() => setFilter("all")} className={getFilterButtonClass("all")}>All ({notifications.length})</button>
             <button onClick={() => setFilter("unread")} className={getFilterButtonClass("unread")}>Unread ({unreadCount})</button>
-            <button onClick={() => setFilter("critical_only")} className={getFilterButtonClass("critical_only")}>Critical ({notifications.filter(n=>(n.type === "critical_alert" || n.type === "health_metric_warning")).length})</button>
+            <button onClick={() => setFilter("critical_only")} className={getFilterButtonClass("critical_only")}>Patient Alerts ({notifications.filter(n=>(n.type === "critical_alert" || n.type === "health_metric_warning")).length})</button>
             <button onClick={() => setFilter("appointment")} className={getFilterButtonClass("appointment")}>Appointments ({notifications.filter(n=>n.type.includes("appointment")).length})</button>
-            <button onClick={() => setFilter("message")} className={getFilterButtonClass("message")}>Messages ({notifications.filter(n=>n.type.includes("message")).length})</button>
-            <button onClick={() => setFilter("health_metric")} className={getFilterButtonClass("health_metric")}>Health Data ({notifications.filter(n=>n.type.includes("health_metric")).length})</button>
           </nav>
         </div>
 
@@ -453,7 +562,11 @@ const Notifications = () => {
                       <div className="flex flex-col items-start space-y-2 mt-2 sm:flex-row sm:items-center sm:justify-between sm:space-y-0 sm:mt-3">
                         <div className="flex flex-wrap gap-x-3 gap-y-1">
                           {notification.actions.map((action, index) => (
-                            <button key={index} className={`text-xs font-semibold text-${iconColor}-600 dark:text-${iconColor}-400 hover:underline`}>
+                            <button
+                              key={index}
+                              onClick={() => handleNotificationAction(action, notification)}
+                              className={`text-xs font-semibold text-${iconColor}-600 dark:text-${iconColor}-400 hover:underline hover:text-${iconColor}-700 dark:hover:text-${iconColor}-300 transition-colors`}
+                            >
                               {action}
                             </button>
                           ))}

@@ -12,7 +12,7 @@ import {
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { logout, getCurrentUser } from "../../services/authService"
-// import { useAlerts } from "../../contexts/AlertContext"
+import { useAlerts } from "../../contexts/AlertContext"
 import api from "../../services/api"
 
 const Header = ({ onMenuClick, isCollapsed }) => {
@@ -24,27 +24,9 @@ const Header = ({ onMenuClick, isCollapsed }) => {
   const [showSearch, setShowSearch] = useState(false)
 
   const navigate = useNavigate()
-  const [alerts, setAlerts] = useState([])
+  const { alerts, getUnreadCount, markAsRead, markAllAsRead } = useAlerts()
 
-  // Get unread count
-  const getUnreadCount = () => {
-    return alerts.filter(alert => !alert.isRead).length
-  }
 
-  // Load alerts function
-  const loadAlerts = async () => {
-    try {
-      const response = await api.get('/alerts', {
-        params: { limit: 10, sortBy: 'timestamp', order: 'desc' }
-      })
-      const allAlerts = response.data.data || []
-      // Filter unread alerts on frontend to ensure we get the latest data
-      const unreadAlerts = allAlerts.filter(alert => !alert.isRead)
-      setAlerts(unreadAlerts)
-    } catch (error) {
-      console.error('Error loading alerts:', error)
-    }
-  }
 
   // Load user data and alerts
   useEffect(() => {
@@ -63,64 +45,11 @@ const Header = ({ onMenuClick, isCollapsed }) => {
     }
 
     loadUserData()
-    loadAlerts()
   }, [])
 
-  // Mark alert as read from header
-  const markAlertAsRead = async (alertId) => {
-    try {
-      await api.put(`/alerts/${alertId}/read`)
-      setAlerts(prev => prev.map(alert =>
-        alert._id === alertId ? { ...alert, isRead: true } : alert
-      ))
-    } catch (error) {
-      console.error('Error marking alert as read:', error)
-    }
-  }
 
-  // Mark all alerts as read from header
-  const markAllAlertsAsRead = async () => {
-    try {
-      await api.put('/alerts/read-all/action')
-      setAlerts(prev => prev.map(alert => ({ ...alert, isRead: true })))
-    } catch (error) {
-      console.error('Error marking all alerts as read:', error)
-    }
-  }
 
-  // Listen for alert updates from other components
-  useEffect(() => {
-    const handleAlertUpdate = (event) => {
-      console.log('Header received alert update:', event.detail)
-      // Refresh alerts when they're updated elsewhere
-      loadAlerts()
-    }
 
-    const handleAlertsGenerated = () => {
-      // Refresh alerts when new ones might have been generated
-      setTimeout(() => {
-        loadAlerts()
-      }, 1000) // Delay to ensure alerts are saved to database
-    }
-
-    window.addEventListener('alertUpdated', handleAlertUpdate)
-    window.addEventListener('alertsGenerated', handleAlertsGenerated)
-
-    return () => {
-      window.removeEventListener('alertUpdated', handleAlertUpdate)
-      window.removeEventListener('alertsGenerated', handleAlertsGenerated)
-    }
-  }, [])
-
-  // Also refresh alerts when user focuses back on the window (as a fallback)
-  useEffect(() => {
-    const handleWindowFocus = () => {
-      loadAlerts()
-    }
-
-    window.addEventListener('focus', handleWindowFocus)
-    return () => window.removeEventListener('focus', handleWindowFocus)
-  }, [])
 
   // Dark mode initialization
   useEffect(() => {
@@ -316,7 +245,7 @@ const Header = ({ onMenuClick, isCollapsed }) => {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation()
-                                markAlertAsRead(alert._id)
+                                markAsRead(alert.id)
                               }}
                               className="ml-2 text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium"
                             >
@@ -338,7 +267,7 @@ const Header = ({ onMenuClick, isCollapsed }) => {
                     {getUnreadCount() > 0 && (
                       <button
                         onClick={() => {
-                          markAllAlertsAsRead()
+                          markAllAsRead()
                         }}
                         className="flex-1 text-center px-3 py-2 text-sm text-blue-600 dark:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-700/30 transition-colors rounded"
                       >
