@@ -149,6 +149,22 @@ const Appointments = () => {
     return appointment.providerName || "Doctor";
   };
 
+  // Helper function to get correct doctor profile picture
+  const getDoctorProfilePicture = (appointment) => {
+    // Try to get current doctor info from the doctors map
+    if (appointment.providerId && doctorsMap[appointment.providerId]) {
+      const doctor = doctorsMap[appointment.providerId];
+      if (doctor.profilePicture) {
+        return doctor.profilePicture;
+      }
+      // Generate avatar with current doctor name if no profile picture
+      return `https://ui-avatars.com/api/?name=${encodeURIComponent(`${doctor.firstName} ${doctor.lastName}`)}&background=10b981&color=ffffff&size=150`;
+    }
+
+    // Fallback to stored providerName if doctor not found in map
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(appointment.providerName || 'Doctor')}&background=10b981&color=ffffff&size=150`;
+  };
+
   // Fetch all appointments for summary cards
   const fetchAllAppointments = async () => {
     try {
@@ -785,8 +801,8 @@ const Appointments = () => {
                       <div className="flex items-start space-x-3 sm:space-x-4 flex-1">
                         {/* Doctor Profile Image */}
                         <img
-                          src={appointment.doctor?.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(appointment.providerName || 'Doctor')}&background=10b981&color=ffffff&size=150`}
-                          alt={appointment.providerName || "Doctor"}
+                          src={getDoctorProfilePicture(appointment)}
+                          alt={getDoctorDisplayName(appointment)}
                           className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover border-2 border-green-100 dark:border-green-800"
                         />
 
@@ -820,7 +836,7 @@ const Appointments = () => {
                               <ClockIcon className="w-3 h-3 sm:w-4 sm:h-4" />
                               <span>
                                 {appointment.dateTime ?
-                                  `${new Date(appointment.dateTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} (30 min)` :
+                                  new Date(appointment.dateTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) :
                                   'Time TBD'
                                 }
                               </span>
@@ -1055,8 +1071,8 @@ const Appointments = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3 sm:space-x-4">
                   <img
-                    src={selectedAppointment.doctor?.image || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedAppointment.providerName || 'Doctor')}&background=10b981&color=ffffff&size=150`}
-                    alt={selectedAppointment.providerName || "Doctor"}
+                    src={getDoctorProfilePicture(selectedAppointment)}
+                    alt={getDoctorDisplayName(selectedAppointment)}
                     className="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover border-2 border-green-100 dark:border-green-800"
                   />
                   <div>

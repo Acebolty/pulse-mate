@@ -79,7 +79,6 @@ const Alerts = () => {
   const navigate = useNavigate();
   const { alerts, loading, markAsRead, markAllAsRead, deleteAlert, clearAllAlerts } = useAlerts();
   const [filter, setFilter] = useState("all");
-  const [showSettings, setShowSettings] = useState(false);
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [showEmergencyPlans, setShowEmergencyPlans] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -216,13 +215,6 @@ const Alerts = () => {
             className="px-3 py-2 text-sm text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 hover:bg-green-50 dark:hover:bg-green-700/20 rounded-xl transition-colors"
           >
             Mark All Read
-          </button>
-          <button
-            onClick={() => setShowSettings(!showSettings)}
-            className="bg-blue-600 dark:bg-blue-500 text-white px-3 py-2 text-sm rounded-xl hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
-          >
-            <AdjustmentsHorizontalIcon className="w-5 h-5 inline mr-2" />
-            Settings
           </button>
         </div>
       </motion.div>
@@ -770,69 +762,7 @@ const Alerts = () => {
         </div>
       </div>
 
-      {/* Alert Settings Panel */}
-      {showSettings && (
-        <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-4">Alert Settings</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h4 className="font-medium text-gray-900 dark:text-slate-200 mb-3">Critical Alerts</h4>
-              <div className="space-y-2">
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    defaultChecked
-                    className="rounded border-gray-300 dark:border-slate-600 text-green-600 dark:text-green-500 focus:ring-green-500 dark:focus:ring-green-600 dark:bg-slate-700 dark:checked:bg-green-500"
-                  />
-                  <span className="ml-2 text-sm text-gray-700 dark:text-slate-300">High Blood Pressure</span>
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    defaultChecked
-                    className="rounded border-gray-300 dark:border-slate-600 text-green-600 dark:text-green-500 focus:ring-green-500 dark:focus:ring-green-600 dark:bg-slate-700 dark:checked:bg-green-500"
-                  />
-                  <span className="ml-2 text-sm text-gray-700 dark:text-slate-300">Irregular Heart Rate</span>
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    defaultChecked
-                    className="rounded border-gray-300 dark:border-slate-600 text-green-600 dark:text-green-500 focus:ring-green-500 dark:focus:ring-green-600 dark:bg-slate-700 dark:checked:bg-green-500"
-                  />
-                  <span className="ml-2 text-sm text-gray-700 dark:text-slate-300">Low Blood Glucose</span>
-                </label>
-              </div>
-            </div>
 
-            <div>
-              <h4 className="font-medium text-gray-900 dark:text-slate-200 mb-3">Notification Methods</h4>
-              <div className="space-y-2">
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    defaultChecked
-                    className="rounded border-gray-300 dark:border-slate-600 text-green-600 dark:text-green-500 focus:ring-green-500 dark:focus:ring-green-600 dark:bg-slate-700 dark:checked:bg-green-500"
-                  />
-                  <span className="ml-2 text-sm text-gray-700 dark:text-slate-300">Push Notifications</span>
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    defaultChecked
-                    className="rounded border-gray-300 dark:border-slate-600 text-green-600 dark:text-green-500 focus:ring-green-500 dark:focus:ring-green-600 dark:bg-slate-700 dark:checked:bg-green-500"
-                  />
-                  <span className="ml-2 text-sm text-gray-700 dark:text-slate-300">Email Alerts</span>
-                </label>
-                <label className="flex items-center">
-                  <input type="checkbox" className="rounded border-gray-300 dark:border-slate-600 text-green-600 dark:text-green-500 focus:ring-green-500 dark:focus:ring-green-600 dark:bg-slate-700 dark:checked:bg-green-500" />
-                  <span className="ml-2 text-sm text-gray-700 dark:text-slate-300">SMS Notifications</span>
-                </label>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
