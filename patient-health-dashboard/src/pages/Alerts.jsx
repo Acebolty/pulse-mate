@@ -709,7 +709,7 @@ const Alerts = () => {
                       <div className="mb-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                         <h4 className="text-xs font-semibold text-blue-800 dark:text-blue-300 mb-2">Recommended Actions:</h4>
                         <ul className="space-y-1">
-                          {alert.recommendations.map((rec, index) => (
+                          {(alert.recommendations || []).map((rec, index) => (
                             <li key={index} className="text-xs text-blue-700 dark:text-blue-300 flex items-start space-x-1">
                               <span className="text-blue-500">•</span>
                               <span>{rec}</span>
@@ -724,7 +724,7 @@ const Alerts = () => {
                       <div className="flex flex-col items-start space-y-2 sm:flex-row sm:items-center sm:space-x-3 sm:space-y-0">
                         <span className="text-xs text-gray-500 dark:text-slate-400">Source: {alert.source}</span>
                         <div className="flex flex-wrap gap-2">
-                          {alert.actions.map((action, index) => (
+                          {(alert.actions || getDefaultActions(alert.type)).map((action, index) => (
                             <button
                               key={index}
                               onClick={() => handleEmergencyAction(alert, action)}

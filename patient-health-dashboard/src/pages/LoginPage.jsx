@@ -21,14 +21,20 @@ const LoginPage = () => {
       // { token: "...", user: { id: "...", firstName: "...", ... } }
       
       if (response.data && response.data.token) {
+        // Check if user has the correct role for patient dashboard
+        if (response.data.user.role !== 'patient') {
+          setError('Access denied. This login is for patients only. Please use the correct dashboard for your account type.');
+          return;
+        }
+
         localStorage.setItem('authToken', response.data.token); // Store the token
         // Optionally store basic user info, or fetch profile separately after redirect
-        localStorage.setItem('authUser', JSON.stringify(response.data.user)); 
-        
+        localStorage.setItem('authUser', JSON.stringify(response.data.user));
+
         // TODO: Replace with proper global state management (e.g., Context API / Redux / Zustand)
         // For now, we'll just navigate. The api.js interceptor will pick up the token.
         window.dispatchEvent(new Event("authChange")); // Basic way to notify other parts of app
-        
+
         navigate('/dashboard/overview'); // Redirect to dashboard
       } else {
         setError('Login failed: No token received.');

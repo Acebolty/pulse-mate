@@ -481,7 +481,7 @@ export const AlertProvider = ({ children }) => {
     }
   };
 
-  // Fetch health data and generate alerts
+  // Fetch existing alerts from database (backend creates alerts automatically)
   const fetchAndGenerateAlerts = async () => {
     // Prevent concurrent calls using module-level variable
     if (isCurrentlyFetching) {
@@ -490,124 +490,43 @@ export const AlertProvider = ({ children }) => {
     }
 
     const callId = Math.random().toString(36).substr(2, 9);
-    console.log(`🔄 AlertContext: Fetching health data and generating alerts... [Call ID: ${callId}]`);
+    console.log(`🔄 AlertContext: Fetching existing alerts from database... [Call ID: ${callId}]`);
     isCurrentlyFetching = true;
     setLoading(true);
 
     try {
-      // Calculate date range for recent data
-      const endDate = new Date();
-      const startDate = new Date();
-      startDate.setDate(endDate.getDate() - 7); // Last 7 days
-
-      const commonParams = { 
-        startDate: startDate.toISOString(), 
-        endDate: endDate.toISOString(),
-        limit: 50,
-        sortBy: 'timestamp',
-        order: 'desc'
-      };
-
-      // Fetch health data for all metrics
-      const [heartRateRes, bloodPressureRes, temperatureRes, glucoseRes] = await Promise.allSettled([
-        api.get('/health-data', { params: { ...commonParams, dataType: 'heartRate' } }),
-        api.get('/health-data', { params: { ...commonParams, dataType: 'bloodPressure' } }),
-        api.get('/health-data', { params: { ...commonParams, dataType: 'bodyTemperature' } }),
-        api.get('/health-data', { params: { ...commonParams, dataType: 'glucoseLevel' } })
-      ]);
-
-      // Process the health data
-      const newHealthData = {
-        heartRate: heartRateRes.status === 'fulfilled' ? heartRateRes.value.data.data : [],
-        bloodPressure: bloodPressureRes.status === 'fulfilled' ? bloodPressureRes.value.data.data : [],
-        bodyTemperature: temperatureRes.status === 'fulfilled' ? temperatureRes.value.data.data : [],
-        glucoseLevel: glucoseRes.status === 'fulfilled' ? glucoseRes.value.data.data : []
-      };
-
-      // Generate smart alerts from health data using user settings
-      console.log(`🔍 AlertContext: Generating smart alerts from health data... [Call ID: ${callId}]`);
-      const smartAlerts = generateSmartAlertsWithSettings(newHealthData, settings, lastProcessedTime);
-      console.log(`⚠️ AlertContext: Generated smart alerts: ${smartAlerts.length} [Call ID: ${callId}]`);
-
-      // Filter alerts based on notification preferences
-      const filteredAlerts = filterAlertsByNotificationPreferences(smartAlerts, settings);
-      console.log('🔽 AlertContext: Filtered alerts:', filteredAlerts.length);
-
-      // Load saved read status
-      const savedReadStatus = loadReadStatus();
-
-      // Apply saved read status to filtered alerts
-      const alertsWithReadStatus = filteredAlerts.map(alert => ({
-        ...alert,
-        isRead: savedReadStatus[alert.id] || false
-      }));
-
-      // Load saved read alerts from localStorage
-      const savedReadAlerts = loadReadAlerts();
-      console.log('📖 Loaded saved read alerts:', savedReadAlerts.length);
-
-      // Merge with existing alerts, keeping read status
-      setAlerts(prevAlerts => {
-        console.log('🔄 Merging alerts - Previous alerts:', prevAlerts.length, 'New filtered alerts:', alertsWithReadStatus.length);
-
-        // Create a map of new alerts by ID for easy lookup
-        const newAlertsMap = new Map(alertsWithReadStatus.map(alert => [alert.id, alert]));
-
-        // Update existing alerts with latest data while preserving read status
-        const updatedExistingAlerts = prevAlerts.map(existingAlert => {
-          if (newAlertsMap.has(existingAlert.id)) {
-            // Alert exists in new data, update with latest values but preserve read status
-            const newAlert = newAlertsMap.get(existingAlert.id);
-            console.log(`🔄 Updating existing alert: ${existingAlert.id} - preserving read status: ${existingAlert.isRead}, updating values`);
-            return {
-              ...newAlert, // Use latest alert data (updated values, timestamp, etc.)
-              isRead: existingAlert.isRead // But preserve the original read status
-            };
-          }
-          console.log(`❌ Existing alert not in new data: ${existingAlert.id} - ${existingAlert.title}`);
-          return existingAlert;
-        });
-
-        // Find truly new alerts (not in existing alerts)
-        const existingAlertIds = new Set(prevAlerts.map(alert => alert.id));
-        const newAlerts = alertsWithReadStatus.filter(alert => !existingAlertIds.has(alert.id));
-        console.log('➕ New alerts to add:', newAlerts.length, newAlerts.map(a => a.title));
-
-        // Save new alerts to database so doctors can see them
-        if (newAlerts.length > 0) {
-          console.log(`💾 AlertContext: Saving ${newAlerts.length} new alerts to database... [Call ID: ${callId}]`);
-          saveAlertsToDatabase(newAlerts);
+      // Fetch existing alerts from database (backend creates alerts automatically)
+      console.log(`🔍 AlertContext: Fetching existing alerts from database... [Call ID: ${callId}]`);
+      const response = await api.get('/alerts', {
+        params: {
+          limit: 50,
+          sortBy: 'timestamp',
+          order: 'desc'
         }
-
-        // Add saved read alerts that are not already present
-        const allAlertIds = new Set([...updatedExistingAlerts.map(a => a.id), ...newAlerts.map(a => a.id)]);
-        const missingReadAlerts = savedReadAlerts.filter(alert => !allAlertIds.has(alert.id));
-        console.log('📖 Adding missing read alerts:', missingReadAlerts.length);
-
-        // Combine updated existing alerts, new alerts, and missing read alerts
-        const mergedAlerts = [...updatedExistingAlerts, ...newAlerts, ...missingReadAlerts];
-        console.log('✅ Final merged alerts count:', mergedAlerts.length);
-
-        // Sort by timestamp (newest first)
-        return mergedAlerts.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
       });
 
-      // Update the last processed time to the latest reading timestamp
-      // Find the latest timestamp from all processed readings
-      const allReadings = Object.values(newHealthData).flat();
-      if (allReadings.length > 0) {
-        const latestTimestamp = allReadings
-          .map(reading => new Date(reading.timestamp))
-          .sort((a, b) => b - a)[0]
-          .toISOString();
-        setLastProcessedTime(latestTimestamp);
-        console.log('⏰ Updated lastProcessedTime to latest reading:', latestTimestamp);
-      } else {
-        console.log('⏰ No readings to process, keeping lastProcessedTime unchanged');
-      }
+      const existingAlerts = response.data.data || [];
+      console.log(`⚠️ AlertContext: Fetched ${existingAlerts.length} existing alerts from database [Call ID: ${callId}]`);
+
+      // Load saved read status from localStorage
+      const savedReadStatus = loadReadStatus();
+
+      // Apply saved read status to existing alerts from database
+      const alertsWithReadStatus = existingAlerts.map(alert => ({
+        ...alert,
+        id: alert._id || alert.id, // Ensure we have an id property
+        isRead: savedReadStatus[alert._id || alert.id] || false
+      }));
+
+      console.log('📖 Applied read status to alerts:', alertsWithReadStatus.length);
+
+      // Set the alerts directly (no need to merge since backend is the source of truth)
+      setAlerts(alertsWithReadStatus);
+
+      console.log('✅ Successfully fetched and set alerts from database');
 
     } catch (err) {
-      console.error("Failed to fetch health data for alerts:", err);
+      console.error("Failed to fetch alerts from database:", err);
     } finally {
       setLoading(false);
       isCurrentlyFetching = false;

@@ -19,6 +19,12 @@ const LoginPage = () => {
       // { token: "...", user: { id: "...", firstName: "...", ... } }
       
       if (response.data && response.data.token) {
+        // Check if user has the correct role for doctor dashboard
+        if (response.data.user.role !== 'doctor') {
+          setError('Access denied. This login is for doctors only. Please use the correct dashboard for your account type.');
+          return;
+        }
+
         localStorage.setItem('doctorAuthToken', response.data.token); // Store the token
         localStorage.setItem('doctorAuthUser', JSON.stringify(response.data.user));
 
