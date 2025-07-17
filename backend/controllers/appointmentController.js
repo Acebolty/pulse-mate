@@ -93,16 +93,26 @@ const createAppointment = async (req, res) => {
 // @access  Private
 const getAppointments = async (req, res) => {
   try {
-    const { status, upcoming, past, limit = 10, page = 1, sortBy = 'dateTime', order = 'asc' } = req.query;
+    const { status, upcoming, past, limit = 10, page = 1, sortBy = 'dateTime', order } = req.query;
+    // Default sort order: ascending for upcoming, descending for past
+    const defaultOrder = past === 'true' ? 'desc' : 'asc';
+    const finalOrder = order || defaultOrder;
     const query = { userId: req.user.id };
 
     if (status) query.status = status;
 
     const now = new Date();
-    if (upcoming === 'true') query.dateTime = { $gte: now };
-    else if (past === 'true') query.dateTime = { $lt: now };
+    if (upcoming === 'true') {
+      query.dateTime = { $gte: now };
+    } else if (past === 'true') {
+      // For past appointments, use both date and status criteria
+      query.$or = [
+        { dateTime: { $lt: now } }, // Past date
+        { status: { $in: ['Completed', 'Cancelled'] } } // Or completed/cancelled status
+      ];
+    }
     
-    const sortOrder = order === 'desc' ? -1 : 1;
+    const sortOrder = finalOrder === 'desc' ? -1 : 1;
     const sortOptions = {};
     if (sortBy === 'dateTime') sortOptions.dateTime = sortOrder;
     else sortOptions.createdAt = sortOrder;

@@ -290,7 +290,15 @@ const Messages = () => {
             // Backend chat structure: _id, participants, lastMessage (object), lastMessageTimestamp
             id: chat._id, // Use chat._id as the unique id
             providerId: otherParticipant?._id, // Use other participant's ID
-            providerName: otherParticipant ? `${otherParticipant.firstName} ${otherParticipant.lastName}` : "Unknown User",
+            providerName: (() => {
+              if (!otherParticipant) return "Unknown User";
+
+              // Use proper title from doctorInfo if available
+              const title = otherParticipant.doctorInfo?.title || (otherParticipant.role === 'doctor' ? 'Dr.' : '');
+              const fullName = `${otherParticipant.firstName} ${otherParticipant.lastName}`;
+
+              return title ? `${title} ${fullName}` : fullName;
+            })(),
             specialty: (() => {
               // Use doctor info directly from backend response
 
@@ -471,7 +479,7 @@ const Messages = () => {
         <div className="flex flex-col items-center justify-center p-6 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
           <div className="flex items-center space-x-2 text-blue-700 dark:text-blue-400 mb-3">
             <CalendarIcon className="w-5 h-5" />
-            <span className="text-sm font-medium">Book an appointment to chat with Dr. {selectedChat?.providerName}</span>
+            <span className="text-sm font-medium">Book an appointment to chat with {selectedChat?.providerName}</span>
           </div>
           <button
             onClick={() => {
@@ -862,7 +870,7 @@ const Messages = () => {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center space-x-2">
-                        <h3 className="text-sm font-semibold text-gray-900 dark:text-slate-100 truncate">Dr. {chat.providerName}</h3>
+                        <h3 className="text-sm font-semibold text-gray-900 dark:text-slate-100 truncate">{chat.providerName}</h3>
                         {chat.isOnline && (
                           <span className="px-1.5 py-0.5 bg-green-100 text-green-700 dark:bg-green-700/30 dark:text-green-400 text-2xs rounded-full font-medium">
                             Online
@@ -961,7 +969,7 @@ const Messages = () => {
                   </div>
                   <div>
                     <div className="flex items-center space-x-2">
-                      <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100">Dr. {selectedChat.providerName}</h2>
+                      <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100">{selectedChat.providerName}</h2>
                       {selectedChat.isOnline && (
                         <span className="px-2 py-0.5 bg-green-100 text-green-700 dark:bg-green-700/30 dark:text-green-400 text-2xs rounded-full font-medium">
                           Online
