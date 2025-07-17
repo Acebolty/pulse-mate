@@ -239,10 +239,6 @@ const Appointments = () => {
             <ChatBubbleLeftRightIcon className="w-4 h-4" />
             <span>Chat Sessions Only</span>
           </div>
-          <div className="flex items-center space-x-2 bg-white/10 rounded-lg px-3 py-1.5">
-            <ClockIcon className="w-4 h-4" />
-            <span>30 Min Sessions</span>
-          </div>
         </div>
       </div>
 
@@ -312,7 +308,7 @@ const Appointments = () => {
                       </div>
                       <div className="flex items-center space-x-1">
                         <ChatBubbleLeftRightIcon className="w-4 h-4" />
-                        <span>{appointment.sessionDuration}min chat</span>
+                        <span>Chat Session</span>
                       </div>
                     </div>
 

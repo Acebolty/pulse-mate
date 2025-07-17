@@ -350,6 +350,7 @@ export const AlertProvider = ({ children }) => {
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [lastProcessedTime, setLastProcessedTime] = useState(null);
+  const [currentUserId, setCurrentUserId] = useState(null);
   // Use default settings since we removed the settings context
   const settings = {
     notifications: {
@@ -367,10 +368,25 @@ export const AlertProvider = ({ children }) => {
     }
   };
 
-  // Load read status from localStorage
+  // Get user-specific localStorage key
+  const getUserSpecificKey = (baseKey) => {
+    try {
+      const authUser = localStorage.getItem('authUser');
+      if (authUser) {
+        const user = JSON.parse(authUser);
+        return `${baseKey}_${user.id || user._id || 'unknown'}`;
+      }
+    } catch (error) {
+      console.error('Error getting user ID for localStorage key:', error);
+    }
+    return baseKey; // Fallback to base key if user ID not available
+  };
+
+  // Load read status from localStorage (user-specific)
   const loadReadStatus = () => {
     try {
-      const savedReadStatus = localStorage.getItem('alertReadStatus');
+      const userSpecificKey = getUserSpecificKey('alertReadStatus');
+      const savedReadStatus = localStorage.getItem(userSpecificKey);
       return savedReadStatus ? JSON.parse(savedReadStatus) : {};
     } catch (error) {
       console.error('Error loading alert read status:', error);
@@ -378,19 +394,21 @@ export const AlertProvider = ({ children }) => {
     }
   };
 
-  // Save read status to localStorage
+  // Save read status to localStorage (user-specific)
   const saveReadStatus = (readStatus) => {
     try {
-      localStorage.setItem('alertReadStatus', JSON.stringify(readStatus));
+      const userSpecificKey = getUserSpecificKey('alertReadStatus');
+      localStorage.setItem(userSpecificKey, JSON.stringify(readStatus));
     } catch (error) {
       console.error('Error saving alert read status:', error);
     }
   };
 
-  // Helper functions for persisting read alerts
+  // Helper functions for persisting read alerts (user-specific)
   const loadReadAlerts = () => {
     try {
-      const saved = localStorage.getItem('readAlerts');
+      const userSpecificKey = getUserSpecificKey('readAlerts');
+      const saved = localStorage.getItem(userSpecificKey);
       return saved ? JSON.parse(saved) : [];
     } catch (error) {
       console.error('Error loading read alerts:', error);
@@ -407,7 +425,8 @@ export const AlertProvider = ({ children }) => {
       const recentReadAlerts = readAlerts.filter(alert =>
         new Date(alert.timestamp) > sevenDaysAgo
       );
-      localStorage.setItem('readAlerts', JSON.stringify(recentReadAlerts));
+      const userSpecificKey = getUserSpecificKey('readAlerts');
+      localStorage.setItem(userSpecificKey, JSON.stringify(recentReadAlerts));
     } catch (error) {
       console.error('Error saving read alerts:', error);
     }
@@ -674,8 +693,11 @@ export const AlertProvider = ({ children }) => {
       // Clear from state
       setAlerts([]);
 
-      // Clear from localStorage
-      localStorage.removeItem('alertReadStatus');
+      // Clear from localStorage (user-specific)
+      const alertReadStatusKey = getUserSpecificKey('alertReadStatus');
+      const readAlertsKey = getUserSpecificKey('readAlerts');
+      localStorage.removeItem(alertReadStatusKey);
+      localStorage.removeItem(readAlertsKey);
 
       // Clear from database using simulation endpoint
       await api.delete('/simulation/clear-alerts');
@@ -701,11 +723,58 @@ export const AlertProvider = ({ children }) => {
     return alerts.filter(alert => !alert.isRead && alert.type === 'critical').length;
   };
 
-  // Auto-fetch and generate alerts on mount
+  // Monitor user changes and refresh alerts when user switches
+  React.useEffect(() => {
+    try {
+      const authUser = localStorage.getItem('authUser');
+      if (authUser) {
+        const user = JSON.parse(authUser);
+        const userId = user.id || user._id;
+
+        // Set current user ID if not set, or if user has changed
+        if (!currentUserId) {
+          console.log('AlertContext: Setting initial user ID:', userId);
+          setCurrentUserId(userId);
+        } else if (currentUserId !== userId) {
+          // User has changed, fetch fresh alerts for the new user
+          console.log('AlertContext: User changed from', currentUserId, 'to', userId, '- fetching alerts for new user');
+          setCurrentUserId(userId);
+          fetchAndGenerateAlerts();
+        }
+      } else {
+        // No user logged in, clear alerts
+        if (currentUserId) {
+          console.log('AlertContext: No user logged in, clearing alerts');
+          setCurrentUserId(null);
+          setAlerts([]);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking user change:', error);
+    }
+  });
+
+  // Auto-fetch and generate alerts on mount and when auth changes
   React.useEffect(() => {
     console.log('AlertContext: Auto-fetching alerts on mount...');
     fetchAndGenerateAlerts();
   }, []); // Only run once on mount
+
+  // Listen for auth changes to refresh alerts for new user
+  React.useEffect(() => {
+    const handleAuthChange = () => {
+      console.log('AlertContext: Auth changed, refreshing alerts...');
+      // Small delay to ensure new auth data is available
+      setTimeout(() => {
+        fetchAndGenerateAlerts();
+      }, 100);
+    };
+
+    window.addEventListener('authChange', handleAuthChange);
+    return () => {
+      window.removeEventListener('authChange', handleAuthChange);
+    };
+  }, []);
 
   // Listen for health data updates to refresh alerts
   React.useEffect(() => {

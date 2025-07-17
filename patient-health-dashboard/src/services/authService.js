@@ -12,6 +12,11 @@ export const logout = async (navigate) => {
     // Continue with logout even if server call fails
   }
 
+  // Note: We don't clear user-specific alert data on logout
+  // This data should persist so when the user logs back in,
+  // they still see their read/unread status for their alerts
+
+  // Clear authentication data
   localStorage.removeItem('authToken');
   localStorage.removeItem('authUser');
 
