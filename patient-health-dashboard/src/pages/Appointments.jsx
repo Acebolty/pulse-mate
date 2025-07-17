@@ -118,6 +118,7 @@ const Appointments = () => {
   const [availableDoctors, setAvailableDoctors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [doctorsLoading, setDoctorsLoading] = useState(false);
+  const [doctorsMap, setDoctorsMap] = useState({}); // Map of doctorId -> doctor info
   const [error, setError] = useState(null);
   const [lastCreatedAppointmentId, setLastCreatedAppointmentId] = useState(null);
 
@@ -135,6 +136,18 @@ const Appointments = () => {
   const [isEditingModal, setIsEditingModal] = useState(false); // To differentiate create/edit in modal
   const [editingAppointmentId, setEditingAppointmentId] = useState(null);
 
+  // Helper function to get correct doctor display name
+  const getDoctorDisplayName = (appointment) => {
+    // Try to get current doctor info from the doctors map
+    if (appointment.providerId && doctorsMap[appointment.providerId]) {
+      const doctor = doctorsMap[appointment.providerId];
+      const title = doctor.doctorInfo?.title || 'Dr.';
+      return `${title} ${doctor.firstName} ${doctor.lastName}`;
+    }
+
+    // Fallback to stored providerName if doctor not found in map
+    return appointment.providerName || "Doctor";
+  };
 
   // Fetch all appointments for summary cards
   const fetchAllAppointments = async () => {
@@ -276,7 +289,19 @@ const Appointments = () => {
       console.log('✅ Fetched available doctors response:', response.data);
       console.log('📋 Doctors array:', response.data.doctors);
       console.log('📊 Number of doctors:', response.data.doctors?.length || 0);
-      setAvailableDoctors(response.data.doctors || []);
+
+      const doctors = response.data.doctors || [];
+      setAvailableDoctors(doctors);
+
+      // Create a map of doctorId -> doctor info for quick lookup
+      const doctorMap = {};
+      doctors.forEach(doctor => {
+        if (doctor._id) {
+          doctorMap[doctor._id] = doctor;
+        }
+      });
+      setDoctorsMap(doctorMap);
+      console.log('📋 Created doctors map with', Object.keys(doctorMap).length, 'doctors');
     } catch (error) {
       console.error('❌ Error fetching available doctors:', error);
       console.error('❌ Error response:', error.response?.data);
@@ -441,7 +466,7 @@ const Appointments = () => {
     setNewAppointmentData(prev => ({
       ...prev,
       providerId: doctor._id,
-      providerName: `Dr. ${doctor.firstName} ${doctor.lastName}`
+      providerName: `${doctor.doctorInfo?.title || 'Dr.'} ${doctor.firstName} ${doctor.lastName}`
     }));
   };
 
@@ -769,7 +794,7 @@ const Appointments = () => {
                           {/* Doctor Name and Status */}
                           <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-2 mb-1 sm:mb-2">
                             <h3 className="text-base md:text-lg font-semibold text-gray-800 dark:text-slate-100">
-                              {appointment.providerName || "Doctor"}
+                              {getDoctorDisplayName(appointment)}
                             </h3>
                             <span
                               className={`px-2 py-0.5 sm:py-1 text-xs font-medium rounded-full ${getStatusColor(appointment.status)} self-start sm:self-center`}
@@ -868,10 +893,10 @@ const Appointments = () => {
                         />
                         <div className="flex-1">
                           <h4 className="font-semibold text-gray-900 dark:text-slate-100 text-base md:text-lg">
-                            Dr. {doctor.firstName} {doctor.lastName}
+                            {doctor.doctorInfo?.title || 'Dr.'} {doctor.firstName} {doctor.lastName}
                           </h4>
                           <p className="text-sm text-gray-600 dark:text-slate-300">
-                            {doctor.doctorInfo?.specialty || 'General Medicine'}
+                            {doctor.doctorInfo?.specialization || 'General Medicine'}
                           </p>
                           <div className="flex items-center space-x-1 mt-1">
                             <ChatBubbleLeftRightIcon className="w-3 h-3 text-purple-500 dark:text-purple-400" />
@@ -1036,7 +1061,7 @@ const Appointments = () => {
                   />
                   <div>
                     <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-slate-100">
-                      {selectedAppointment.providerName || "Doctor"}
+                      {getDoctorDisplayName(selectedAppointment)}
                     </h2>
                     <p className="text-sm text-gray-600 dark:text-slate-300">
                       {selectedAppointment.reason || selectedAppointment.title || "General Consultation"}

@@ -303,7 +303,9 @@ const Messages = () => {
               // Use doctor info directly from backend response
 
               let specialty;
-              if (otherParticipant?.doctorInfo?.specialty) {
+              if (otherParticipant?.doctorInfo?.specialization) {
+                specialty = otherParticipant.doctorInfo.specialization;
+              } else if (otherParticipant?.doctorInfo?.specialty) {
                 specialty = otherParticipant.doctorInfo.specialty;
               } else if (otherParticipant?.role === 'doctor') {
                 specialty = 'General Medicine'; // Default for doctors without specialty

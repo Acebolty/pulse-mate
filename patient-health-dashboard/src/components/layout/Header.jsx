@@ -20,8 +20,6 @@ const Header = ({ onMenuClick, isCollapsed }) => {
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [showNotifications, setShowNotifications] = useState(false)
   const [userData, setUserData] = useState(null)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [showSearch, setShowSearch] = useState(false)
 
   const navigate = useNavigate()
   const { alerts, getUnreadCount, markAsRead, markAllAsRead } = useAlerts()
@@ -102,16 +100,7 @@ const Header = ({ onMenuClick, isCollapsed }) => {
     setShowProfileMenu(false)
   }
 
-  const handleSearch = (e) => {
-    e.preventDefault()
-    if (searchQuery.trim()) {
-      // Navigate to search results or filter current page
-      console.log('Searching for:', searchQuery)
-      // You can implement search functionality here
-      setSearchQuery("")
-      setShowSearch(false)
-    }
-  }
+
 
   // Get display name
   const getDisplayName = () => {
@@ -153,35 +142,12 @@ const Header = ({ onMenuClick, isCollapsed }) => {
             </div>
           )}
 
-          {/* Search bar */}
-          {showSearch && (
-            <div className="hidden md:block">
-              <form onSubmit={handleSearch} className="relative">
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search health data..."
-                  className="w-64 px-4 py-2 pl-10 text-sm border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  autoFocus
-                />
-                <MagnifyingGlassIcon className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
-              </form>
-            </div>
-          )}
+
 
         </div>
 
         {/* Right side */}
         <div className="flex items-center space-x-3">
-          {/* Search toggle */}
-          <button
-            onClick={() => setShowSearch(!showSearch)}
-            className="p-2.5 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition-all duration-200"
-          >
-            <MagnifyingGlassIcon className="w-5 h-5" />
-          </button>
-
           {/* Dark mode toggle */}
           <button
             onClick={toggleDarkMode}
