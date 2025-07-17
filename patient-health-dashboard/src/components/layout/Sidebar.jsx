@@ -285,7 +285,7 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse }) => {
     { name: "Dashboard", href: "/dashboard/overview", icon: HomeIcon },
     { name: "Health Metrics", href: "/dashboard/health-metrics", icon: HeartIcon },
     { name: "Appointments", href: "/dashboard/appointments", icon: CalendarIcon },
-    { name: "Messages", href: "/dashboard/messages", icon: ChatBubbleLeftIcon, badge: 3 },
+    { name: "Messages", href: "/dashboard/messages", icon: ChatBubbleLeftIcon },
     { name: "Alerts", href: "/dashboard/alerts", icon: BellIcon, badge: unreadCount },
     { name: "Profile", href: "/dashboard/profile", icon: UserIcon },
     { name: "Settings", href: "/dashboard/settings", icon: Cog6ToothIcon },

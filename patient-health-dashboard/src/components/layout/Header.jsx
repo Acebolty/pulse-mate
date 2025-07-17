@@ -67,7 +67,6 @@ const Header = ({ onMenuClick, isCollapsed }) => {
       if (!event.target.closest('.dropdown-container')) {
         setShowProfileMenu(false)
         setShowNotifications(false)
-        setShowSearch(false)
       }
     }
 

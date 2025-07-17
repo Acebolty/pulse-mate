@@ -780,6 +780,13 @@ export const AlertProvider = ({ children }) => {
   React.useEffect(() => {
     const handleHealthDataUpdate = (event) => {
       console.log('AlertContext: Health data updated, refreshing alerts...', event.detail);
+
+      // Skip alert generation for manual data entry since backend already creates alerts
+      if (event.detail?.source === 'manualDataEntry') {
+        console.log('AlertContext: Skipping alert generation for manual data entry (backend handles this)');
+        return;
+      }
+
       setTimeout(() => {
         fetchAndGenerateAlerts();
       }, 500); // Small delay to ensure data is saved
