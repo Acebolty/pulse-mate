@@ -20,10 +20,12 @@ const signupUser = async (req, res) => {
       lastName,
       email,
       password,
+      phone,
       dateOfBirth,
       gender,
       address, // Expects an object
       emergencyContact, // Expects an object
+      medicalInfo, // Medical information object
       // Doctor-specific fields
       userType,
       specialization,
@@ -48,10 +50,12 @@ const signupUser = async (req, res) => {
       lastName,
       email: email.toLowerCase(),
       passwordHash,
+      phone,
       dateOfBirth,
       gender,
       address, // Mongoose will use subschema defaults if parts are missing
       emergencyContact, // Mongoose will use subschema defaults if parts are missing
+      medicalInfo, // Medical information from sign-up form
       // Settings will be initialized by the pre-save hook in User.js
     };
 
