@@ -101,7 +101,7 @@ class WeeklyHealthSummaryService {
   }
 
   calculateAverage(values) {
-    return values.length > 0 ? Math.round(values.reduce((a, b) => a + b, 0) / values.length) : 0;
+    return values.length > 0 ? Math.round((values.reduce((a, b) => a + b, 0) / values.length) * 10) / 10 : 0;
   }
 
   calculateTrend(thisWeek, lastWeek) {

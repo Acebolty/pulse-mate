@@ -699,7 +699,7 @@ const Messages = () => {
                             </div> : null
                           }
                         </div>
-                        {isDoctor && <div className="flex items-center space-x-1 mt-1 px-2">{getMessageStatus(message.status)}<span className="text-xs text-gray-400 dark:text-slate-500">{formatMessageTime(message.timestamp)}</span></div>}
+                        {isDoctor && !showAvatar && <div className="flex items-center space-x-1 mt-1 px-2">{getMessageStatus(message.status)}<span className="text-xs text-gray-400 dark:text-slate-500">{formatMessageTime(message.timestamp)}</span></div>}
                       </div>
                     </div>
                   </div>

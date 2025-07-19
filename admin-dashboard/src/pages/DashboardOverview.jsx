@@ -4,9 +4,12 @@ import {
   UserGroupIcon,
   ShieldCheckIcon,
   CalendarIcon,
-  ExclamationTriangleIcon,
   ChartBarIcon,
   ClockIcon,
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
+  UserPlusIcon,
+  ChatBubbleLeftRightIcon,
 } from "@heroicons/react/24/outline"
 import { getDashboardOverview } from "../services/adminService"
 
@@ -45,12 +48,20 @@ const DashboardOverview = () => {
       color: "blue",
     },
     {
-      title: "Active Doctors",
-      value: dashboardData.overview.totalDoctors.toLocaleString(),
+      title: "Total Providers",
+      value: dashboardData.overview.totalProviders.toLocaleString(),
       change: `+${dashboardData.growth.doctors}%`,
       changeType: "increase",
       icon: ShieldCheckIcon,
       color: "green",
+    },
+    {
+      title: "Active Providers",
+      value: dashboardData.overview.activeProviders.toLocaleString(),
+      change: `${dashboardData.overview.totalProviders > 0 ? Math.round((dashboardData.overview.activeProviders / dashboardData.overview.totalProviders) * 100) : 0}% accepting patients`,
+      changeType: "increase",
+      icon: CheckCircleIcon,
+      color: "emerald",
     },
     {
       title: "Total Appointments",
@@ -60,44 +71,49 @@ const DashboardOverview = () => {
       icon: CalendarIcon,
       color: "yellow",
     },
-    {
-      title: "Recent Alerts",
-      value: dashboardData.overview.recentAlerts.toLocaleString(),
-      change: "Last 7 days",
-      changeType: "neutral",
-      icon: ExclamationTriangleIcon,
-      color: "red",
-    },
   ] : []
 
+  // TODO: Replace with real-time data from backend API
   const recentActivity = [
     {
       id: 1,
-      type: "appointment",
-      message: "New appointment scheduled by Dr. Smith",
-      time: "5 minutes ago",
-      icon: CalendarIcon,
+      type: "patient_signup",
+      message: "New patient registration: Sarah Johnson",
+      time: "3 minutes ago",
+      icon: UserPlusIcon,
+      color: "blue",
     },
     {
       id: 2,
-      type: "alert",
-      message: "Critical health alert for Patient #1234",
-      time: "12 minutes ago",
-      icon: ExclamationTriangleIcon,
+      type: "doctor_signup",
+      message: "New provider registration: Dr. Michael Chen",
+      time: "15 minutes ago",
+      icon: ShieldCheckIcon,
+      color: "green",
     },
     {
       id: 3,
-      type: "user",
-      message: "New doctor registration: Dr. Johnson",
-      time: "1 hour ago",
-      icon: ShieldCheckIcon,
+      type: "appointment_booked",
+      message: "Appointment booked: Emma Wilson with Dr. Smith",
+      time: "32 minutes ago",
+      icon: CalendarIcon,
+      color: "yellow",
     },
     {
       id: 4,
-      type: "patient",
-      message: "Patient data updated: Alice Cooper",
+      type: "chat_opened",
+      message: "Dr. Rodriguez opened chat session with Patient #1247",
+      time: "1 hour ago",
+      icon: ChatBubbleLeftRightIcon,
+      color: "emerald",
+    },
+    {
+      id: 5,
+      type: "appointment_completed",
+      message: "Dr. Thompson completed session with Patient #1156",
       time: "2 hours ago",
-      icon: UserGroupIcon,
+      icon: CheckCircleIcon,
+      color: "purple",
     },
   ]
 
@@ -129,8 +145,22 @@ const DashboardOverview = () => {
     const colors = {
       blue: "from-blue-500 to-blue-600 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300",
       green: "from-green-500 to-green-600 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300",
+      emerald: "from-emerald-500 to-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300",
       yellow: "from-yellow-500 to-yellow-600 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300",
       red: "from-red-500 to-red-600 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300",
+      purple: "from-purple-500 to-purple-600 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300",
+    }
+    return colors[color] || colors.blue
+  }
+
+  const getActivityIconClasses = (color) => {
+    const colors = {
+      blue: "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400",
+      green: "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400",
+      emerald: "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400",
+      yellow: "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400",
+      red: "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400",
+      purple: "bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400",
     }
     return colors[color] || colors.blue
   }
@@ -143,9 +173,9 @@ const DashboardOverview = () => {
           <h1 className="text-2xl font-bold mb-2">Admin Dashboard</h1>
           <p className="text-green-100">Loading dashboard data...</p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg border border-gray-100 dark:border-slate-700 animate-pulse">
+            <div key={i} className="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-lg border border-gray-100 dark:border-slate-700 animate-pulse">
               <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-3/4 mb-4"></div>
               <div className="h-8 bg-gray-200 dark:bg-slate-700 rounded w-1/2 mb-2"></div>
               <div className="h-3 bg-gray-200 dark:bg-slate-700 rounded w-1/4"></div>
@@ -187,22 +217,17 @@ const DashboardOverview = () => {
         <p className="text-green-100">
           Monitor and manage your PulseMate healthcare system
         </p>
-        {dashboardData && (
-          <div className="mt-4 text-sm text-green-100">
-            <p>System Status: {dashboardData.systemHealth.status} • Uptime: {Math.floor(dashboardData.systemHealth.uptime / 3600)}h</p>
-          </div>
-        )}
       </div>
 
       {/* Metrics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {metrics.map((metric, index) => (
           <motion.div
             key={metric.title}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
-            className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-lg border border-gray-100 dark:border-slate-700 hover:shadow-xl transition-all duration-200"
+            className="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-lg border border-gray-100 dark:border-slate-700 hover:shadow-xl transition-all duration-200"
           >
             <div className="flex items-center justify-between">
               <div>
@@ -220,8 +245,8 @@ const DashboardOverview = () => {
                   {metric.change} from last month
                 </p>
               </div>
-              <div className={`w-12 h-12 rounded-2xl bg-gradient-to-r ${getColorClasses(metric.color).split(' ')[0]} ${getColorClasses(metric.color).split(' ')[1]} flex items-center justify-center shadow-lg`}>
-                <metric.icon className="w-6 h-6 text-white" />
+              <div className={`w-10 h-10 rounded-xl bg-gradient-to-r ${getColorClasses(metric.color).split(' ')[0]} ${getColorClasses(metric.color).split(' ')[1]} flex items-center justify-center shadow-lg`}>
+                <metric.icon className="w-5 h-5 text-white" />
               </div>
             </div>
           </motion.div>
@@ -246,8 +271,8 @@ const DashboardOverview = () => {
           <div className="space-y-4">
             {recentActivity.map((activity) => (
               <div key={activity.id} className="flex items-start space-x-3">
-                <div className="w-8 h-8 bg-gray-100 dark:bg-slate-700 rounded-2xl flex items-center justify-center flex-shrink-0">
-                  <activity.icon className="w-4 h-4 text-gray-600 dark:text-slate-400" />
+                <div className={`w-8 h-8 rounded-2xl flex items-center justify-center flex-shrink-0 ${getActivityIconClasses(activity.color)}`}>
+                  <activity.icon className="w-4 h-4" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-gray-900 dark:text-white">

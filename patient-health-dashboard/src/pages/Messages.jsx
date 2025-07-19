@@ -1095,7 +1095,7 @@ const Messages = () => {
                           ) : null}
                         </div>
 
-                        {isPatient && (
+                        {isPatient && !showAvatar && (
                           <div className="flex items-center space-x-0.5 sm:space-x-1 mt-0.5 sm:mt-1 px-1.5 sm:px-2">
                             {getMessageStatus(message.status)}
                             <span className="text-2xs sm:text-xs text-gray-400 dark:text-slate-500">{formatMessageTime(message.timestamp)}</span>

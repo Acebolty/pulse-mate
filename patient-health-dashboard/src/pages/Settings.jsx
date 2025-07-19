@@ -40,6 +40,17 @@ const Settings = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const navigate = useNavigate();
 
+  // Change Password Modal State
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordSuccess, setPasswordSuccess] = useState('');
+
   // Handle sign out
   const handleSignOut = () => {
     logout(navigate);
@@ -93,6 +104,80 @@ const Settings = () => {
 
 
 
+
+  // Change Password Handlers
+  const handlePasswordChange = (field, value) => {
+    setPasswordData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    setPasswordError('');
+    setPasswordSuccess('');
+  };
+
+  const handleChangePassword = async (e) => {
+    e.preventDefault();
+
+    // Validate passwords
+    if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
+      setPasswordError('Please fill in all password fields.');
+      return;
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setPasswordError('New passwords do not match.');
+      return;
+    }
+
+    if (passwordData.newPassword.length < 6) {
+      setPasswordError('New password must be at least 6 characters long.');
+      return;
+    }
+
+    if (passwordData.currentPassword === passwordData.newPassword) {
+      setPasswordError('New password must be different from current password.');
+      return;
+    }
+
+    setPasswordLoading(true);
+    setPasswordError('');
+
+    try {
+      const response = await api.post('/auth/change-password', {
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword
+      });
+
+      setPasswordSuccess('Password changed successfully!');
+      setPasswordData({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      });
+
+      // Close modal after 2 seconds
+      setTimeout(() => {
+        setShowChangePasswordModal(false);
+        setPasswordSuccess('');
+      }, 2000);
+
+    } catch (err) {
+      setPasswordError(err.response?.data?.message || 'Failed to change password. Please try again.');
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
+  const handleClosePasswordModal = () => {
+    setShowChangePasswordModal(false);
+    setPasswordData({
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: ''
+    });
+    setPasswordError('');
+    setPasswordSuccess('');
+  };
 
   const handleTestWeeklySummary = async () => {
     setLoading(true);
@@ -399,22 +484,16 @@ const Settings = () => {
               <div>
                 <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100 mb-3 sm:mb-4">Password & Authentication</h3>
                 <div className="space-y-3">
-                  <button className="w-full text-left p-3 sm:p-4 border border-gray-200 dark:border-slate-700 dark:hover:bg-slate-700/50 rounded-lg hover:bg-gray-50 transition-colors">
+                  <button
+                    onClick={() => setShowChangePasswordModal(true)}
+                    className="w-full text-left p-3 sm:p-4 border border-gray-200 dark:border-slate-700 dark:hover:bg-slate-700/50 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <h4 className="text-sm font-medium text-gray-900 dark:text-slate-200">Change Password</h4>
                         <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400 mt-0.5 sm:mt-0">Update your account password</p>
                       </div>
                       <span className="text-blue-600 dark:text-blue-400 text-xs sm:text-sm mt-1 sm:mt-0 self-end sm:self-auto">Change</span>
-                    </div>
-                  </button>
-                  <button className="w-full text-left p-3 sm:p-4 border border-gray-200 dark:border-slate-700 dark:hover:bg-slate-700/50 rounded-lg hover:bg-gray-50 transition-colors">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-900 dark:text-slate-200">Login History</h4>
-                        <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400 mt-0.5 sm:mt-0">View recent login activity</p>
-                      </div>
-                      <span className="text-blue-600 dark:text-blue-400 text-xs sm:text-sm mt-1 sm:mt-0 self-end sm:self-auto">View</span>
                     </div>
                   </button>
                 </div>
@@ -439,6 +518,109 @@ const Settings = () => {
         </div>
       </div>
 
+      {/* Change Password Modal */}
+      {showChangePasswordModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Change Password</h3>
+                <button
+                  onClick={handleClosePasswordModal}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-slate-300"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <form onSubmit={handleChangePassword} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+                    Current Password
+                  </label>
+                  <input
+                    type="password"
+                    value={passwordData.currentPassword}
+                    onChange={(e) => handlePasswordChange('currentPassword', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent dark:bg-slate-700 dark:text-slate-200"
+                    placeholder="Enter current password"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+                    New Password
+                  </label>
+                  <input
+                    type="password"
+                    value={passwordData.newPassword}
+                    onChange={(e) => handlePasswordChange('newPassword', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent dark:bg-slate-700 dark:text-slate-200"
+                    placeholder="Enter new password"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+                    Confirm New Password
+                  </label>
+                  <input
+                    type="password"
+                    value={passwordData.confirmPassword}
+                    onChange={(e) => handlePasswordChange('confirmPassword', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent dark:bg-slate-700 dark:text-slate-200"
+                    placeholder="Confirm new password"
+                    required
+                  />
+                </div>
+
+                {passwordError && (
+                  <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+                    <p className="text-sm text-red-600 dark:text-red-400">{passwordError}</p>
+                  </div>
+                )}
+
+                {passwordSuccess && (
+                  <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                    <p className="text-sm text-green-600 dark:text-green-400">{passwordSuccess}</p>
+                  </div>
+                )}
+
+                <div className="flex space-x-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={handleClosePasswordModal}
+                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={passwordLoading}
+                    className="flex-1 px-4 py-2 bg-green-600 dark:bg-green-500 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 transition-colors disabled:opacity-50 flex items-center justify-center"
+                  >
+                    {passwordLoading ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Changing...
+                      </>
+                    ) : (
+                      'Change Password'
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   )

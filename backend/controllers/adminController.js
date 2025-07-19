@@ -434,10 +434,9 @@ const getDashboardOverview = async (req, res) => {
       'doctorInfo.approvalStatus': 'rejected'
     });
 
-    // Get doctor availability statistics
-    const availableDoctors = await User.countDocuments({
+    // Get active providers (doctors with isAcceptingPatients: true)
+    const activeProviders = await User.countDocuments({
       role: 'doctor',
-      'doctorInfo.approvalStatus': 'approved',
       'doctorInfo.isAcceptingPatients': true
     });
 
@@ -502,12 +501,12 @@ const getDashboardOverview = async (req, res) => {
       data: {
         overview: {
           totalPatients,
-          totalDoctors,
+          totalProviders: totalDoctors, // Total providers (doctors)
+          activeProviders, // Active providers (isAcceptingPatients: true)
           totalAdmins,
           pendingDoctors,
           approvedDoctors,
           rejectedDoctors,
-          availableDoctors,
           onlineDoctors,
           totalAppointments,
           recentAppointments,
@@ -525,7 +524,7 @@ const getDashboardOverview = async (req, res) => {
           approved: approvedDoctors,
           pending: pendingDoctors,
           rejected: rejectedDoctors,
-          available: availableDoctors,
+          active: activeProviders,
           online: onlineDoctors,
           approvalRate: totalDoctors > 0 ? Math.round((approvedDoctors / totalDoctors) * 100) : 0
         },
