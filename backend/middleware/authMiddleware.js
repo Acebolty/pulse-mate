@@ -5,6 +5,8 @@ const JWT_SECRET = process.env.JWT_SECRET;
 // If JWT_SECRET is not set, jwt.verify will throw an error handled below.
 
 module.exports = function(req, res, next) {
+  console.log(`🔐 Auth middleware called for ${req.method} ${req.originalUrl}`);
+
   // Get token from header
   const authHeader = req.header('Authorization');
 

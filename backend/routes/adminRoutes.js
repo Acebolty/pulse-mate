@@ -37,7 +37,10 @@ const {
   // System management controllers
   getSystemHealth,
   performSystemBackup,
-  getSystemLogs
+  getSystemLogs,
+
+  // Debug controllers
+  debugHealthData
 } = require('../controllers/adminController');
 
 // ==========================================
@@ -62,6 +65,38 @@ router.get('/users', authMiddleware, adminMiddleware, getAllUsers);
 // @desc    Get all patients with health data
 // @access  Private (Admin only)
 router.get('/patients', authMiddleware, adminMiddleware, getAllPatients);
+
+// Test route to verify patient routes are working
+router.get('/patients/test', (req, res) => {
+  console.log('🧪 Test route called');
+  res.json({ message: 'Patient routes are working!' });
+});
+
+// Debug route to check health data
+router.get('/debug-health', debugHealthData);
+
+// @route   GET /api/admin/patients/:patientId
+// @desc    Get detailed patient information for admin
+// @access  Private (Admin only)
+router.get('/patients/:patientId', authMiddleware, adminMiddleware, require('../controllers/adminController').getPatientDetails);
+
+// @route   GET /api/admin/patients/:patientId/health-data
+// @desc    Get patient health data for admin
+// @access  Private (Admin only)
+router.get('/patients/:patientId/health-data', authMiddleware, adminMiddleware, require('../controllers/adminController').getPatientHealthData);
+
+// @route   GET /api/admin/patients/:patientId/alerts
+// @desc    Get patient alerts for admin
+// @access  Private (Admin only)
+router.get('/patients/:patientId/alerts', authMiddleware, adminMiddleware, require('../controllers/adminController').getPatientAlerts);
+
+// @route   DELETE /api/admin/patients/:patientId
+// @desc    Delete patient account and all associated data
+// @access  Private (Admin only)
+router.delete('/patients/:patientId', (req, res, next) => {
+  console.log('🗑️ DELETE /api/admin/patients/:patientId route called with patientId:', req.params.patientId);
+  next();
+}, authMiddleware, adminMiddleware, deleteUser);
 
 // @route   GET /api/admin/doctors
 // @desc    Get all doctors with approval status

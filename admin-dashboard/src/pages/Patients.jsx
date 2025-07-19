@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import {
   MagnifyingGlassIcon,
@@ -12,8 +12,17 @@ import {
   TrashIcon,
   ChartBarIcon,
   XMarkIcon,
+  PhoneIcon,
+  EnvelopeIcon,
+  CalendarIcon,
+  MapPinIcon,
+  BeakerIcon,
+  FireIcon,
+  ArrowTrendingUpIcon,
 } from "@heroicons/react/24/outline"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { getAllPatients } from '../services/adminService'
+import api from '../services/api'
 
 const Patients = () => {
   const [searchTerm, setSearchTerm] = useState("")
@@ -21,165 +30,324 @@ const Patients = () => {
   const [sortBy, setSortBy] = useState("name")
   const [selectedPatient, setSelectedPatient] = useState(null)
   const [showHealthModal, setShowHealthModal] = useState(false)
+  const [patients, setPatients] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [pagination, setPagination] = useState({ current: 1, pages: 1, total: 0 })
+  const [patientDetailData, setPatientDetailData] = useState(null)
+  const [detailLoading, setDetailLoading] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [patientToDelete, setPatientToDelete] = useState(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
 
-  // Dummy patient data
-  const patients = [
-    {
-      id: "P001",
-      name: "Alice Johnson",
-      email: "alice.johnson@email.com",
-      age: 34,
-      gender: "Female",
-      phone: "+1 (555) 123-4567",
-      status: "critical",
-      lastVisit: "2024-01-15",
-      doctor: "Dr. Smith",
-      healthScore: 65,
-      conditions: ["Hypertension", "Diabetes"],
-      avatar: null,
-      recentReadings: {
-        heartRate: 85,
-        bloodPressure: "140/90",
-        temperature: 98.6,
-        glucose: 180,
-        weight: 165,
-        lastUpdated: "2024-01-25 09:30 AM"
-      },
-      weeklyData: [
-        { day: "Mon", heartRate: 82, bloodPressure: 138, glucose: 175 },
-        { day: "Tue", heartRate: 85, bloodPressure: 142, glucose: 180 },
-        { day: "Wed", heartRate: 88, bloodPressure: 145, glucose: 185 },
-        { day: "Thu", heartRate: 85, bloodPressure: 140, glucose: 178 },
-        { day: "Fri", heartRate: 87, bloodPressure: 143, glucose: 182 },
-        { day: "Sat", heartRate: 84, bloodPressure: 139, glucose: 176 },
-        { day: "Sun", heartRate: 85, bloodPressure: 140, glucose: 180 },
-      ],
-    },
-    {
-      id: "P002",
-      name: "Bob Wilson",
-      email: "bob.wilson@email.com",
-      age: 45,
-      gender: "Male",
-      phone: "+1 (555) 234-5678",
-      status: "stable",
-      lastVisit: "2024-01-20",
-      doctor: "Dr. Brown",
-      healthScore: 82,
-      conditions: ["High Cholesterol"],
-      avatar: null,
-      recentReadings: {
-        heartRate: 72,
-        bloodPressure: "125/80",
-        temperature: 98.4,
-        glucose: 95,
-        weight: 180,
-        lastUpdated: "2024-01-25 08:15 AM"
-      },
-      weeklyData: [
-        { day: "Mon", heartRate: 70, bloodPressure: 122, glucose: 92 },
-        { day: "Tue", heartRate: 72, bloodPressure: 125, glucose: 95 },
-        { day: "Wed", heartRate: 74, bloodPressure: 128, glucose: 98 },
-        { day: "Thu", heartRate: 71, bloodPressure: 124, glucose: 94 },
-        { day: "Fri", heartRate: 73, bloodPressure: 126, glucose: 96 },
-        { day: "Sat", heartRate: 70, bloodPressure: 123, glucose: 93 },
-        { day: "Sun", heartRate: 72, bloodPressure: 125, glucose: 95 },
-      ],
-    },
-    {
-      id: "P003",
-      name: "Carol Davis",
-      email: "carol.davis@email.com",
-      age: 28,
-      gender: "Female",
-      phone: "+1 (555) 345-6789",
-      status: "healthy",
-      lastVisit: "2024-01-18",
-      doctor: "Dr. Johnson",
-      healthScore: 95,
-      conditions: [],
-      avatar: null,
-      recentReadings: {
-        heartRate: 68,
-        bloodPressure: "110/70",
-        temperature: 98.2,
-        glucose: 85,
-        weight: 125,
-        lastUpdated: "2024-01-25 07:45 AM"
-      },
-      weeklyData: [
-        { day: "Mon", heartRate: 66, bloodPressure: 108, glucose: 82 },
-        { day: "Tue", heartRate: 68, bloodPressure: 110, glucose: 85 },
-        { day: "Wed", heartRate: 70, bloodPressure: 112, glucose: 88 },
-        { day: "Thu", heartRate: 67, bloodPressure: 109, glucose: 84 },
-        { day: "Fri", heartRate: 69, bloodPressure: 111, glucose: 86 },
-        { day: "Sat", heartRate: 66, bloodPressure: 108, glucose: 83 },
-        { day: "Sun", heartRate: 68, bloodPressure: 110, glucose: 85 },
-      ],
-    },
-    {
-      id: "P004",
-      name: "David Miller",
-      email: "david.miller@email.com",
-      age: 52,
-      gender: "Male",
-      phone: "+1 (555) 456-7890",
-      status: "warning",
-      lastVisit: "2024-01-12",
-      doctor: "Dr. Smith",
-      healthScore: 73,
-      conditions: ["Asthma"],
-      avatar: null,
-      recentReadings: {
-        heartRate: 78,
-        bloodPressure: "130/85",
-        temperature: 98.8,
-        glucose: 105,
-        weight: 190,
-        lastUpdated: "2024-01-25 06:20 AM"
-      },
-      weeklyData: [
-        { day: "Mon", heartRate: 76, bloodPressure: 128, glucose: 102 },
-        { day: "Tue", heartRate: 78, bloodPressure: 130, glucose: 105 },
-        { day: "Wed", heartRate: 80, bloodPressure: 132, glucose: 108 },
-        { day: "Thu", heartRate: 77, bloodPressure: 129, glucose: 104 },
-        { day: "Fri", heartRate: 79, bloodPressure: 131, glucose: 106 },
-        { day: "Sat", heartRate: 76, bloodPressure: 128, glucose: 103 },
-        { day: "Sun", heartRate: 78, bloodPressure: 130, glucose: 105 },
-      ],
-    },
-    {
-      id: "P005",
-      name: "Emma Thompson",
-      email: "emma.thompson@email.com",
-      age: 39,
-      gender: "Female",
-      phone: "+1 (555) 567-8901",
-      status: "stable",
-      lastVisit: "2024-01-22",
-      doctor: "Dr. Wilson",
-      healthScore: 88,
-      conditions: ["Migraine"],
-      avatar: null,
-      recentReadings: {
-        heartRate: 75,
-        bloodPressure: "118/75",
-        temperature: 98.3,
-        glucose: 90,
-        weight: 140,
-        lastUpdated: "2024-01-25 10:15 AM"
-      },
-      weeklyData: [
-        { day: "Mon", heartRate: 73, bloodPressure: 116, glucose: 87 },
-        { day: "Tue", heartRate: 75, bloodPressure: 118, glucose: 90 },
-        { day: "Wed", heartRate: 77, bloodPressure: 120, glucose: 93 },
-        { day: "Thu", heartRate: 74, bloodPressure: 117, glucose: 89 },
-        { day: "Fri", heartRate: 76, bloodPressure: 119, glucose: 91 },
-        { day: "Sat", heartRate: 73, bloodPressure: 116, glucose: 88 },
-        { day: "Sun", heartRate: 75, bloodPressure: 118, glucose: 90 },
-      ],
-    },
-  ]
+  // Fetch patients data
+  useEffect(() => {
+    fetchPatients()
+  }, [searchTerm, filterStatus])
+
+  const fetchPatients = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      const params = {
+        search: searchTerm,
+        healthStatus: filterStatus === 'all' ? '' : filterStatus,
+        limit: 50 // Get more patients for admin view
+      }
+
+      console.log('📋 Fetching patients with params:', params)
+      const response = await getAllPatients(params)
+      console.log('📋 Admin patients response:', response)
+
+      if (response.success) {
+        // Process patients data and calculate health status
+        const processedPatients = response.patients.map(patient => {
+          console.log('📊 Processing patient:', patient.firstName, 'Health data count:', patient.recentHealthData?.length || 0);
+          if (patient.recentHealthData?.length > 0) {
+            console.log('📊 Sample health data for', patient.firstName, ':', patient.recentHealthData[0]);
+          }
+
+          const healthStatus = calculateHealthStatus(patient);
+          console.log('📊 Calculated health status for', patient.firstName, ':', healthStatus);
+
+          return {
+            ...patient,
+            healthStatus,
+            displayName: `${patient.firstName || ''} ${patient.lastName || ''}`.trim() || 'Unknown Patient',
+            age: patient.dateOfBirth ? calculateAge(patient.dateOfBirth) : 'N/A'
+          };
+        })
+
+        setPatients(processedPatients)
+        setPagination(response.pagination || { current: 1, pages: 1, total: processedPatients.length })
+      } else {
+        throw new Error(response.message || 'Failed to fetch patients')
+      }
+    } catch (err) {
+      console.error('❌ Error fetching patients:', err)
+      console.error('Error details:', {
+        status: err.response?.status,
+        statusText: err.response?.statusText,
+        data: err.response?.data,
+        message: err.message
+      })
+      setError(err.response?.data?.message || err.message || 'Failed to load patients')
+      setPatients([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Calculate age from date of birth
+  const calculateAge = (dateOfBirth) => {
+    if (!dateOfBirth) return 'N/A'
+    const today = new Date()
+    const birthDate = new Date(dateOfBirth)
+    let age = today.getFullYear() - birthDate.getFullYear()
+    const monthDiff = today.getMonth() - birthDate.getMonth()
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--
+    }
+    return age
+  }
+
+  // Calculate health status based on recent health data (using same logic as patient profile)
+  const calculateHealthStatus = (patient) => {
+    if (!patient.recentHealthData || patient.recentHealthData.length === 0) {
+      return { status: 'unknown', score: 0, label: 'No health data available' }
+    }
+
+    // Get latest readings for each metric
+    const latestReadings = {}
+    patient.recentHealthData.forEach(data => {
+      if (!latestReadings[data.dataType] || new Date(data.timestamp) > new Date(latestReadings[data.dataType].timestamp)) {
+        latestReadings[data.dataType] = data
+      }
+    })
+
+    // Use default health targets (same as patient dashboard defaults)
+    const defaultHealthTargets = {
+      heartRate: { min: 60, max: 100 },
+      bloodPressure: { systolic: { min: 90, max: 120 }, diastolic: { min: 60, max: 80 } },
+      glucoseLevel: { min: 70, max: 140 },
+      bodyTemperature: { min: 97.0, max: 99.5 }
+    }
+
+    // Start with perfect score and subtract points (same as patient profile logic)
+    let score = 100
+    let factors = []
+
+    // Check heart rate against targets
+    if (latestReadings.heartRate) {
+      const currentHR = latestReadings.heartRate.value
+      const hrMin = defaultHealthTargets.heartRate.min
+      const hrMax = defaultHealthTargets.heartRate.max
+
+      if (currentHR < hrMin - 10 || currentHR > hrMax + 20) {
+        score -= 20
+        factors.push(`Heart rate (${currentHR} bpm) outside optimal range`)
+      } else if (currentHR < hrMin || currentHR > hrMax) {
+        score -= 10
+        factors.push(`Heart rate (${currentHR} bpm) outside target range`)
+      }
+    }
+
+    // Check blood pressure against targets
+    if (latestReadings.bloodPressure) {
+      const bp = latestReadings.bloodPressure.value
+      const systolic = typeof bp === 'object' ? bp.systolic : bp
+      const diastolic = typeof bp === 'object' ? bp.diastolic : bp - 40 // fallback
+      const bpSysMin = defaultHealthTargets.bloodPressure.systolic.min
+      const bpSysMax = defaultHealthTargets.bloodPressure.systolic.max
+      const bpDiaMin = defaultHealthTargets.bloodPressure.diastolic.min
+      const bpDiaMax = defaultHealthTargets.bloodPressure.diastolic.max
+
+      if (systolic > bpSysMax + 20 || diastolic > bpDiaMax + 10 || systolic < bpSysMin - 20 || diastolic < bpDiaMin - 10) {
+        score -= 20
+        factors.push(`Blood pressure critically outside range`)
+      } else if (systolic > bpSysMax || diastolic > bpDiaMax || systolic < bpSysMin || diastolic < bpDiaMin) {
+        score -= 10
+        factors.push(`Blood pressure outside target range`)
+      }
+    }
+
+    // Check glucose levels against targets
+    if (latestReadings.glucoseLevel) {
+      const currentGlucose = latestReadings.glucoseLevel.value
+      const glucoseMin = defaultHealthTargets.glucoseLevel.min
+      const glucoseMax = defaultHealthTargets.glucoseLevel.max
+
+      if (currentGlucose > glucoseMax + 40 || currentGlucose < glucoseMin - 20) {
+        score -= 20
+        factors.push(`Blood glucose critically outside range`)
+      } else if (currentGlucose > glucoseMax || currentGlucose < glucoseMin) {
+        score -= 10
+        factors.push(`Blood glucose outside target range`)
+      }
+    }
+
+    // Check body temperature against targets
+    if (latestReadings.bodyTemperature) {
+      const currentTemp = latestReadings.bodyTemperature.value
+      const tempMin = defaultHealthTargets.bodyTemperature.min
+      const tempMax = defaultHealthTargets.bodyTemperature.max
+
+      if (currentTemp > tempMax + 1 || currentTemp < tempMin - 1) {
+        score -= 15
+        factors.push(`Body temperature outside safe range`)
+      } else if (currentTemp > tempMax || currentTemp < tempMin) {
+        score -= 5
+        factors.push(`Body temperature outside target range`)
+      }
+    }
+
+    // Ensure score doesn't go below 0
+    score = Math.max(0, score)
+
+    // Determine status based on score (same logic as patient profile)
+    let status, label
+    if (score >= 90) {
+      status = 'healthy'
+      label = 'Excellent'
+    } else if (score >= 80) {
+      status = 'healthy'
+      label = 'Very Good'
+    } else if (score >= 70) {
+      status = 'stable'
+      label = 'Good'
+    } else if (score >= 60) {
+      status = 'stable'
+      label = 'Fair'
+    } else {
+      status = score >= 40 ? 'warning' : 'critical'
+      label = 'Needs Attention'
+    }
+
+    return { status, score: Math.round(score), label, factors }
+  }
+
+  // Fetch detailed patient data for modal
+  const fetchPatientDetails = async (patient) => {
+    setDetailLoading(true)
+    try {
+      // Fetch comprehensive patient data using admin-specific routes
+      const [profileRes, healthDataRes, appointmentsRes, alertsRes] = await Promise.allSettled([
+        // Get patient profile (admin route)
+        api.get(`/admin/patients/${patient._id}`),
+        // Get detailed health data (admin route)
+        api.get(`/admin/patients/${patient._id}/health-data`, {
+          params: {
+            startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+            endDate: new Date().toISOString(),
+            limit: 100
+          }
+        }),
+        // Get appointment history (general route - should work for admin)
+        api.get(`/appointments`, { params: { patientId: patient._id } }),
+        // Get patient alerts (admin route)
+        api.get(`/admin/patients/${patient._id}/alerts`)
+      ])
+
+      const detailData = {
+        profile: profileRes.status === 'fulfilled' ? profileRes.value.data?.patient || patient : patient,
+        healthData: healthDataRes.status === 'fulfilled' ? healthDataRes.value.data?.data || [] : [],
+        appointments: appointmentsRes.status === 'fulfilled' ? appointmentsRes.value.data?.appointments || [] : [],
+        alerts: alertsRes.status === 'fulfilled' ? alertsRes.value.data?.alerts || [] : [],
+        rawPatient: patient
+      }
+
+      // Process health data into charts format
+      detailData.chartData = processHealthDataForCharts(detailData.healthData)
+
+      setPatientDetailData(detailData)
+    } catch (error) {
+      console.error('❌ Error fetching patient details:', error)
+      // Fallback to basic patient data
+      setPatientDetailData({
+        profile: patient,
+        healthData: patient.recentHealthData || [],
+        appointments: [],
+        alerts: [],
+        chartData: {},
+        rawPatient: patient
+      })
+    } finally {
+      setDetailLoading(false)
+    }
+  }
+
+  // Process health data for charts
+  const processHealthDataForCharts = (healthData) => {
+    const chartData = {
+      heartRate: [],
+      bloodPressure: [],
+      glucoseLevel: [],
+      bodyTemperature: []
+    }
+
+    healthData.forEach(data => {
+      const date = new Date(data.timestamp).toLocaleDateString()
+      const entry = { date, value: data.value, timestamp: data.timestamp }
+
+      if (chartData[data.dataType]) {
+        chartData[data.dataType].push(entry)
+      }
+    })
+
+    // Sort by timestamp and limit to last 14 days for charts
+    Object.keys(chartData).forEach(key => {
+      chartData[key] = chartData[key]
+        .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
+        .slice(-14)
+    })
+
+    return chartData
+  }
+
+  // Handle opening patient details modal
+  const handleViewPatientDetails = async (patient) => {
+    setSelectedPatient(patient)
+    setShowHealthModal(true)
+    await fetchPatientDetails(patient)
+  }
+
+  // Handle delete patient
+  const handleDeletePatient = async (patient) => {
+    setPatientToDelete(patient)
+    setShowDeleteModal(true)
+  }
+
+  const confirmDeletePatient = async () => {
+    if (!patientToDelete) return
+
+    console.log('🗑️ Starting delete process for patient:', patientToDelete._id);
+    setDeleteLoading(true)
+    try {
+      console.log('🗑️ Making DELETE request to:', `/admin/patients/${patientToDelete._id}`);
+      const response = await api.delete(`/admin/patients/${patientToDelete._id}`)
+      console.log('🗑️ Delete response received:', response);
+
+      if (response.data.success) {
+        // Remove patient from local state
+        setPatients(patients.filter(p => p._id !== patientToDelete._id))
+        setShowDeleteModal(false)
+        setPatientToDelete(null)
+
+        // Show success message
+        alert(`✅ ${response.data.message}`)
+        console.log('✅ Patient deleted successfully:', response.data.deletedUser)
+      } else {
+        throw new Error(response.data.message || 'Failed to delete patient')
+      }
+    } catch (error) {
+      console.error('❌ Error deleting patient:', error)
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to delete patient'
+      alert(`❌ Error: ${errorMessage}`)
+    } finally {
+      setDeleteLoading(false)
+    }
+  }
 
   const getStatusColor = (status) => {
     const colors = {
@@ -187,8 +355,9 @@ const Patients = () => {
       warning: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300",
       stable: "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300",
       healthy: "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300",
+      unknown: "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300",
     }
-    return colors[status] || colors.stable
+    return colors[status] || colors.unknown
   }
 
   const getStatusIcon = (status) => {
@@ -197,29 +366,30 @@ const Patients = () => {
       warning: ExclamationTriangleIcon,
       stable: HeartIcon,
       healthy: CheckCircleIcon,
+      unknown: UserIcon,
     }
-    const Icon = icons[status] || HeartIcon
+    const Icon = icons[status] || UserIcon
     return <Icon className="w-4 h-4" />
   }
 
   const filteredPatients = patients.filter((patient) => {
-    const matchesSearch = patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = patient.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          patient.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         patient.id.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesFilter = filterStatus === "all" || patient.status === filterStatus
+                         patient.patientId?.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesFilter = filterStatus === "all" || patient.healthStatus?.status === filterStatus
     return matchesSearch && matchesFilter
   })
 
   const sortedPatients = [...filteredPatients].sort((a, b) => {
     switch (sortBy) {
       case "name":
-        return a.name.localeCompare(b.name)
+        return a.displayName.localeCompare(b.displayName)
       case "age":
-        return a.age - b.age
+        return (a.age === 'N/A' ? 0 : a.age) - (b.age === 'N/A' ? 0 : b.age)
       case "healthScore":
-        return b.healthScore - a.healthScore
-      case "lastVisit":
-        return new Date(b.lastVisit) - new Date(a.lastVisit)
+        return (b.healthStatus?.score || 0) - (a.healthStatus?.score || 0)
+      case "joinDate":
+        return new Date(b.createdAt) - new Date(a.createdAt)
       default:
         return 0
     }
@@ -259,11 +429,12 @@ const Patients = () => {
               onChange={(e) => setFilterStatus(e.target.value)}
               className="px-4 py-3 border border-gray-200 dark:border-slate-600 rounded-2xl bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
             >
-              <option value="all">All Status</option>
+              <option value="all">All Health Status</option>
               <option value="healthy">Healthy</option>
               <option value="stable">Stable</option>
               <option value="warning">Warning</option>
               <option value="critical">Critical</option>
+              <option value="unknown">No Data</option>
             </select>
 
             <select
@@ -274,7 +445,7 @@ const Patients = () => {
               <option value="name">Sort by Name</option>
               <option value="age">Sort by Age</option>
               <option value="healthScore">Sort by Health Score</option>
-              <option value="lastVisit">Sort by Last Visit</option>
+              <option value="joinDate">Sort by Join Date</option>
             </select>
           </div>
         </div>
@@ -290,22 +461,19 @@ const Patients = () => {
                   Patient
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">
-                  Status
+                  Health Status
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">
                   Age/Gender
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">
-                  Doctor
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">
                   Health Score
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">
-                  Last Visit
+                  Contact
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">
-                  Health Data
+                  View Details
                 </th>
                 <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">
                   Actions
@@ -313,9 +481,33 @@ const Patients = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 dark:divide-slate-700">
-              {sortedPatients.map((patient, index) => (
+              {loading ? (
+                <tr>
+                  <td colSpan="7" className="px-6 py-12 text-center">
+                    <div className="flex items-center justify-center space-x-2">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-500"></div>
+                      <span className="text-gray-500 dark:text-slate-400">Loading patients...</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : error ? (
+                <tr>
+                  <td colSpan="7" className="px-6 py-12 text-center">
+                    <div className="text-red-500 dark:text-red-400">
+                      <ExclamationTriangleIcon className="w-8 h-8 mx-auto mb-2" />
+                      <p>{error}</p>
+                      <button
+                        onClick={fetchPatients}
+                        className="mt-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-xl transition-all duration-200"
+                      >
+                        Retry
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ) : sortedPatients.map((patient, index) => (
                 <motion.tr
-                  key={patient.id}
+                  key={patient._id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
@@ -324,17 +516,25 @@ const Patients = () => {
                   {/* Patient Info */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
-                        <span className="text-white font-semibold text-sm">
-                          {patient.name.split(' ').map(n => n[0]).join('')}
-                        </span>
-                      </div>
+                      {patient.profilePicture ? (
+                        <img
+                          src={patient.profilePicture}
+                          alt={patient.displayName}
+                          className="w-12 h-12 rounded-2xl object-cover shadow-lg ring-2 ring-blue-100 dark:ring-blue-700/50"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
+                          <span className="text-white font-semibold text-sm">
+                            {patient.displayName.split(' ').map(n => n[0]).join('').substring(0, 2)}
+                          </span>
+                        </div>
+                      )}
                       <div>
                         <div className="text-sm font-semibold text-gray-900 dark:text-white">
-                          {patient.name}
+                          {patient.displayName}
                         </div>
                         <div className="text-sm text-gray-500 dark:text-slate-400">
-                          ID: {patient.id}
+                          ID: {patient.patientId || patient._id.substring(0, 8)}
                         </div>
                         <div className="text-xs text-gray-400 dark:text-slate-500">
                           {patient.email}
@@ -343,11 +543,11 @@ const Patients = () => {
                     </div>
                   </td>
 
-                  {/* Status */}
+                  {/* Health Status */}
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center px-3 py-1 rounded-2xl text-xs font-medium ${getStatusColor(patient.status)}`}>
-                      {getStatusIcon(patient.status)}
-                      <span className="ml-1 capitalize">{patient.status}</span>
+                    <span className={`inline-flex items-center px-3 py-1 rounded-2xl text-xs font-medium ${getStatusColor(patient.healthStatus?.status || 'unknown')}`}>
+                      {getStatusIcon(patient.healthStatus?.status || 'unknown')}
+                      <span className="ml-1 capitalize">{patient.healthStatus?.status || 'Unknown'}</span>
                     </span>
                   </td>
 
@@ -357,14 +557,7 @@ const Patients = () => {
                       {patient.age} years
                     </div>
                     <div className="text-sm text-gray-500 dark:text-slate-400">
-                      {patient.gender}
-                    </div>
-                  </td>
-
-                  {/* Doctor */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900 dark:text-white font-medium">
-                      {patient.doctor}
+                      {patient.gender || 'Not specified'}
                     </div>
                   </td>
 
@@ -372,59 +565,55 @@ const Patients = () => {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center space-x-2">
                       <div className={`text-sm font-bold ${
-                        patient.healthScore >= 80 ? 'text-green-600 dark:text-green-400' :
-                        patient.healthScore >= 60 ? 'text-yellow-600 dark:text-yellow-400' :
+                        (patient.healthStatus?.score || 0) >= 80 ? 'text-green-600 dark:text-green-400' :
+                        (patient.healthStatus?.score || 0) >= 60 ? 'text-yellow-600 dark:text-yellow-400' :
                         'text-red-600 dark:text-red-400'
                       }`}>
-                        {patient.healthScore}/100
+                        {patient.healthStatus?.score || 0}/100
                       </div>
                       <div className="w-16 bg-gray-200 dark:bg-slate-600 rounded-full h-2">
                         <div
                           className={`h-2 rounded-full ${
-                            patient.healthScore >= 80 ? 'bg-green-500' :
-                            patient.healthScore >= 60 ? 'bg-yellow-500' :
+                            (patient.healthStatus?.score || 0) >= 80 ? 'bg-green-500' :
+                            (patient.healthStatus?.score || 0) >= 60 ? 'bg-yellow-500' :
                             'bg-red-500'
                           }`}
-                          style={{ width: `${patient.healthScore}%` }}
+                          style={{ width: `${patient.healthStatus?.score || 0}%` }}
                         ></div>
                       </div>
                     </div>
                   </td>
 
-                  {/* Last Visit */}
+                  {/* Contact */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900 dark:text-white">
-                      {new Date(patient.lastVisit).toLocaleDateString()}
+                      {patient.phone || 'Not provided'}
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-slate-400">
+                      Joined: {new Date(patient.createdAt).toLocaleDateString()}
                     </div>
                   </td>
 
-                  {/* Health Data */}
+                  {/* View Details */}
                   <td className="px-6 py-4">
                     <button
-                      onClick={() => {
-                        setSelectedPatient(patient)
-                        setShowHealthModal(true)
-                      }}
+                      onClick={() => handleViewPatientDetails(patient)}
                       className="inline-flex items-center space-x-1 px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded-xl transition-all duration-200 shadow-md hover:shadow-lg whitespace-nowrap"
                     >
                       <ChartBarIcon className="w-3 h-3" />
-                      <span>View Data</span>
+                      <span>View Details</span>
                     </button>
                   </td>
 
                   {/* Actions */}
                   <td className="px-6 py-4 whitespace-nowrap text-right">
-                    <div className="flex items-center justify-end space-x-2">
-                      <button className="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xl transition-all duration-200 shadow-md hover:shadow-lg">
-                        <EyeIcon className="w-4 h-4" />
-                      </button>
-                      <button className="p-2 bg-gray-500 hover:bg-gray-600 text-white rounded-xl transition-all duration-200 shadow-md hover:shadow-lg">
-                        <PencilIcon className="w-4 h-4" />
-                      </button>
-                      <button className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-xl transition-all duration-200 shadow-md hover:shadow-lg">
-                        <TrashIcon className="w-4 h-4" />
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => handleDeletePatient(patient)}
+                      className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-xl transition-all duration-200 shadow-md hover:shadow-lg"
+                      title="Delete Patient"
+                    >
+                      <TrashIcon className="w-4 h-4" />
+                    </button>
                   </td>
                 </motion.tr>
               ))}
@@ -434,7 +623,7 @@ const Patients = () => {
       </div>
 
       {/* Empty State */}
-      {sortedPatients.length === 0 && (
+      {!loading && !error && sortedPatients.length === 0 && (
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-gray-100 dark:border-slate-700 text-center py-16">
           <div className="w-16 h-16 bg-gray-100 dark:bg-slate-700 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <UserIcon className="w-8 h-8 text-gray-400" />
@@ -443,41 +632,73 @@ const Patients = () => {
             No patients found
           </h3>
           <p className="text-gray-500 dark:text-slate-400">
-            Try adjusting your search or filter criteria
+            {searchTerm || filterStatus !== 'all'
+              ? 'Try adjusting your search or filter criteria'
+              : 'No patients have registered yet'
+            }
           </p>
+          {(searchTerm || filterStatus !== 'all') && (
+            <button
+              onClick={() => {
+                setSearchTerm('')
+                setFilterStatus('all')
+              }}
+              className="mt-4 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-xl transition-all duration-200"
+            >
+              Clear Filters
+            </button>
+          )}
         </div>
       )}
 
-      {/* Health Data Modal */}
+      {/* Enhanced Patient Details Modal */}
       {showHealthModal && selectedPatient && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+            className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl max-w-7xl w-full max-h-[95vh] overflow-y-auto"
           >
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-slate-700">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-slate-700 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-slate-700 dark:to-slate-600">
               <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
-                  <span className="text-white font-semibold text-sm">
-                    {selectedPatient.name.split(' ').map(n => n[0]).join('')}
-                  </span>
-                </div>
+                {selectedPatient.profilePicture ? (
+                  <img
+                    src={selectedPatient.profilePicture}
+                    alt={selectedPatient.displayName}
+                    className="w-16 h-16 rounded-2xl object-cover shadow-lg ring-2 ring-blue-100 dark:ring-blue-700/50"
+                  />
+                ) : (
+                  <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
+                    <span className="text-white font-semibold text-lg">
+                      {selectedPatient.displayName.split(' ').map(n => n[0]).join('').substring(0, 2)}
+                    </span>
+                  </div>
+                )}
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                    {selectedPatient.name} - Health Data
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                    {selectedPatient.displayName}
                   </h2>
-                  <p className="text-sm text-gray-500 dark:text-slate-400">
-                    Patient ID: {selectedPatient.id}
+                  <p className="text-sm text-gray-600 dark:text-slate-300">
+                    Patient ID: {selectedPatient.patientId || selectedPatient._id.substring(0, 8)}
                   </p>
+                  <div className="flex items-center space-x-4 mt-2">
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(selectedPatient.healthStatus?.status || 'unknown')}`}>
+                      {getStatusIcon(selectedPatient.healthStatus?.status || 'unknown')}
+                      <span className="ml-1 capitalize">{selectedPatient.healthStatus?.status || 'Unknown'}</span>
+                    </span>
+                    <span className="text-sm text-gray-500 dark:text-slate-400">
+                      Health Score: {selectedPatient.healthStatus?.score || 0}/100
+                    </span>
+                  </div>
                 </div>
               </div>
               <button
                 onClick={() => {
                   setShowHealthModal(false)
                   setSelectedPatient(null)
+                  setPatientDetailData(null)
                 }}
                 className="p-2 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-2xl transition-colors"
               >
@@ -486,143 +707,458 @@ const Patients = () => {
             </div>
 
             {/* Modal Content */}
-            <div className="p-6 space-y-6">
-              {/* Recent Readings */}
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                  Current Readings
-                </h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-2xl border border-red-200 dark:border-red-800">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <HeartIcon className="w-5 h-5 text-red-600 dark:text-red-400" />
-                      <span className="text-sm font-medium text-red-800 dark:text-red-300">Heart Rate</span>
+            {detailLoading ? (
+              <div className="p-12 text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                <p className="text-gray-500 dark:text-slate-400">Loading patient details...</p>
+              </div>
+            ) : (
+              <div className="p-6 space-y-8">
+                {/* Patient Profile Information */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Personal Information */}
+                  <div className="lg:col-span-2 bg-gray-50 dark:bg-slate-700 rounded-2xl p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                      <UserIcon className="w-5 h-5 mr-2" />
+                      Personal Information
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium text-gray-500 dark:text-slate-400">Full Name</label>
+                        <p className="text-gray-900 dark:text-white font-medium">{selectedPatient.displayName}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-500 dark:text-slate-400">Email</label>
+                        <p className="text-gray-900 dark:text-white">{selectedPatient.email}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-500 dark:text-slate-400">Phone</label>
+                        <p className="text-gray-900 dark:text-white">{selectedPatient.phone || 'Not provided'}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-500 dark:text-slate-400">Date of Birth</label>
+                        <p className="text-gray-900 dark:text-white">
+                          {selectedPatient.dateOfBirth ? new Date(selectedPatient.dateOfBirth).toLocaleDateString() : 'Not provided'}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-500 dark:text-slate-400">Gender</label>
+                        <p className="text-gray-900 dark:text-white">{selectedPatient.gender || 'Not specified'}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-500 dark:text-slate-400">Age</label>
+                        <p className="text-gray-900 dark:text-white">{selectedPatient.age} years</p>
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="text-sm font-medium text-gray-500 dark:text-slate-400">Address</label>
+                        <p className="text-gray-900 dark:text-white">
+                          {patientDetailData?.profile?.address ?
+                            `${patientDetailData.profile.address.street || ''} ${patientDetailData.profile.address.city || ''} ${patientDetailData.profile.address.state || ''} ${patientDetailData.profile.address.zipCode || ''}`.trim() || 'Not provided'
+                            : 'Not provided'
+                          }
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-2xl font-bold text-red-900 dark:text-red-100">
-                      {selectedPatient.recentReadings.heartRate} bpm
-                    </p>
                   </div>
 
-                  <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-2xl border border-blue-200 dark:border-blue-800">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <span className="w-5 h-5 text-blue-600 dark:text-blue-400 text-lg">🩸</span>
-                      <span className="text-sm font-medium text-blue-800 dark:text-blue-300">Blood Pressure</span>
+                  {/* Account Information */}
+                  <div className="bg-blue-50 dark:bg-blue-900/20 rounded-2xl p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                      <CalendarIcon className="w-5 h-5 mr-2" />
+                      Account Details
+                    </h3>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-sm font-medium text-gray-500 dark:text-slate-400">Patient ID</label>
+                        <p className="text-gray-900 dark:text-white font-mono text-sm">
+                          {selectedPatient.patientId || selectedPatient._id.substring(0, 8)}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-500 dark:text-slate-400">Registration Date</label>
+                        <p className="text-gray-900 dark:text-white">
+                          {new Date(selectedPatient.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-500 dark:text-slate-400">Account Status</label>
+                        <p className="text-gray-900 dark:text-white">
+                          {(() => {
+                            // Determine account status based on available data
+                            const profile = patientDetailData?.profile || selectedPatient;
+                            const hasRecentActivity = profile.lastLoginAt &&
+                              new Date(profile.lastLoginAt) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000); // 30 days
+                            return hasRecentActivity ? 'Active' : 'Inactive';
+                          })()}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-500 dark:text-slate-400">Last Login</label>
+                        <p className="text-gray-900 dark:text-white">
+                          {(() => {
+                            const profile = patientDetailData?.profile || selectedPatient;
+                            return profile.lastLoginAt ?
+                              new Date(profile.lastLoginAt).toLocaleDateString() + ' at ' +
+                              new Date(profile.lastLoginAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                              : 'Never';
+                          })()}
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">
-                      {selectedPatient.recentReadings.bloodPressure}
-                    </p>
-                  </div>
-
-                  <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-2xl border border-yellow-200 dark:border-yellow-800">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <span className="w-5 h-5 text-yellow-600 dark:text-yellow-400 text-lg">🌡️</span>
-                      <span className="text-sm font-medium text-yellow-800 dark:text-yellow-300">Temperature</span>
-                    </div>
-                    <p className="text-2xl font-bold text-yellow-900 dark:text-yellow-100">
-                      {selectedPatient.recentReadings.temperature}°F
-                    </p>
-                  </div>
-
-                  <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-2xl border border-purple-200 dark:border-purple-800">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <span className="w-5 h-5 text-purple-600 dark:text-purple-400 text-lg">🍯</span>
-                      <span className="text-sm font-medium text-purple-800 dark:text-purple-300">Glucose</span>
-                    </div>
-                    <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">
-                      {selectedPatient.recentReadings.glucose} mg/dL
-                    </p>
-                  </div>
-
-                  <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-2xl border border-green-200 dark:border-green-800">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <span className="w-5 h-5 text-green-600 dark:text-green-400 text-lg">⚖️</span>
-                      <span className="text-sm font-medium text-green-800 dark:text-green-300">Weight</span>
-                    </div>
-                    <p className="text-2xl font-bold text-green-900 dark:text-green-100">
-                      {selectedPatient.recentReadings.weight} lbs
-                    </p>
-                  </div>
-
-                  <div className="bg-gray-50 dark:bg-slate-700 p-4 rounded-2xl border border-gray-200 dark:border-slate-600">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <span className="w-5 h-5 text-gray-600 dark:text-slate-400 text-lg">🕒</span>
-                      <span className="text-sm font-medium text-gray-800 dark:text-slate-300">Last Updated</span>
-                    </div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-slate-100">
-                      {selectedPatient.recentReadings.lastUpdated}
-                    </p>
                   </div>
                 </div>
-              </div>
 
-              {/* 7-Day Charts */}
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                  Past 7 Days Trends
-                </h3>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Heart Rate Chart */}
-                  <div className="bg-gray-50 dark:bg-slate-700 p-4 rounded-2xl">
-                    <h4 className="text-sm font-medium text-gray-700 dark:text-slate-300 mb-3">Heart Rate (bpm)</h4>
-                    <ResponsiveContainer width="100%" height={200}>
-                      <LineChart data={selectedPatient.weeklyData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="day" />
-                        <YAxis />
-                        <Tooltip />
-                        <Line type="monotone" dataKey="heartRate" stroke="#ef4444" strokeWidth={2} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-
-                  {/* Blood Pressure Chart */}
-                  <div className="bg-gray-50 dark:bg-slate-700 p-4 rounded-2xl">
-                    <h4 className="text-sm font-medium text-gray-700 dark:text-slate-300 mb-3">Blood Pressure (Systolic)</h4>
-                    <ResponsiveContainer width="100%" height={200}>
-                      <LineChart data={selectedPatient.weeklyData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="day" />
-                        <YAxis />
-                        <Tooltip />
-                        <Line type="monotone" dataKey="bloodPressure" stroke="#3b82f6" strokeWidth={2} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-
-                  {/* Glucose Chart */}
-                  <div className="bg-gray-50 dark:bg-slate-700 p-4 rounded-2xl lg:col-span-2">
-                    <h4 className="text-sm font-medium text-gray-700 dark:text-slate-300 mb-3">Glucose Level (mg/dL)</h4>
-                    <ResponsiveContainer width="100%" height={200}>
-                      <LineChart data={selectedPatient.weeklyData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="day" />
-                        <YAxis />
-                        <Tooltip />
-                        <Line type="monotone" dataKey="glucose" stroke="#8b5cf6" strokeWidth={2} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              </div>
-
-              {/* Medical Conditions */}
-              {selectedPatient.conditions.length > 0 && (
+                {/* Current Health Readings */}
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                    Medical Conditions
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                    <HeartIcon className="w-5 h-5 mr-2" />
+                    Current Health Readings
                   </h3>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedPatient.conditions.map((condition, idx) => (
-                      <span
-                        key={idx}
-                        className="px-3 py-2 bg-orange-100 dark:bg-orange-900/20 text-orange-800 dark:text-orange-300 text-sm rounded-2xl border border-orange-200 dark:border-orange-800"
-                      >
-                        {condition}
-                      </span>
-                    ))}
+                  {patientDetailData?.healthData && patientDetailData.healthData.length > 0 ? (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {/* Get latest readings for each metric */}
+                      {(() => {
+                        const latestReadings = {}
+                        patientDetailData.healthData.forEach(data => {
+                          if (!latestReadings[data.dataType] || new Date(data.timestamp) > new Date(latestReadings[data.dataType].timestamp)) {
+                            latestReadings[data.dataType] = data
+                          }
+                        })
+
+                        // Helper function to get metric styles
+                        const getMetricStyles = (metricKey) => {
+                          const styles = {
+                            heartRate: {
+                              bg: 'bg-red-50 dark:bg-red-900/20',
+                              border: 'border-red-200 dark:border-red-800',
+                              icon: 'text-red-600 dark:text-red-400',
+                              label: 'text-red-800 dark:text-red-300',
+                              value: 'text-red-900 dark:text-red-100'
+                            },
+                            bloodPressure: {
+                              bg: 'bg-blue-50 dark:bg-blue-900/20',
+                              border: 'border-blue-200 dark:border-blue-800',
+                              icon: 'text-blue-600 dark:text-blue-400',
+                              label: 'text-blue-800 dark:text-blue-300',
+                              value: 'text-blue-900 dark:text-blue-100'
+                            },
+                            glucoseLevel: {
+                              bg: 'bg-purple-50 dark:bg-purple-900/20',
+                              border: 'border-purple-200 dark:border-purple-800',
+                              icon: 'text-purple-600 dark:text-purple-400',
+                              label: 'text-purple-800 dark:text-purple-300',
+                              value: 'text-purple-900 dark:text-purple-100'
+                            },
+                            bodyTemperature: {
+                              bg: 'bg-orange-50 dark:bg-orange-900/20',
+                              border: 'border-orange-200 dark:border-orange-800',
+                              icon: 'text-orange-600 dark:text-orange-400',
+                              label: 'text-orange-800 dark:text-orange-300',
+                              value: 'text-orange-900 dark:text-orange-100'
+                            }
+                          }
+                          return styles[metricKey] || styles.heartRate
+                        }
+
+                        return [
+                          { key: 'heartRate', name: 'Heart Rate', unit: 'bpm', icon: HeartIcon },
+                          { key: 'bloodPressure', name: 'Blood Pressure', unit: 'mmHg', icon: ArrowTrendingUpIcon },
+                          { key: 'glucoseLevel', name: 'Glucose Level', unit: 'mg/dL', icon: BeakerIcon },
+                          { key: 'bodyTemperature', name: 'Temperature', unit: '°F', icon: FireIcon }
+                        ].map(metric => {
+                          const reading = latestReadings[metric.key]
+                          if (!reading) return null
+
+                          const styles = getMetricStyles(metric.key)
+
+                          return (
+                            <div key={metric.key} className={`${styles.bg} p-4 rounded-2xl border ${styles.border}`}>
+                              <div className="flex items-center space-x-2 mb-2">
+                                <metric.icon className={`w-5 h-5 ${styles.icon}`} />
+                                <span className={`text-sm font-medium ${styles.label}`}>{metric.name}</span>
+                              </div>
+                              <p className={`text-2xl font-bold ${styles.value}`}>
+                                {typeof reading.value === 'object'
+                                  ? `${reading.value.systolic}/${reading.value.diastolic}`
+                                  : reading.value
+                                } {metric.unit}
+                              </p>
+                              <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
+                                {new Date(reading.timestamp).toLocaleDateString()}
+                              </p>
+                            </div>
+                          )
+                        }).filter(Boolean)
+                      })()}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 bg-gray-50 dark:bg-slate-700 rounded-2xl">
+                      <HeartIcon className="w-12 h-12 mx-auto mb-2 text-gray-300 dark:text-slate-600" />
+                      <p className="text-gray-500 dark:text-slate-400">No health data available</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Health Data Charts */}
+                {patientDetailData?.chartData && Object.keys(patientDetailData.chartData).some(key => patientDetailData.chartData[key].length > 0) && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                      <ChartBarIcon className="w-5 h-5 mr-2" />
+                      Health Trends (Last 14 Days)
+                    </h3>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {/* Heart Rate Chart */}
+                      {patientDetailData.chartData.heartRate?.length > 0 && (
+                        <div className="bg-gray-50 dark:bg-slate-700 p-4 rounded-2xl">
+                          <h4 className="text-sm font-medium text-gray-700 dark:text-slate-300 mb-3">Heart Rate (bpm)</h4>
+                          <ResponsiveContainer width="100%" height={200}>
+                            <LineChart data={patientDetailData.chartData.heartRate}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="date" />
+                              <YAxis />
+                              <Tooltip />
+                              <Line type="monotone" dataKey="value" stroke="#ef4444" strokeWidth={2} />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        </div>
+                      )}
+
+                      {/* Blood Pressure Chart */}
+                      {patientDetailData.chartData.bloodPressure?.length > 0 && (
+                        <div className="bg-gray-50 dark:bg-slate-700 p-4 rounded-2xl">
+                          <h4 className="text-sm font-medium text-gray-700 dark:text-slate-300 mb-3">Blood Pressure</h4>
+                          <ResponsiveContainer width="100%" height={200}>
+                            <LineChart data={patientDetailData.chartData.bloodPressure}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="date" />
+                              <YAxis />
+                              <Tooltip />
+                              <Line type="monotone" dataKey="value.systolic" stroke="#3b82f6" strokeWidth={2} name="Systolic" />
+                              <Line type="monotone" dataKey="value.diastolic" stroke="#06b6d4" strokeWidth={2} name="Diastolic" />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        </div>
+                      )}
+
+                      {/* Glucose Chart */}
+                      {patientDetailData.chartData.glucoseLevel?.length > 0 && (
+                        <div className="bg-gray-50 dark:bg-slate-700 p-4 rounded-2xl">
+                          <h4 className="text-sm font-medium text-gray-700 dark:text-slate-300 mb-3">Glucose Level (mg/dL)</h4>
+                          <ResponsiveContainer width="100%" height={200}>
+                            <LineChart data={patientDetailData.chartData.glucoseLevel}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="date" />
+                              <YAxis />
+                              <Tooltip />
+                              <Line type="monotone" dataKey="value" stroke="#8b5cf6" strokeWidth={2} />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        </div>
+                      )}
+
+                      {/* Temperature Chart */}
+                      {patientDetailData.chartData.bodyTemperature?.length > 0 && (
+                        <div className="bg-gray-50 dark:bg-slate-700 p-4 rounded-2xl">
+                          <h4 className="text-sm font-medium text-gray-700 dark:text-slate-300 mb-3">Body Temperature (°F)</h4>
+                          <ResponsiveContainer width="100%" height={200}>
+                            <LineChart data={patientDetailData.chartData.bodyTemperature}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="date" />
+                              <YAxis />
+                              <Tooltip />
+                              <Line type="monotone" dataKey="value" stroke="#f59e0b" strokeWidth={2} />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Appointment History & Alerts */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Appointment History */}
+                  <div className="bg-green-50 dark:bg-green-900/20 rounded-2xl p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                      <CalendarIcon className="w-5 h-5 mr-2" />
+                      Recent Appointments
+                    </h3>
+                    {patientDetailData?.appointments && patientDetailData.appointments.length > 0 ? (
+                      <div className="space-y-3 max-h-64 overflow-y-auto">
+                        {patientDetailData.appointments.slice(0, 5).map((appointment, idx) => (
+                          <div key={idx} className="bg-white dark:bg-slate-700 p-3 rounded-xl border border-green-200 dark:border-green-800">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <p className="font-medium text-gray-900 dark:text-white text-sm">
+                                  {appointment.reason || 'General Consultation'}
+                                </p>
+                                <p className="text-xs text-gray-500 dark:text-slate-400">
+                                  {new Date(appointment.dateTime).toLocaleDateString()} at {new Date(appointment.dateTime).toLocaleTimeString()}
+                                </p>
+                              </div>
+                              <span className={`px-2 py-1 text-xs rounded-full ${
+                                appointment.status === 'completed' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300' :
+                                appointment.status === 'open_chat' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300' :
+                                appointment.status === 'approved' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300' :
+                                'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300'
+                              }`}>
+                                {appointment.status}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <CalendarIcon className="w-12 h-12 mx-auto mb-2 text-gray-300 dark:text-slate-600" />
+                        <p className="text-gray-500 dark:text-slate-400">No appointments found</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Recent Alerts */}
+                  <div className="bg-orange-50 dark:bg-orange-900/20 rounded-2xl p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                      <ExclamationTriangleIcon className="w-5 h-5 mr-2" />
+                      Recent Health Alerts
+                    </h3>
+                    {patientDetailData?.alerts && patientDetailData.alerts.length > 0 ? (
+                      <div className="space-y-3 max-h-64 overflow-y-auto">
+                        {patientDetailData.alerts.slice(0, 5).map((alert, idx) => (
+                          <div key={idx} className="bg-white dark:bg-slate-700 p-3 rounded-xl border border-orange-200 dark:border-orange-800">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <p className="font-medium text-gray-900 dark:text-white text-sm">
+                                  {alert.message}
+                                </p>
+                                <p className="text-xs text-gray-500 dark:text-slate-400">
+                                  {new Date(alert.timestamp).toLocaleDateString()}
+                                </p>
+                              </div>
+                              <span className={`px-2 py-1 text-xs rounded-full ${
+                                alert.severity === 'critical' ? 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300' :
+                                alert.severity === 'warning' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300' :
+                                'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300'
+                              }`}>
+                                {alert.severity}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <ExclamationTriangleIcon className="w-12 h-12 mx-auto mb-2 text-gray-300 dark:text-slate-600" />
+                        <p className="text-gray-500 dark:text-slate-400">No alerts found</p>
+                      </div>
+                    )}
                   </div>
                 </div>
-              )}
+
+                {/* Emergency Contact Information */}
+                {patientDetailData?.profile?.emergencyContact && (
+                  <div className="bg-red-50 dark:bg-red-900/20 rounded-2xl p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                      <PhoneIcon className="w-5 h-5 mr-2" />
+                      Emergency Contact
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="text-sm font-medium text-gray-500 dark:text-slate-400">Name</label>
+                        <p className="text-gray-900 dark:text-white">
+                          {patientDetailData.profile.emergencyContact.name || 'Not provided'}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-500 dark:text-slate-400">Relationship</label>
+                        <p className="text-gray-900 dark:text-white">
+                          {patientDetailData.profile.emergencyContact.relationship || 'Not provided'}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-500 dark:text-slate-400">Phone</label>
+                        <p className="text-gray-900 dark:text-white">
+                          {patientDetailData.profile.emergencyContact.phone || 'Not provided'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Modal Footer */}
+            <div className="border-t border-gray-200 dark:border-slate-700 p-6 bg-gray-50 dark:bg-slate-700">
+              <div className="flex flex-col sm:flex-row justify-between items-center space-y-3 sm:space-y-0 sm:space-x-3">
+                <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-slate-400">
+                  <span>Last updated: {new Date().toLocaleDateString()}</span>
+                  <span>•</span>
+                  <span>Health Score: {selectedPatient.healthStatus?.score || 0}/100</span>
+                </div>
+                <div className="flex space-x-3">
+                  <button
+                    onClick={() => {
+                      setShowHealthModal(false)
+                      setSelectedPatient(null)
+                      setPatientDetailData(null)
+                    }}
+                    className="px-6 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-2xl transition-all duration-200"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && patientToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl max-w-md w-full"
+          >
+            {/* Modal Header */}
+            <div className="p-6 border-b border-gray-200 dark:border-slate-700">
+              <div className="flex items-center space-x-3">
+                <div className="w-12 h-12 bg-red-100 dark:bg-red-900/20 rounded-2xl flex items-center justify-center">
+                  <ExclamationTriangleIcon className="w-6 h-6 text-red-600 dark:text-red-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Delete Patient
+                  </h3>
+                  <p className="text-sm text-gray-500 dark:text-slate-400">
+                    This action cannot be undone
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6">
+              <p className="text-gray-700 dark:text-slate-300 mb-4">
+                Are you sure you want to delete <strong>{patientToDelete.displayName}</strong>?
+                This will permanently remove all their data including:
+              </p>
+              <ul className="list-disc list-inside text-sm text-gray-600 dark:text-slate-400 space-y-1 mb-6">
+                <li>Patient profile and personal information</li>
+                <li>All health data and medical records</li>
+                <li>Appointment history</li>
+                <li>Health alerts and notifications</li>
+              </ul>
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4">
+                <div className="flex items-center space-x-2">
+                  <ExclamationTriangleIcon className="w-5 h-5 text-red-600 dark:text-red-400" />
+                  <span className="text-sm font-medium text-red-800 dark:text-red-300">
+                    Warning: This action is irreversible
+                  </span>
+                </div>
+              </div>
             </div>
 
             {/* Modal Footer */}
@@ -630,15 +1166,30 @@ const Patients = () => {
               <div className="flex justify-end space-x-3">
                 <button
                   onClick={() => {
-                    setShowHealthModal(false)
-                    setSelectedPatient(null)
+                    setShowDeleteModal(false)
+                    setPatientToDelete(null)
                   }}
-                  className="px-6 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-2xl transition-all duration-200"
+                  disabled={deleteLoading}
+                  className="px-6 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-2xl transition-all duration-200 disabled:opacity-50"
                 >
-                  Close
+                  Cancel
                 </button>
-                <button className="px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-2xl transition-all duration-200 shadow-lg hover:shadow-xl">
-                  Generate Report
+                <button
+                  onClick={confirmDeletePatient}
+                  disabled={deleteLoading}
+                  className="px-6 py-2 bg-red-500 hover:bg-red-600 text-white rounded-2xl transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 flex items-center space-x-2"
+                >
+                  {deleteLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Deleting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <TrashIcon className="w-4 h-4" />
+                      <span>Delete Patient</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>

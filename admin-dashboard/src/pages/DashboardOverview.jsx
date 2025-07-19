@@ -77,32 +77,28 @@ const DashboardOverview = () => {
     {
       title: "Total Patients",
       value: dashboardData.overview.totalPatients.toLocaleString(),
-      change: `+${dashboardData.growth.patients}%`,
-      changeType: "increase",
+      description: "Registered users with patient role",
       icon: UserGroupIcon,
       color: "blue",
     },
     {
       title: "Total Providers",
       value: dashboardData.overview.totalProviders.toLocaleString(),
-      change: `+${dashboardData.growth.doctors}%`,
-      changeType: "increase",
+      description: "Healthcare professionals in system",
       icon: ShieldCheckIcon,
       color: "green",
     },
     {
       title: "Active Providers",
       value: dashboardData.overview.activeProviders.toLocaleString(),
-      change: `${dashboardData.overview.totalProviders > 0 ? Math.round((dashboardData.overview.activeProviders / dashboardData.overview.totalProviders) * 100) : 0}% accepting patients`,
-      changeType: "increase",
+      description: "Currently accepting new patients",
       icon: CheckCircleIcon,
       color: "emerald",
     },
     {
       title: "Total Appointments",
       value: dashboardData.overview.totalAppointments.toLocaleString(),
-      change: `+${dashboardData.growth.appointments}%`,
-      changeType: dashboardData.growth.appointments > 0 ? "increase" : "decrease",
+      description: "All appointments across platform",
       icon: CalendarIcon,
       color: "yellow",
     },
@@ -283,13 +279,10 @@ const DashboardOverview = () => {
                 <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
                   {metric.value}
                 </p>
-                <p className={`text-sm mt-1 ${
-                  metric.changeType === 'increase' 
-                    ? 'text-green-600 dark:text-green-400' 
-                    : 'text-red-600 dark:text-red-400'
-                }`}>
-                  {metric.change} from last month
+                <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
+                  {metric.description}
                 </p>
+
               </div>
               <div className={`w-10 h-10 rounded-xl bg-gradient-to-r ${getColorClasses(metric.color).split(' ')[0]} ${getColorClasses(metric.color).split(' ')[1]} flex items-center justify-center shadow-lg`}>
                 <metric.icon className="w-5 h-5 text-white" />

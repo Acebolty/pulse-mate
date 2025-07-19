@@ -296,7 +296,7 @@ const Appointments = () => {
                     <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500 dark:text-slate-400 mb-3">
                       <div className="flex items-center space-x-1">
                         <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                        <span>Dr. {appointment.providerName}</span>
+                        <span>{appointment.providerName}</span>
                       </div>
                       <div className="flex items-center space-x-1">
                         <CalendarIcon className="w-4 h-4" />

@@ -5,6 +5,7 @@ const HealthData = require('../models/HealthData');
 const Alert = require('../models/Alert');
 const Appointment = require('../models/Appointment');
 const Chat = require('../models/Chat');
+const Notification = require('../models/Notification');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -155,33 +156,35 @@ const getAllUsers = async (req, res) => {
  */
 const getAllPatients = async (req, res) => {
   try {
-    const { 
-      page = 1, 
-      limit = 10, 
+    const {
+      page = 1,
+      limit = 10,
       search = '',
-      healthStatus = 'all' 
+      healthStatus = 'all'
     } = req.query;
 
-    // Build query for patients only
-    let query = { 
+    // Simple query for patients only - no complex filtering for now
+    let query = {
       $or: [
         { role: { $exists: false } }, // Users without role (default patients)
         { role: 'patient' }
       ]
     };
-    
-    if (search) {
-      query.$and = [
-        query,
-        {
-          $or: [
-            { firstName: { $regex: search, $options: 'i' } },
-            { lastName: { $regex: search, $options: 'i' } },
-            { email: { $regex: search, $options: 'i' } },
-            { patientId: { $regex: search, $options: 'i' } }
-          ]
-        }
-      ];
+
+    // Add search filter if provided
+    if (search && search.trim()) {
+      query = {
+        $and: [
+          query,
+          {
+            $or: [
+              { firstName: { $regex: search.trim(), $options: 'i' } },
+              { lastName: { $regex: search.trim(), $options: 'i' } },
+              { email: { $regex: search.trim(), $options: 'i' } }
+            ]
+          }
+        ]
+      };
     }
 
     const patients = await User.find(query)
@@ -190,17 +193,78 @@ const getAllPatients = async (req, res) => {
       .limit(limit * 1)
       .skip((page - 1) * limit);
 
-    // Get recent health data for each patient
+    console.log(`📋 Found ${patients.length} patients`);
+
+    // Debug: Check what user IDs exist in HealthData collection
+    const allHealthDataUsers = await HealthData.distinct('userId');
+    console.log(`📊 Total unique user IDs in HealthData collection: ${allHealthDataUsers.length}`);
+    console.log(`📊 Sample HealthData user IDs:`, allHealthDataUsers.slice(0, 3));
+    console.log(`📊 Patient IDs we're looking for:`, patients.map(p => p._id.toString()).slice(0, 3));
+
+    // Get recent health data for each patient with proper error handling
     const patientsWithHealthData = await Promise.all(
       patients.map(async (patient) => {
-        const recentHealthData = await HealthData.find({ userId: patient._id })
-          .sort({ timestamp: -1 })
-          .limit(5);
-        
-        return {
-          ...patient.toObject(),
-          recentHealthData
-        };
+        try {
+          // Check if HealthData model is available
+          if (!HealthData) {
+            console.warn('HealthData model not available');
+            return {
+              ...patient.toObject(),
+              recentHealthData: []
+            };
+          }
+
+          // Debug: Check what we're searching for
+          console.log(`🔍 Searching health data for patient ID: ${patient._id} (${patient.firstName} ${patient.lastName})`);
+
+          // Try both ObjectId and string comparison
+          const recentHealthData = await HealthData.find({
+            $or: [
+              { userId: patient._id },
+              { userId: patient._id.toString() }
+            ]
+          })
+            .sort({ timestamp: -1 })
+            .limit(5)
+            .lean(); // Use lean() for better performance
+
+          console.log(`📊 Found ${recentHealthData.length} health records for patient ${patient.firstName}`);
+          if (recentHealthData.length > 0) {
+            console.log('📊 Sample health data:', {
+              dataType: recentHealthData[0].dataType,
+              value: recentHealthData[0].value,
+              timestamp: recentHealthData[0].timestamp,
+              userId: recentHealthData[0].userId
+            });
+          } else {
+            // Let's also check if there's ANY health data for this user with different queries
+            const anyHealthDataById = await HealthData.findOne({ userId: patient._id });
+            const anyHealthDataByString = await HealthData.findOne({ userId: patient._id.toString() });
+            console.log(`🔍 Any health data exists for this patient (ObjectId):`, !!anyHealthDataById);
+            console.log(`🔍 Any health data exists for this patient (String):`, !!anyHealthDataByString);
+            if (anyHealthDataById || anyHealthDataByString) {
+              const foundData = anyHealthDataById || anyHealthDataByString;
+              console.log('🔍 Found health data with different query:', {
+                dataType: foundData.dataType,
+                value: foundData.value,
+                userId: foundData.userId,
+                userIdType: typeof foundData.userId
+              });
+            }
+          }
+
+          return {
+            ...patient.toObject(),
+            recentHealthData: recentHealthData || []
+          };
+        } catch (healthDataError) {
+          console.error(`Error fetching health data for patient ${patient._id}:`, healthDataError.message);
+          // Return patient data without health data if there's an error
+          return {
+            ...patient.toObject(),
+            recentHealthData: []
+          };
+        }
       })
     );
 
@@ -218,8 +282,137 @@ const getAllPatients = async (req, res) => {
 
   } catch (error) {
     console.error('Get all patients error:', error.message);
-    res.status(500).json({ 
-      message: 'Server error fetching patients' 
+    res.status(500).json({
+      message: 'Server error fetching patients',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * @desc    Get detailed patient information for admin
+ * @route   GET /api/admin/patients/:patientId
+ * @access  Private (Admin only)
+ */
+const getPatientDetails = async (req, res) => {
+  try {
+    const { patientId } = req.params;
+
+    // Get patient profile
+    const patient = await User.findById(patientId).select('-passwordHash');
+
+    if (!patient) {
+      return res.status(404).json({
+        message: 'Patient not found'
+      });
+    }
+
+    // Verify it's a patient
+    if (patient.role && patient.role !== 'patient') {
+      return res.status(400).json({
+        message: 'User is not a patient'
+      });
+    }
+
+    res.json({
+      success: true,
+      patient
+    });
+
+  } catch (error) {
+    console.error('Get patient details error:', error.message);
+    res.status(500).json({
+      message: 'Server error fetching patient details'
+    });
+  }
+};
+
+/**
+ * @desc    Get patient health data for admin
+ * @route   GET /api/admin/patients/:patientId/health-data
+ * @access  Private (Admin only)
+ */
+const getPatientHealthData = async (req, res) => {
+  try {
+    const { patientId } = req.params;
+    const {
+      startDate,
+      endDate,
+      limit = 100,
+      type
+    } = req.query;
+
+    // Verify patient exists
+    const patient = await User.findById(patientId);
+    if (!patient || (patient.role && patient.role !== 'patient')) {
+      return res.status(404).json({
+        message: 'Patient not found'
+      });
+    }
+
+    // Build query
+    let query = { userId: patientId };
+
+    if (startDate || endDate) {
+      query.timestamp = {};
+      if (startDate) query.timestamp.$gte = new Date(startDate);
+      if (endDate) query.timestamp.$lte = new Date(endDate);
+    }
+
+    if (type) {
+      query.type = type;
+    }
+
+    const healthData = await HealthData.find(query)
+      .sort({ timestamp: -1 })
+      .limit(parseInt(limit));
+
+    res.json({
+      success: true,
+      data: healthData,
+      count: healthData.length
+    });
+
+  } catch (error) {
+    console.error('Get patient health data error:', error.message);
+    res.status(500).json({
+      message: 'Server error fetching patient health data'
+    });
+  }
+};
+
+/**
+ * @desc    Get patient alerts for admin
+ * @route   GET /api/admin/patients/:patientId/alerts
+ * @access  Private (Admin only)
+ */
+const getPatientAlerts = async (req, res) => {
+  try {
+    const { patientId } = req.params;
+    const { limit = 50 } = req.query;
+
+    // Verify patient exists
+    const patient = await User.findById(patientId);
+    if (!patient || (patient.role && patient.role !== 'patient')) {
+      return res.status(404).json({
+        message: 'Patient not found'
+      });
+    }
+
+    const alerts = await Alert.find({ userId: patientId })
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit));
+
+    res.json({
+      success: true,
+      alerts,
+      count: alerts.length
+    });
+
+  } catch (error) {
+    console.error('Get patient alerts error:', error.message);
+    res.status(500).json({
+      message: 'Server error fetching patient alerts'
     });
   }
 };
@@ -1251,11 +1444,105 @@ const formatTimeAgo = (timestamp) => {
   return new Date(timestamp).toLocaleDateString();
 };
 
+/**
+ * @desc    Delete user account and all associated data
+ * @route   DELETE /api/admin/users/:userId
+ * @access  Private (Admin only)
+ */
+const deleteUser = async (req, res) => {
+  try {
+    const { userId, patientId } = req.params;
+    const userIdToDelete = userId || patientId; // Support both parameter names
+
+    console.log(`🗑️ Admin deleting user: ${userIdToDelete}`);
+
+    // Find the user first to check if they exist
+    const user = await User.findById(userIdToDelete);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Prevent deletion of admin users
+    if (user.role === 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Cannot delete admin users'
+      });
+    }
+
+    // Delete all associated data
+    const deletionPromises = [];
+
+    // Delete health data
+    deletionPromises.push(
+      HealthData.deleteMany({ userId: userIdToDelete })
+    );
+
+    // Delete alerts
+    deletionPromises.push(
+      Alert.deleteMany({ userId: userIdToDelete })
+    );
+
+    // Delete appointments (both as patient and doctor)
+    deletionPromises.push(
+      Appointment.deleteMany({
+        $or: [
+          { userId: userIdToDelete },
+          { doctorId: userIdToDelete }
+        ]
+      })
+    );
+
+    // Delete notifications
+    deletionPromises.push(
+      Notification.deleteMany({
+        $or: [
+          { recipientId: userIdToDelete },
+          { senderId: userIdToDelete }
+        ]
+      })
+    );
+
+    // Execute all deletions
+    await Promise.all(deletionPromises);
+
+    // Finally, delete the user
+    await User.findByIdAndDelete(userIdToDelete);
+
+    console.log(`✅ User ${userIdToDelete} and all associated data deleted successfully`);
+
+    res.json({
+      success: true,
+      message: `User ${user.firstName} ${user.lastName} deleted successfully`,
+      deletedUser: {
+        id: user._id,
+        name: `${user.firstName} ${user.lastName}`,
+        email: user.email,
+        role: user.role
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error deleting user:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete user',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
 // Export all functions
 module.exports = {
   adminLogin,
   getAllUsers,
   getAllPatients,
+  getPatientDetails,
+  getPatientHealthData,
+  getPatientAlerts,
   getAllDoctors,
   getDashboardOverview,
   getRecentActivities,
@@ -1264,7 +1551,7 @@ module.exports = {
   rejectAppointment,
   // Add other functions as we implement them
   updateUserStatus: (req, res) => res.status(501).json({ message: 'Not implemented yet' }),
-  deleteUser: (req, res) => res.status(501).json({ message: 'Not implemented yet' }),
+  deleteUser,
   approveDoctorRegistration,
   rejectDoctorRegistration,
   updateDoctorApprovalStatus,
@@ -1277,5 +1564,41 @@ module.exports = {
   getHealthDataAnalytics: (req, res) => res.status(501).json({ message: 'Not implemented yet' }),
   getSystemHealth: (req, res) => res.status(501).json({ message: 'Not implemented yet' }),
   performSystemBackup: (req, res) => res.status(501).json({ message: 'Not implemented yet' }),
-  getSystemLogs: (req, res) => res.status(501).json({ message: 'Not implemented yet' })
+  getSystemLogs: (req, res) => res.status(501).json({ message: 'Not implemented yet' }),
+
+  // Debug function to check health data
+  debugHealthData: async (req, res) => {
+    try {
+      // Get all patients
+      const patients = await User.find({
+        $or: [
+          { role: { $exists: false } },
+          { role: 'patient' }
+        ]
+      }).limit(3);
+
+      // Get all health data user IDs
+      const healthDataUsers = await HealthData.distinct('userId');
+
+      // Get sample health data
+      const sampleHealthData = await HealthData.find().limit(5);
+
+      const debugInfo = {
+        totalPatients: patients.length,
+        patientIds: patients.map(p => ({ id: p._id.toString(), name: `${p.firstName} ${p.lastName}` })),
+        totalHealthDataUsers: healthDataUsers.length,
+        healthDataUserIds: healthDataUsers.slice(0, 5).map(id => id.toString()),
+        sampleHealthData: sampleHealthData.map(data => ({
+          userId: data.userId.toString(),
+          dataType: data.dataType,
+          value: data.value,
+          timestamp: data.timestamp
+        }))
+      };
+
+      res.json({ success: true, debug: debugInfo });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
 };
