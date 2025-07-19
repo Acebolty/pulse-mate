@@ -1086,6 +1086,171 @@ const updateDoctorAvailability = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Get recent system activities for admin dashboard
+ * @route   GET /api/admin/analytics/recent-activities
+ * @access  Private (Admin only)
+ */
+const getRecentActivities = async (req, res) => {
+  try {
+    const { limit = 10 } = req.query;
+    const activities = [];
+
+    // Get recent user registrations (last 7 days)
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    // 1. New patient registrations
+    const recentPatients = await User.find({
+      role: 'patient',
+      createdAt: { $gte: sevenDaysAgo }
+    })
+    .select('firstName lastName createdAt')
+    .sort({ createdAt: -1 })
+    .limit(5);
+
+    recentPatients.forEach(patient => {
+      activities.push({
+        id: `patient_${patient._id}`,
+        type: 'patient_signup',
+        message: `New patient registration: ${patient.firstName} ${patient.lastName}`,
+        timestamp: patient.createdAt,
+        color: 'blue'
+      });
+    });
+
+    // 2. New doctor registrations
+    const recentDoctors = await User.find({
+      role: 'doctor',
+      createdAt: { $gte: sevenDaysAgo }
+    })
+    .select('firstName lastName createdAt')
+    .sort({ createdAt: -1 })
+    .limit(5);
+
+    recentDoctors.forEach(doctor => {
+      activities.push({
+        id: `doctor_${doctor._id}`,
+        type: 'doctor_signup',
+        message: `New provider registration: Dr. ${doctor.firstName} ${doctor.lastName}`,
+        timestamp: doctor.createdAt,
+        color: 'green'
+      });
+    });
+
+    // 3. Recent appointment bookings
+    const recentAppointments = await Appointment.find({
+      createdAt: { $gte: sevenDaysAgo }
+    })
+    .populate('userId', 'firstName lastName')
+    .select('userId providerName createdAt')
+    .sort({ createdAt: -1 })
+    .limit(5);
+
+    recentAppointments.forEach(appointment => {
+      const patientName = appointment.userId ?
+        `${appointment.userId.firstName} ${appointment.userId.lastName}` :
+        'Unknown Patient';
+
+      activities.push({
+        id: `appointment_${appointment._id}`,
+        type: 'appointment_booked',
+        message: `Appointment booked: ${patientName} with ${appointment.providerName}`,
+        timestamp: appointment.createdAt,
+        color: 'yellow'
+      });
+    });
+
+    // 4. Recent chat sessions opened (status changed to 'Open Chat')
+    const recentChatSessions = await Appointment.find({
+      status: 'Open Chat',
+      updatedAt: { $gte: sevenDaysAgo }
+    })
+    .populate('userId', 'firstName lastName patientId')
+    .select('userId providerName updatedAt')
+    .sort({ updatedAt: -1 })
+    .limit(5);
+
+    recentChatSessions.forEach(session => {
+      const patientName = session.userId ?
+        `${session.userId.firstName} ${session.userId.lastName}` :
+        'Unknown Patient';
+
+      activities.push({
+        id: `chat_${session._id}`,
+        type: 'chat_opened',
+        message: `${session.providerName} opened chat session with ${patientName}`,
+        timestamp: session.updatedAt,
+        color: 'emerald'
+      });
+    });
+
+    // 5. Recent completed appointments
+    const recentCompletedAppointments = await Appointment.find({
+      status: 'Completed',
+      updatedAt: { $gte: sevenDaysAgo }
+    })
+    .populate('userId', 'firstName lastName patientId')
+    .select('userId providerName updatedAt')
+    .sort({ updatedAt: -1 })
+    .limit(5);
+
+    recentCompletedAppointments.forEach(appointment => {
+      const patientName = appointment.userId ?
+        `${appointment.userId.firstName} ${appointment.userId.lastName}` :
+        'Unknown Patient';
+
+      activities.push({
+        id: `completed_${appointment._id}`,
+        type: 'appointment_completed',
+        message: `${appointment.providerName} completed session with ${patientName}`,
+        timestamp: appointment.updatedAt,
+        color: 'purple'
+      });
+    });
+
+    // Sort all activities by timestamp (most recent first) and limit
+    const sortedActivities = activities
+      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+      .slice(0, parseInt(limit))
+      .map(activity => ({
+        ...activity,
+        time: formatTimeAgo(activity.timestamp)
+      }));
+
+    res.json({
+      success: true,
+      data: sortedActivities
+    });
+
+  } catch (error) {
+    console.error('Error fetching recent activities:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch recent activities'
+    });
+  }
+};
+
+// Helper function to format time ago
+const formatTimeAgo = (timestamp) => {
+  const now = new Date();
+  const diffInSeconds = Math.floor((now - new Date(timestamp)) / 1000);
+
+  if (diffInSeconds < 60) return `${diffInSeconds} seconds ago`;
+
+  const diffInMinutes = Math.floor(diffInSeconds / 60);
+  if (diffInMinutes < 60) return `${diffInMinutes} minute${diffInMinutes > 1 ? 's' : ''} ago`;
+
+  const diffInHours = Math.floor(diffInMinutes / 60);
+  if (diffInHours < 24) return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`;
+
+  const diffInDays = Math.floor(diffInHours / 24);
+  if (diffInDays < 7) return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
+
+  return new Date(timestamp).toLocaleDateString();
+};
+
 // Export all functions
 module.exports = {
   adminLogin,
@@ -1093,6 +1258,7 @@ module.exports = {
   getAllPatients,
   getAllDoctors,
   getDashboardOverview,
+  getRecentActivities,
   getPendingAppointments,
   approveAppointment,
   rejectAppointment,

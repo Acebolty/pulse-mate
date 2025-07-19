@@ -273,6 +273,23 @@ export const getDashboardOverview = async () => {
 };
 
 /**
+ * Get recent system activities
+ * @param {number} limit - Number of activities to fetch
+ * @returns {Promise<object>} Recent activities data
+ */
+export const getRecentActivities = async (limit = 10) => {
+  try {
+    const response = await api.get('/admin/analytics/recent-activities', {
+      params: { limit }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching recent activities:', error);
+    throw error;
+  }
+};
+
+/**
  * Get user analytics and statistics
  * @returns {Promise<object>} User analytics data
  */

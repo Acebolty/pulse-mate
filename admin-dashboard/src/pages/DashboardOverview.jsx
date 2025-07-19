@@ -7,14 +7,16 @@ import {
   ChartBarIcon,
   ClockIcon,
   CheckCircleIcon,
-  ExclamationTriangleIcon,
+
   UserPlusIcon,
   ChatBubbleLeftRightIcon,
 } from "@heroicons/react/24/outline"
-import { getDashboardOverview } from "../services/adminService"
+import { getDashboardOverview, getRecentActivities, getPendingAppointments, approveAppointment, rejectAppointment } from "../services/adminService"
 
 const DashboardOverview = () => {
   const [dashboardData, setDashboardData] = useState(null)
+  const [recentActivities, setRecentActivities] = useState([])
+  const [pendingAppointments, setPendingAppointments] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -23,12 +25,45 @@ const DashboardOverview = () => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true)
-        const response = await getDashboardOverview()
-        setDashboardData(response.data)
+
+        // Fetch dashboard overview, recent activities, and pending appointments
+        const [dashboardResponse, activitiesResponse, appointmentsResponse] = await Promise.allSettled([
+          getDashboardOverview(),
+          getRecentActivities(10),
+          getPendingAppointments()
+        ])
+
+        // Handle dashboard data
+        if (dashboardResponse.status === 'fulfilled') {
+          setDashboardData(dashboardResponse.value.data)
+        } else {
+          console.error('Error fetching dashboard data:', dashboardResponse.reason)
+        }
+
+        // Handle activities data
+        if (activitiesResponse.status === 'fulfilled') {
+          setRecentActivities(activitiesResponse.value.data)
+        } else {
+          console.error('Error fetching recent activities:', activitiesResponse.reason)
+          // Fall back to static data if API fails
+          setRecentActivities(staticRecentActivity)
+        }
+
+        // Handle pending appointments data
+        if (appointmentsResponse.status === 'fulfilled') {
+          console.log('📋 Dashboard pending appointments response:', appointmentsResponse.value)
+          setPendingAppointments(appointmentsResponse.value.appointments || [])
+        } else {
+          console.error('Error fetching pending appointments:', appointmentsResponse.reason)
+          setPendingAppointments([])
+        }
+
         setError(null)
       } catch (err) {
         console.error('Error fetching dashboard data:', err)
         setError('Failed to load dashboard data')
+        // Fall back to static data if API fails
+        setRecentActivities(staticRecentActivity)
       } finally {
         setLoading(false)
       }
@@ -73,8 +108,8 @@ const DashboardOverview = () => {
     },
   ] : []
 
-  // TODO: Replace with real-time data from backend API
-  const recentActivity = [
+  // Static fallback data for when API fails
+  const staticRecentActivity = [
     {
       id: 1,
       type: "patient_signup",
@@ -117,29 +152,7 @@ const DashboardOverview = () => {
     },
   ]
 
-  const pendingApprovals = [
-    {
-      id: 1,
-      type: "Doctor Registration",
-      name: "Dr. Emily Watson",
-      specialty: "Cardiology",
-      time: "2 hours ago",
-    },
-    {
-      id: 2,
-      type: "Appointment Request",
-      name: "John Doe",
-      doctor: "Dr. Smith",
-      time: "4 hours ago",
-    },
-    {
-      id: 3,
-      type: "System Access",
-      name: "Dr. Michael Brown",
-      department: "Emergency",
-      time: "6 hours ago",
-    },
-  ]
+  // Static pending approvals removed - now using real data from API
 
   const getColorClasses = (color) => {
     const colors = {
@@ -163,6 +176,39 @@ const DashboardOverview = () => {
       purple: "bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400",
     }
     return colors[color] || colors.blue
+  }
+
+  const getActivityIcon = (type) => {
+    const icons = {
+      patient_signup: UserPlusIcon,
+      doctor_signup: ShieldCheckIcon,
+      appointment_booked: CalendarIcon,
+      chat_opened: ChatBubbleLeftRightIcon,
+      appointment_completed: CheckCircleIcon,
+    }
+    return icons[type] || UserGroupIcon
+  }
+
+  const handleApproveAppointment = async (appointmentId) => {
+    try {
+      await approveAppointment(appointmentId)
+      // Refresh pending appointments
+      const response = await getPendingAppointments()
+      setPendingAppointments(response.appointments || [])
+    } catch (error) {
+      console.error('Error approving appointment:', error)
+    }
+  }
+
+  const handleRejectAppointment = async (appointmentId) => {
+    try {
+      await rejectAppointment(appointmentId)
+      // Refresh pending appointments
+      const response = await getPendingAppointments()
+      setPendingAppointments(response.appointments || [])
+    } catch (error) {
+      console.error('Error rejecting appointment:', error)
+    }
   }
 
   // Loading state
@@ -269,11 +315,19 @@ const DashboardOverview = () => {
             <ChartBarIcon className="w-5 h-5 text-gray-400" />
           </div>
           <div className="space-y-4">
-            {recentActivity.map((activity) => (
-              <div key={activity.id} className="flex items-start space-x-3">
-                <div className={`w-8 h-8 rounded-2xl flex items-center justify-center flex-shrink-0 ${getActivityIconClasses(activity.color)}`}>
-                  <activity.icon className="w-4 h-4" />
-                </div>
+            {!recentActivities || recentActivities.length === 0 ? (
+              <div className="text-center py-8">
+                <ChartBarIcon className="w-12 h-12 mx-auto mb-2 text-gray-300 dark:text-slate-600" />
+                <p className="text-sm text-gray-500 dark:text-slate-400">No recent activities</p>
+              </div>
+            ) : (
+              recentActivities.map((activity) => {
+              const ActivityIcon = getActivityIcon(activity.type)
+              return (
+                <div key={activity.id} className="flex items-start space-x-3">
+                  <div className={`w-8 h-8 rounded-2xl flex items-center justify-center flex-shrink-0 ${getActivityIconClasses(activity.color)}`}>
+                    <ActivityIcon className="w-4 h-4" />
+                  </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-gray-900 dark:text-white">
                     {activity.message}
@@ -284,11 +338,13 @@ const DashboardOverview = () => {
                   </p>
                 </div>
               </div>
-            ))}
+              )
+            })
+            )}
           </div>
         </motion.div>
 
-        {/* Pending Approvals */}
+        {/* Pending Appointments */}
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -297,53 +353,65 @@ const DashboardOverview = () => {
         >
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Pending Approvals
+              Pending Appointments
             </h2>
             <span className="bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-xs px-2 py-1 rounded-full">
-              {pendingApprovals.length} pending
+              {pendingAppointments?.length || 0} pending
             </span>
           </div>
           <div className="space-y-4">
-            {pendingApprovals.map((approval) => (
-              <div key={approval.id} className="border border-gray-200 dark:border-slate-700 rounded-2xl p-4 hover:bg-gray-50 dark:hover:bg-slate-700/30 transition-colors duration-200">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">
-                      {approval.type}
-                    </p>
-                    <p className="text-sm text-gray-600 dark:text-slate-400">
-                      {approval.name}
-                    </p>
-                    {approval.specialty && (
-                      <p className="text-xs text-gray-500 dark:text-slate-500">
-                        {approval.specialty}
-                      </p>
-                    )}
-                    {approval.doctor && (
-                      <p className="text-xs text-gray-500 dark:text-slate-500">
-                        with {approval.doctor}
-                      </p>
-                    )}
-                    {approval.department && (
-                      <p className="text-xs text-gray-500 dark:text-slate-500">
-                        {approval.department} Department
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex space-x-2">
-                    <button className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-xs rounded-2xl transition-all duration-200 shadow-md hover:shadow-lg">
-                      Approve
-                    </button>
-                    <button className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-xs rounded-2xl transition-all duration-200 shadow-md hover:shadow-lg">
-                      Reject
-                    </button>
-                  </div>
-                </div>
-                <p className="text-xs text-gray-500 dark:text-slate-500 mt-2">
-                  {approval.time}
-                </p>
+            {loading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                <p className="text-sm text-gray-500 dark:text-slate-400">Loading appointments...</p>
               </div>
-            ))}
+            ) : !pendingAppointments || pendingAppointments.length === 0 ? (
+              <div className="text-center py-8">
+                <CalendarIcon className="w-12 h-12 mx-auto mb-2 text-gray-300 dark:text-slate-600" />
+                <p className="text-sm text-gray-500 dark:text-slate-400">No pending appointments</p>
+              </div>
+            ) : (
+              pendingAppointments.map((appointment) => (
+                <div key={appointment._id} className="border border-gray-200 dark:border-slate-700 rounded-2xl p-4 hover:bg-gray-50 dark:hover:bg-slate-700/30 transition-colors duration-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">
+                        Appointment Request
+                      </p>
+                      <p className="text-sm text-gray-600 dark:text-slate-400">
+                        {appointment.userId?.firstName} {appointment.userId?.lastName}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-slate-500">
+                        with {appointment.providerName}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-slate-500">
+                        Reason: {appointment.reason}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-slate-500">
+                        Date: {new Date(appointment.dateTime).toLocaleDateString()} at {new Date(appointment.dateTime).toLocaleTimeString()}
+                      </p>
+                    </div>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => handleApproveAppointment(appointment._id)}
+                        className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-xs rounded-2xl transition-all duration-200 shadow-md hover:shadow-lg"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => handleRejectAppointment(appointment._id)}
+                        className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-xs rounded-2xl transition-all duration-200 shadow-md hover:shadow-lg"
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-slate-500 mt-2">
+                    {new Date(appointment.createdAt).toLocaleString()}
+                  </p>
+                </div>
+              ))
+            )}
           </div>
         </motion.div>
       </div>

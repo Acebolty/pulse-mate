@@ -29,6 +29,7 @@ const {
   
   // System analytics controllers
   getDashboardOverview,
+  getRecentActivities,
   getSystemStats,
   getUserAnalytics,
   getHealthDataAnalytics,
@@ -150,6 +151,11 @@ router.post('/appointments/:appointmentId/reject', authMiddleware, adminMiddlewa
 // @desc    Get dashboard overview metrics
 // @access  Private (Admin only)
 router.get('/analytics/overview', authMiddleware, adminMiddleware, getDashboardOverview);
+
+// @route   GET /api/admin/analytics/recent-activities
+// @desc    Get recent system activities for dashboard
+// @access  Private (Admin only)
+router.get('/analytics/recent-activities', authMiddleware, adminMiddleware, getRecentActivities);
 
 // @route   GET /api/admin/analytics/users
 // @desc    Get user analytics and statistics

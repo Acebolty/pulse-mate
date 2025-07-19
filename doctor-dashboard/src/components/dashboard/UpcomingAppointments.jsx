@@ -8,9 +8,9 @@ const UpcomingAppointments = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Fetch real appointments for today
+  // Fetch approved appointments for this doctor
   useEffect(() => {
-    const fetchTodaysAppointments = async () => {
+    const fetchApprovedAppointments = async () => {
       try {
         setLoading(true);
         setError(null);
@@ -25,15 +25,17 @@ const UpcomingAppointments = () => {
           throw new Error('Invalid appointments data structure');
         }
 
-        // Filter for today's appointments
-        const today = new Date().toDateString();
-        const todaysAppointments = allAppointments.filter(apt => {
-          const aptDate = new Date(apt.dateTime);
-          return aptDate.toDateString() === today && apt.status === 'Confirmed';
+        // Filter for approved appointments only (admin has approved them)
+        const approvedAppointments = allAppointments.filter(apt => {
+          return apt.status === 'Approved' || apt.status === 'approved';
         });
 
+        console.log('📅 Fetching approved appointments for doctor dashboard...');
+        console.log('📊 All appointments:', allAppointments);
+        console.log('📋 Approved appointments:', approvedAppointments);
+
         // Format appointments for display
-        const formattedAppointments = todaysAppointments.map(apt => {
+        const formattedAppointments = approvedAppointments.map(apt => {
           const aptDate = new Date(apt.dateTime);
 
           // Handle different data structures - check both populated and direct fields
@@ -71,13 +73,13 @@ const UpcomingAppointments = () => {
         });
 
         setAppointments(formattedAppointments);
-        console.log('✅ Formatted today\'s appointments:', formattedAppointments);
+        console.log('✅ Formatted approved appointments:', formattedAppointments);
 
       } catch (err) {
         if (err.response?.status === 401) {
           setError('Please log in to view appointments');
         } else {
-          setError('Failed to load today\'s appointments');
+          setError('Failed to load approved appointments');
         }
         setAppointments([]);
       } finally {
@@ -85,13 +87,15 @@ const UpcomingAppointments = () => {
       }
     };
 
-    fetchTodaysAppointments();
+    fetchApprovedAppointments();
   }, []);
 
   const getStatusColor = (status) => {
-    switch (status) {
+    switch (status.toLowerCase()) {
       case "confirmed":
         return "bg-emerald-100 text-emerald-700 dark:bg-emerald-700/30 dark:text-emerald-300";
+      case "approved":
+        return "bg-blue-100 text-blue-700 dark:bg-blue-700/30 dark:text-blue-300";
       case "pending":
         return "bg-amber-100 text-amber-700 dark:bg-amber-700/30 dark:text-amber-300";
       case "cancelled":
@@ -116,7 +120,7 @@ const UpcomingAppointments = () => {
       transition={{ delay: 0.2, duration: 0.8 }} // Adjusted delay
     >
       <div className="mb-6">
-        <h3 className="text-xl font-bold text-gray-900 dark:text-slate-100">Today's Schedule</h3>
+        <h3 className="text-xl font-bold text-gray-900 dark:text-slate-100">Appointment Schedules</h3>
       </div>
 
       <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
@@ -145,8 +149,8 @@ const UpcomingAppointments = () => {
           // No appointments state
           <div className="text-center py-8">
             <CalendarDaysIcon className="w-16 h-16 text-gray-400 dark:text-slate-500 mx-auto mb-4" />
-            <p className="text-gray-500 dark:text-slate-400 font-medium">No appointments scheduled for today</p>
-            <p className="text-gray-400 dark:text-slate-500 text-sm mt-1">Your schedule is clear!</p>
+            <p className="text-gray-500 dark:text-slate-400 font-medium">No approved appointments</p>
+            <p className="text-gray-400 dark:text-slate-500 text-sm mt-1">Approved appointments will appear here for you to open chat sessions</p>
           </div>
         ) : (
           // Appointments list
