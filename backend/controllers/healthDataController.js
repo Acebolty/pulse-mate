@@ -64,10 +64,12 @@ const addHealthData = async (req, res) => {
             alertToCreate = { type: 'warning', title: 'Elevated Blood Pressure', message: `Blood pressure reading: ${value.systolic}/${value.diastolic} mmHg is elevated. Monitor closely.`, source: source || 'Blood Pressure Monitor' };
           }
         } else if (dataType === 'heartRate' && typeof value === 'number') {
-          if (value > 100) {
+          if (value > 120) {
+            alertToCreate = { type: 'critical', title: 'Severe Tachycardia Alert', message: `CRITICAL: Heart rate ${value} bpm is dangerously high. This requires immediate medical attention.`, source: source || 'Heart Rate Monitor' };
+          } else if (value > 100) {
             alertToCreate = { type: 'warning', title: 'High Heart Rate Detected', message: `Heart rate of ${value} bpm detected. If resting, please monitor.`, source: source || 'Heart Rate Monitor' };
           } else if (value < 50 && value > 0) {
-            alertToCreate = { type: 'warning', title: 'Low Heart Rate Detected', message: `Heart rate of ${value} bpm detected. If experiencing symptoms, consult your doctor.`, source: source || 'Heart Rate Monitor' };
+            alertToCreate = { type: 'critical', title: 'Severe Bradycardia Alert', message: `CRITICAL: Heart rate ${value} bpm is dangerously low. This requires immediate medical attention.`, source: source || 'Heart Rate Monitor' };
           }
         } else if (dataType === 'glucoseLevel' && typeof value === 'number') {
           if (value > 180) {
@@ -83,6 +85,25 @@ const addHealthData = async (req, res) => {
       // Backend email notifications for critical alerts (frontend handles UI alerts)
       if (alertToCreate) {
         console.log('🚨 Alert created:', alertToCreate.type, '-', alertToCreate.title);
+
+        // Save alert to database
+        try {
+          const alert = new Alert({
+            userId: req.user.id,
+            type: alertToCreate.type,
+            title: alertToCreate.title,
+            message: alertToCreate.message,
+            source: alertToCreate.source,
+            relatedDataType: dataType,
+            timestamp: new Date(),
+            isRead: false
+          });
+
+          const savedAlert = await alert.save();
+          console.log('💾 Alert saved to database:', savedAlert._id);
+        } catch (saveError) {
+          console.error('Error saving alert to database:', saveError);
+        }
 
         // Send email for critical and warning alerts
         if (alertToCreate.type === 'critical' || alertToCreate.type === 'warning') {

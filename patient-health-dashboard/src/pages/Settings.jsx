@@ -3,16 +3,12 @@
 import { useState, useEffect } from "react" // Added useEffect
 import api from '../services/api'; // Import API service
 import { useNavigate } from 'react-router-dom'; // For potential redirects
+import { logout } from '../services/authService'; // Import logout function
 import {
   BellIcon,
-  ShieldCheckIcon,
-  CogIcon,
   KeyIcon,
   ArrowRightOnRectangleIcon,
   ExclamationTriangleIcon,
-  MoonIcon,
-  SunIcon,
-  ComputerDesktopIcon,
 } from "@heroicons/react/24/outline"
 
 
@@ -22,10 +18,6 @@ import {
 // Default structure for health monitoring settings
 const initialSettingsData = {
   // These directly map to the `settings` object in the User model
-  privacy: {
-    profileVisibility: "healthcare-providers",
-    dataSharing: true,
-  },
   notifications: {
     emailNotifications: true,
     appointmentReminders: true,
@@ -34,22 +26,7 @@ const initialSettingsData = {
     weeklyHealthSummary: true,
     healthTaskReminders: false,
   },
-  health: {
-    providerAccess: {
-      shareRealTimeData: false,
-      shareHistoricalData: false,
-      allowRemoteMonitoring: false,
-      emergencyAccess: true,
-    }
-  },
-  appearance: {
-    theme: "system",
-    fontSize: "medium",
-    colorScheme: "green",
-  },
   security: { // Some basic security flags
-    sessionTimeout: "30-minutes",
-    loginAlerts: true,
   }
 };
 
@@ -57,13 +34,16 @@ const initialSettingsData = {
 const Settings = () => {
   const [activeTab, setActiveTab] = useState("notifications") // Default to notifications
   const [settingsData, setSettingsData] = useState(initialSettingsData); // Renamed from 'settings' to avoid conflict
-  const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const navigate = useNavigate();
 
+  // Handle sign out
+  const handleSignOut = () => {
+    logout(navigate);
+  };
 
   useEffect(() => {
     const fetchUserSettings = async () => {
@@ -73,10 +53,7 @@ const Settings = () => {
         const userData = response.data;
         setSettingsData({ // Populate state from fetched user data
           // Populate settings directly from userData.settings
-          privacy: userData.settings?.privacy || initialSettingsData.privacy,
           notifications: userData.settings?.notifications || initialSettingsData.notifications,
-          health: userData.settings?.health || initialSettingsData.health,
-          appearance: userData.settings?.appearance || initialSettingsData.appearance,
           security: userData.settings?.security || initialSettingsData.security,
         });
         setError('');
@@ -96,9 +73,7 @@ const Settings = () => {
 
   const tabs = [
     { id: "notifications", label: "Notifications", icon: BellIcon },
-    { id: "privacy", label: "Privacy & Data", icon: ShieldCheckIcon },
     { id: "security", label: "Security", icon: KeyIcon },
-    { id: "appearance", label: "Appearance", icon: CogIcon },
   ]
 
   // Updated to work with settingsData and its structure
@@ -117,22 +92,7 @@ const Settings = () => {
 
 
 
-  // Handle nested settings like health.emergencyContact.name
-  const handleNestedSettingChange = (section, nestedKey, field, value) => {
-    setSettingsData(prev => ({
-      ...prev,
-      [section]: {
-        ...prev[section],
-        [nestedKey]: {
-          ...prev[section][nestedKey],
-          [field]: value,
-        },
-      },
-    }));
-    setHasUnsavedChanges(true);
-    setSuccessMessage('');
-    setError('');
-  };
+
 
   const handleTestWeeklySummary = async () => {
     setLoading(true);
@@ -240,50 +200,7 @@ const Settings = () => {
 
 
 
-  // Handle data download
-  const handleDownloadData = async () => {
-    try {
-      setLoading(true);
 
-      // Fetch all user data
-      const [profileRes, healthDataRes, alertsRes] = await Promise.allSettled([
-        api.get('/profile/me'),
-        api.get('/health-data'),
-        api.get('/alerts')
-      ]);
-
-      const exportData = {
-        profile: profileRes.status === 'fulfilled' ? profileRes.value.data : null,
-        healthData: healthDataRes.status === 'fulfilled' ? healthDataRes.value.data : [],
-        alerts: alertsRes.status === 'fulfilled' ? alertsRes.value.data : [],
-        exportDate: new Date().toISOString(),
-        exportVersion: '1.0'
-      };
-
-      // Create and download file
-      const dataStr = JSON.stringify(exportData, null, 2);
-      const dataBlob = new Blob([dataStr], { type: 'application/json' });
-      const url = URL.createObjectURL(dataBlob);
-
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `health-data-export-${new Date().toISOString().split('T')[0]}.json`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-
-      setSuccessMessage('Health data exported successfully!');
-      setTimeout(() => setSuccessMessage(''), 3000);
-
-    } catch (err) {
-      console.error('Error downloading data:', err);
-      setError('Failed to export data. Please try again.');
-      setTimeout(() => setError(''), 5000);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -376,172 +293,7 @@ const Settings = () => {
         <div className="p-3 sm:p-4 md:p-6">
 
 
-          {/* Privacy Settings */}
-          {activeTab === "privacy" && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100 mb-3 sm:mb-4">Healthcare Provider Access</h3>
-                <div className="space-y-3 sm:space-y-4">
-                  {/* Real-time Data Sharing */}
-                  <div className="flex flex-col items-start space-y-2 p-3 sm:p-4 border border-green-200 dark:border-green-800/40 bg-green-50 dark:bg-green-900/20 rounded-lg sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-900 dark:text-slate-200">Real-time Data Sharing</h4>
-                      <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400">Allow providers to access your live health data for monitoring</p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer mt-1 sm:mt-0 self-end sm:self-center">
-                      <input
-                        type="checkbox"
-                        checked={settingsData.health.providerAccess?.shareRealTimeData || false}
-                        onChange={(e) => handleNestedSettingChange("health", "providerAccess", "shareRealTimeData", e.target.checked)}
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-gray-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 dark:after:border-slate-500 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600 dark:peer-checked:bg-green-500"></div>
-                    </label>
-                  </div>
 
-                  {/* Historical Data Sharing */}
-                  <div className="flex flex-col items-start space-y-2 p-3 sm:p-4 border border-gray-200 dark:border-slate-700 dark:bg-slate-700/30 rounded-lg sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-900 dark:text-slate-200">Historical Data Sharing</h4>
-                      <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400">Share your health history and trends with providers</p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer mt-1 sm:mt-0 self-end sm:self-center">
-                      <input
-                        type="checkbox"
-                        checked={settingsData.health.providerAccess?.shareHistoricalData || false}
-                        onChange={(e) => handleNestedSettingChange("health", "providerAccess", "shareHistoricalData", e.target.checked)}
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-gray-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 dark:after:border-slate-500 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600 dark:peer-checked:bg-green-500"></div>
-                    </label>
-                  </div>
-
-                  {/* Remote Monitoring */}
-                  <div className="flex flex-col items-start space-y-2 p-3 sm:p-4 border border-gray-200 dark:border-slate-700 dark:bg-slate-700/30 rounded-lg sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-900 dark:text-slate-200">Remote Monitoring</h4>
-                      <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400">Allow providers to monitor your health remotely and receive alerts</p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer mt-1 sm:mt-0 self-end sm:self-center">
-                      <input
-                        type="checkbox"
-                        checked={settingsData.health.providerAccess?.allowRemoteMonitoring || false}
-                        onChange={(e) => handleNestedSettingChange("health", "providerAccess", "allowRemoteMonitoring", e.target.checked)}
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-gray-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 dark:after:border-slate-500 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600 dark:peer-checked:bg-green-500"></div>
-                    </label>
-                  </div>
-
-                  {/* Emergency Access */}
-                  <div className="flex flex-col items-start space-y-2 p-3 sm:p-4 border border-red-200 dark:border-red-800/40 bg-red-50 dark:bg-red-900/20 rounded-lg sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-900 dark:text-slate-200">Emergency Access</h4>
-                      <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400">Allow emergency access to your health data in critical situations</p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer mt-1 sm:mt-0 self-end sm:self-center">
-                      <input
-                        type="checkbox"
-                        checked={settingsData.health.providerAccess?.emergencyAccess || false}
-                        onChange={(e) => handleNestedSettingChange("health", "providerAccess", "emergencyAccess", e.target.checked)}
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-gray-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 dark:after:border-slate-500 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600 dark:peer-checked:bg-green-500"></div>
-                    </label>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100 mb-3 sm:mb-4">General Privacy Settings</h3>
-                <div className="space-y-3 sm:space-y-4">
-                  {/* Profile Visibility */}
-                  <div className="flex flex-col items-start space-y-2 p-3 sm:p-4 border border-gray-200 dark:border-slate-700 dark:bg-slate-700/30 rounded-lg sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-900 dark:text-slate-200">Profile Visibility</h4>
-                      <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400">Control who can see your profile information</p>
-                    </div>
-                    <select
-                      value={settingsData.privacy.profileVisibility}
-                      onChange={(e) => handleSettingChange("privacy", "profileVisibility", e.target.value)}
-                      className="w-full sm:w-auto mt-1 sm:mt-0 px-3 py-2 text-sm border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
-                    >
-                      <option value="public">Public</option>
-                      <option value="healthcare-providers">Healthcare Providers Only</option>
-                      <option value="private">Private</option>
-                    </select>
-                  </div>
-
-
-                </div>
-              </div>
-
-              <div className="border-t dark:border-slate-700 pt-4 sm:pt-6">
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100 mb-3 sm:mb-4">Data Management</h3>
-                <div className="space-y-3">
-                  <button className="w-full text-left p-3 sm:p-4 border border-gray-200 dark:border-slate-700 dark:hover:bg-slate-700/50 rounded-lg hover:bg-gray-50 transition-colors">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-900 dark:text-slate-200">Download My Data</h4>
-                        <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400 mt-0.5 sm:mt-0">Get a copy of all your health data</p>
-                      </div>
-                      <span className="text-green-600 dark:text-green-400 text-sm">Export</span>
-                    </div>
-                  </button>
-                  <button className="w-full text-left p-4 border border-red-200 dark:border-red-500/50 rounded-lg hover:bg-red-50 dark:hover:bg-red-700/20 transition-colors">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="font-medium text-red-900 dark:text-red-300">Delete My Account</h4>
-                        <p className="text-sm text-red-600 dark:text-red-400">Permanently delete your account and all data</p>
-                      </div>
-                      <span className="text-red-600 dark:text-red-400 text-sm">Delete</span>
-                    </div>
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100 mb-3 sm:mb-4">Data Management</h3>
-                <div className="space-y-3 sm:space-y-4">
-                  {/* Download Data */}
-                  <div className="p-3 sm:p-4 border border-blue-200 dark:border-blue-800/40 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                    <div className="flex flex-col items-start space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-900 dark:text-slate-200">Download My Health Data</h4>
-                        <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400">Export all your health data in JSON format</p>
-                      </div>
-                      <button
-                        onClick={handleDownloadData}
-                        className="px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors flex items-center space-x-2"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        <span>Download Data</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Account Deletion */}
-                  <div className="p-3 sm:p-4 border border-red-200 dark:border-red-800/40 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                    <div className="flex flex-col items-start space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-900 dark:text-slate-200">Delete My Account</h4>
-                        <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400">Permanently delete your account and all associated data</p>
-                      </div>
-                      <button
-                        onClick={() => setShowDeleteModal(true)}
-                        className="px-4 py-2 bg-red-600 dark:bg-red-500 text-white text-sm rounded-lg hover:bg-red-700 dark:hover:bg-red-600 transition-colors flex items-center space-x-2"
-                      >
-                        <ExclamationTriangleIcon className="w-4 h-4" />
-                        <span>Delete Account</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Notification Settings */}
           {activeTab === "notifications" && (
@@ -629,62 +381,7 @@ const Settings = () => {
                 </div>
               </div>
 
-              <div>
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100 mb-3 sm:mb-4">Healthcare Provider Notifications</h3>
-                <div className="space-y-3 sm:space-y-4">
-                  {/* Provider Messages */}
-                  <div className="flex flex-col items-start space-y-2 p-3 sm:p-4 border border-gray-200 dark:border-slate-700 dark:bg-slate-700/30 rounded-lg sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-900 dark:text-slate-200">Provider Messages</h4>
-                      <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400">Messages and updates from your healthcare providers</p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer mt-1 sm:mt-0 self-end sm:self-center">
-                      <input
-                        type="checkbox"
-                        checked={settingsData.notifications.messageNotifications}
-                        onChange={(e) => handleSettingChange("notifications", "messageNotifications", e.target.checked)}
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-gray-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 dark:after:border-slate-500 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600 dark:peer-checked:bg-green-500"></div>
-                    </label>
-                  </div>
 
-                  {/* Appointment Reminders */}
-                  <div className="flex flex-col items-start space-y-2 p-3 sm:p-4 border border-gray-200 dark:border-slate-700 dark:bg-slate-700/30 rounded-lg sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-900 dark:text-slate-200">Appointment Reminders</h4>
-                      <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400">Get reminded about upcoming appointments and consultations</p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer mt-1 sm:mt-0 self-end sm:self-center">
-                      <input
-                        type="checkbox"
-                        checked={settingsData.notifications.appointmentReminders}
-                        onChange={(e) => handleSettingChange("notifications", "appointmentReminders", e.target.checked)}
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-gray-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 dark:after:border-slate-500 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600 dark:peer-checked:bg-green-500"></div>
-                    </label>
-                  </div>
-
-
-                  {/* Health Task Reminders */}
-                  <div className="flex flex-col items-start space-y-2 p-3 sm:p-4 border border-gray-200 dark:border-slate-700 dark:bg-slate-700/30 rounded-lg sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-900 dark:text-slate-200">Health Task Reminders</h4>
-                      <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400">Reminders to log daily health metrics</p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer mt-1 sm:mt-0 self-end sm:self-center">
-                      <input
-                        type="checkbox"
-                        checked={settingsData.notifications.healthTaskReminders || false}
-                        onChange={(e) => handleSettingChange("notifications", "healthTaskReminders", e.target.checked)}
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-gray-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 dark:after:border-slate-500 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600 dark:peer-checked:bg-green-500"></div>
-                    </label>
-                  </div>
-                </div>
-              </div>
 
 
             </div>
@@ -697,48 +394,7 @@ const Settings = () => {
           {/* Security Settings */}
           {activeTab === "security" && (
             <div className="space-y-6">
-              <div>
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100 mb-3 sm:mb-4">Account Security</h3>
-                <div className="space-y-3 sm:space-y-4">
 
-
-                  {/* Session Timeout */}
-                  <div className="flex flex-col items-start space-y-2 p-3 sm:p-4 border border-gray-200 dark:border-slate-700 dark:bg-slate-700/30 rounded-lg sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-900 dark:text-slate-200">Session Timeout</h4>
-                      <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400">Automatically log out after inactivity</p>
-                    </div>
-                    <select
-                      value={settingsData.security.sessionTimeout}
-                      onChange={(e) => handleSettingChange("security", "sessionTimeout", e.target.value)}
-                      className="w-full sm:w-auto mt-1 sm:mt-0 px-3 py-2 text-sm border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 rounded-lg focus:ring-2 focus:ring-green-500 dark:focus:ring-green-600 focus:border-transparent"
-                    >
-                      <option value="15-minutes">15 minutes</option>
-                      <option value="30-minutes">30 minutes</option>
-                      <option value="1-hour">1 hour</option>
-                      <option value="4-hours">4 hours</option>
-                      <option value="never">Never</option>
-                    </select>
-                  </div>
-
-                  {/* Login Alerts */}
-                  <div className="flex flex-col items-start space-y-2 p-3 sm:p-4 border border-gray-200 dark:border-slate-700 dark:bg-slate-700/30 rounded-lg sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-                    <div>
-                      <h4 className="text-sm font-medium text-gray-900 dark:text-slate-200">Login Alerts</h4>
-                      <p className="text-xs sm:text-sm text-gray-600 dark:text-slate-400">Get notified of new login attempts</p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer mt-1 sm:mt-0 self-end sm:self-center">
-                      <input
-                        type="checkbox"
-                        checked={settingsData.security.loginAlerts}
-                        onChange={(e) => handleSettingChange("security", "loginAlerts", e.target.checked)}
-                        className="sr-only peer"
-                      />
-                      <div className="w-11 h-6 bg-gray-200 dark:bg-slate-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 dark:after:border-slate-500 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600 dark:peer-checked:bg-green-500"></div>
-                    </label>
-                  </div>
-                </div>
-              </div>
 
               <div>
                 <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100 mb-3 sm:mb-4">Password & Authentication</h3>
@@ -766,195 +422,24 @@ const Settings = () => {
             </div>
           )}
 
-          {/* Appearance Settings */}
-          {activeTab === "appearance" && (
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100 mb-3 sm:mb-4">Theme</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-                  <button
-                    onClick={() => handleSettingChange("appearance", "theme", "light")}
-                    className={`p-3 sm:p-4 border-2 rounded-lg transition-colors text-center ${
-                      settingsData.appearance.theme === "light"
-                        ? "border-green-500 bg-green-50 dark:bg-green-700/20 dark:border-green-600"
-                        : "border-gray-200 dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-600"
-                    }`}
-                  >
-                    <SunIcon className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-1 sm:mb-2 text-yellow-500 dark:text-yellow-400" />
-                    <p className="text-xs sm:text-sm font-medium text-gray-900 dark:text-slate-200">Light</p>
-                  </button>
-                  <button
-                    onClick={() => handleSettingChange("appearance", "theme", "dark")}
-                    className={`p-3 sm:p-4 border-2 rounded-lg transition-colors text-center ${
-                      settingsData.appearance.theme === "dark"
-                        ? "border-green-500 bg-green-50 dark:bg-green-700/20 dark:border-green-600"
-                        : "border-gray-200 dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-600"
-                    }`}
-                  >
-                    <MoonIcon className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-1 sm:mb-2 text-gray-700 dark:text-slate-300" />
-                    <p className="text-xs sm:text-sm font-medium text-gray-900 dark:text-slate-200">Dark</p>
-                  </button>
-                  <button
-                    onClick={() => handleSettingChange("appearance", "theme", "system")}
-                    className={`p-3 sm:p-4 border-2 rounded-lg transition-colors text-center ${
-                      settingsData.appearance.theme === "system"
-                        ? "border-green-500 bg-green-50 dark:bg-green-700/20 dark:border-green-600"
-                        : "border-gray-200 dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-600"
-                    }`}
-                  >
-                    <ComputerDesktopIcon className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-1 sm:mb-2 text-gray-700 dark:text-slate-300" />
-                    <p className="text-xs sm:text-sm font-medium text-gray-900 dark:text-slate-200">System</p>
-                  </button>
-                </div>
-              </div>
 
-              <div>
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100 mb-3 sm:mb-4">Font Size</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-                  <button
-                    onClick={() => handleSettingChange("appearance", "fontSize", "small")}
-                    className={`p-3 sm:p-4 border-2 rounded-lg transition-colors text-center ${
-                      settingsData.appearance.fontSize === "small"
-                        ? "border-green-500 bg-green-50 dark:bg-green-700/20 dark:border-green-600"
-                        : "border-gray-200 dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-600"
-                    }`}
-                  >
-                    <p className="text-sm font-medium text-gray-900 dark:text-slate-200">Small</p>
-                    <p className="text-xs text-gray-600 dark:text-slate-400 mt-1">Compact view</p>
-                  </button>
-                  <button
-                    onClick={() => handleSettingChange("appearance", "fontSize", "medium")}
-                    className={`p-3 sm:p-4 border-2 rounded-lg transition-colors text-center ${
-                      settingsData.appearance.fontSize === "medium"
-                        ? "border-green-500 bg-green-50 dark:bg-green-700/20 dark:border-green-600"
-                        : "border-gray-200 dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-600"
-                    }`}
-                  >
-                    <p className="text-sm font-medium text-gray-900 dark:text-slate-200">Medium</p>
-                    <p className="text-xs text-gray-600 dark:text-slate-400 mt-1">Default size</p>
-                  </button>
-                  <button
-                    onClick={() => handleSettingChange("appearance", "fontSize", "large")}
-                    className={`p-3 sm:p-4 border-2 rounded-lg transition-colors text-center ${
-                      settingsData.appearance.fontSize === "large"
-                        ? "border-green-500 bg-green-50 dark:bg-green-700/20 dark:border-green-600"
-                        : "border-gray-200 dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-600"
-                    }`}
-                  >
-                    <p className="text-sm font-medium text-gray-900 dark:text-slate-200">Large</p>
-                    <p className="text-xs text-gray-600 dark:text-slate-400 mt-1">Easy reading</p>
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100 mb-3 sm:mb-4">Color Scheme</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-                  <button
-                    onClick={() => handleSettingChange("appearance", "colorScheme", "green")}
-                    className={`p-3 sm:p-4 border-2 rounded-lg transition-colors text-center ${
-                      settingsData.appearance.colorScheme === "green"
-                        ? "border-green-500 bg-green-50 dark:bg-green-700/20 dark:border-green-600"
-                        : "border-gray-200 dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-600"
-                    }`}
-                  >
-                    <div className="w-6 h-6 sm:w-8 sm:h-8 bg-green-500 rounded-full mx-auto mb-1 sm:mb-2"></div>
-                    <p className="text-xs sm:text-sm font-medium text-gray-900 dark:text-slate-200">Green</p>
-                  </button>
-                  <button
-                    onClick={() => handleSettingChange("appearance", "colorScheme", "blue")}
-                    className={`p-3 sm:p-4 border-2 rounded-lg transition-colors text-center ${
-                      settingsData.appearance.colorScheme === "blue"
-                        ? "border-green-500 bg-green-50 dark:bg-green-700/20 dark:border-green-600"
-                        : "border-gray-200 dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-600"
-                    }`}
-                  >
-                    <div className="w-6 h-6 sm:w-8 sm:h-8 bg-blue-500 rounded-full mx-auto mb-1 sm:mb-2"></div>
-                    <p className="text-xs sm:text-sm font-medium text-gray-900 dark:text-slate-200">Blue</p>
-                  </button>
-                  <button
-                    onClick={() => handleSettingChange("appearance", "colorScheme", "purple")}
-                    className={`p-3 sm:p-4 border-2 rounded-lg transition-colors text-center ${
-                      settingsData.appearance.colorScheme === "purple"
-                        ? "border-green-500 bg-green-50 dark:bg-green-700/20 dark:border-green-600"
-                        : "border-gray-200 dark:border-slate-700 hover:border-gray-300 dark:hover:border-slate-600"
-                    }`}
-                  >
-                    <div className="w-6 h-6 sm:w-8 sm:h-8 bg-purple-500 rounded-full mx-auto mb-1 sm:mb-2"></div>
-                    <p className="text-xs sm:text-sm font-medium text-gray-900 dark:text-slate-200">Purple</p>
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Footer Actions */}
         <div className="border-t border-gray-200 dark:border-slate-700 p-3 sm:p-4 md:p-6">
-          <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
-            <div className="flex flex-col space-y-3 sm:flex-row sm:space-x-3 sm:space-y-0">
-              <button
-                onClick={() => setShowLogoutModal(true)}
-                className="flex items-center justify-center sm:justify-start space-x-2 px-3 py-2 text-sm sm:px-4 text-gray-600 dark:text-slate-300 hover:text-gray-800 dark:hover:text-slate-100 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
-              >
-                <ArrowRightOnRectangleIcon className="w-4 h-4" />
-                <span>Sign Out</span>
-              </button>
-            </div>
-
-            <div className="flex flex-col space-y-3 sm:flex-row sm:space-x-3 sm:space-y-0">
-              <button className="px-3 py-2 text-sm sm:px-4 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-700/20 rounded-lg transition-colors">
-                Delete Account
-              </button>
-              <button className="px-3 py-2 text-sm sm:px-4 text-gray-600 dark:text-slate-300 hover:text-gray-800 dark:hover:text-slate-100 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
-                Export Data
-              </button>
-            </div>
+          <div className="flex justify-start">
+            <button
+              onClick={handleSignOut}
+              className="flex items-center justify-center sm:justify-start space-x-2 px-3 py-2 text-sm sm:px-4 text-gray-600 dark:text-slate-300 hover:text-gray-800 dark:hover:text-slate-100 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+            >
+              <ArrowRightOnRectangleIcon className="w-4 h-4" />
+              <span>Sign Out</span>
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Delete Account Modal */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-slate-800 rounded-lg p-6 max-w-md w-full mx-4">
-            <div className="flex items-center space-x-3 mb-4">
-              <ExclamationTriangleIcon className="w-6 h-6 text-red-600" />
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">Delete Account</h3>
-            </div>
 
-            <p className="text-sm text-gray-600 dark:text-slate-400 mb-6">
-              Are you sure you want to delete your account? This action cannot be undone and will permanently delete:
-            </p>
-
-            <ul className="text-sm text-gray-600 dark:text-slate-400 mb-6 list-disc list-inside space-y-1">
-              <li>All your health data and history</li>
-              <li>Your profile and settings</li>
-              <li>All appointments and messages</li>
-              <li>All alerts and notifications</li>
-            </ul>
-
-            <div className="flex space-x-3">
-              <button
-                onClick={() => setShowDeleteModal(false)}
-                className="flex-1 px-4 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  // Handle account deletion here
-                  setShowDeleteModal(false);
-                  setError('Account deletion is not implemented yet.');
-                }}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-              >
-                Delete Account
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
