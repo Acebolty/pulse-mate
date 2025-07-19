@@ -91,14 +91,47 @@ export const deleteUser = async (userId) => {
 
 /**
  * Get all pending appointments for approval
+ * @param {number} page - Page number for pagination
+ * @param {number} limit - Number of items per page
  * @returns {Promise<object>} Pending appointments data
  */
-export const getPendingAppointments = async () => {
+export const getPendingAppointments = async (page = 1, limit = 15) => {
   try {
-    const response = await api.get('/admin/appointments/pending');
+    const response = await api.get(`/admin/appointments/pending?page=${page}&limit=${limit}`);
     return response.data;
   } catch (error) {
     console.error('Error fetching pending appointments:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get all past appointments for history view
+ * @param {number} page - Page number for pagination
+ * @param {number} limit - Number of items per page
+ * @param {string} status - Filter by status (optional)
+ * @param {string} search - Search term (optional)
+ * @returns {Promise<object>} Past appointments data
+ */
+export const getPastAppointments = async (page = 1, limit = 15, status = 'all', search = '') => {
+  try {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString()
+    });
+
+    if (status && status !== 'all') {
+      params.append('status', status);
+    }
+
+    if (search) {
+      params.append('search', search);
+    }
+
+    const response = await api.get(`/admin/appointments/history?${params.toString()}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching past appointments:', error);
     throw error;
   }
 };

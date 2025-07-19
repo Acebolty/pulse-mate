@@ -749,18 +749,88 @@ const getDashboardOverview = async (req, res) => {
  */
 const getPendingAppointments = async (req, res) => {
   try {
-    const pendingAppointments = await Appointment.getPendingAppointments();
+    const { page = 1, limit = 15 } = req.query;
+    const skip = (page - 1) * limit;
+
+    const pendingAppointments = await Appointment.find({ status: 'Pending' })
+      .populate('userId', 'firstName lastName email patientId')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const totalPending = await Appointment.countDocuments({ status: 'Pending' });
 
     res.json({
       success: true,
       appointments: pendingAppointments,
-      count: pendingAppointments.length
+      count: pendingAppointments.length,
+      totalCount: totalPending,
+      currentPage: parseInt(page),
+      totalPages: Math.ceil(totalPending / limit),
+      hasNextPage: page * limit < totalPending,
+      hasPrevPage: page > 1
     });
 
   } catch (error) {
     console.error('Get pending appointments error:', error.message);
     res.status(500).json({
       message: 'Server error fetching pending appointments'
+    });
+  }
+};
+
+/**
+ * @desc    Get all past appointments (approved/cancelled/completed) for admin history
+ * @route   GET /api/admin/appointments/history
+ * @access  Private (Admin only)
+ */
+const getPastAppointments = async (req, res) => {
+  try {
+    const { page = 1, limit = 15, status, search } = req.query;
+    const skip = (page - 1) * limit;
+
+    // Build query for past appointments (non-pending statuses)
+    const query = {
+      status: { $in: ['Approved', 'Open Chat', 'Completed', 'Cancelled', 'Expired'] }
+    };
+
+    // Add status filter if specified
+    if (status && status !== 'all') {
+      query.status = status;
+    }
+
+    // Add search functionality
+    if (search) {
+      query.$or = [
+        { providerName: { $regex: search, $options: 'i' } },
+        { reason: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    const pastAppointments = await Appointment.find(query)
+      .populate('userId', 'firstName lastName email patientId')
+      .populate('approvedBy', 'firstName lastName')
+      .sort({ updatedAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const totalPast = await Appointment.countDocuments(query);
+
+    res.json({
+      success: true,
+      appointments: pastAppointments,
+      count: pastAppointments.length,
+      totalCount: totalPast,
+      currentPage: parseInt(page),
+      totalPages: Math.ceil(totalPast / limit),
+      hasNextPage: page * limit < totalPast,
+      hasPrevPage: page > 1
+    });
+
+  } catch (error) {
+    console.error('Get past appointments error:', error.message);
+    res.status(500).json({
+      message: 'Server error fetching past appointments'
     });
   }
 };
@@ -1547,6 +1617,7 @@ module.exports = {
   getDashboardOverview,
   getRecentActivities,
   getPendingAppointments,
+  getPastAppointments,
   approveAppointment,
   rejectAppointment,
   // Add other functions as we implement them

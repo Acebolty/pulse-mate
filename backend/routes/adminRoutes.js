@@ -24,6 +24,7 @@ const {
 
   // Appointment approval controllers
   getPendingAppointments,
+  getPastAppointments,
   approveAppointment,
   rejectAppointment,
   
@@ -160,6 +161,11 @@ router.delete('/doctors/:doctorId', authMiddleware, adminMiddleware, deleteDocto
 // @desc    Get all pending appointments for approval
 // @access  Private (Admin only)
 router.get('/appointments/pending', authMiddleware, adminMiddleware, getPendingAppointments);
+
+// @route   GET /api/admin/appointments/history
+// @desc    Get all past appointments (approved/cancelled/completed) for admin history
+// @access  Private (Admin only)
+router.get('/appointments/history', authMiddleware, adminMiddleware, getPastAppointments);
 
 // Test route to verify admin routes are working
 router.get('/test', (req, res) => {
