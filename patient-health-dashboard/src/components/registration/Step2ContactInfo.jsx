@@ -114,7 +114,7 @@ const Step2ContactInfo = ({ formData, handleChange, error }) => {
             </label>
             <select
               name="country"
-              value={formData.address?.country || 'United States'}
+              value={formData.address?.country || 'Nigeria'}
               onChange={(e) => handleChange('address', { ...formData.address, country: e.target.value })}
               className="w-full p-3 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-green-500 focus:border-green-500"
             >
@@ -187,7 +187,7 @@ const Step2ContactInfo = ({ formData, handleChange, error }) => {
               onChange={(e) => handleChange('emergencyContact', { ...formData.emergencyContact, phone: e.target.value })}
               required
               className="w-full p-3 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-green-500 focus:border-green-500"
-              placeholder="234-000-000-000"
+              placeholder="+234-000-000-0000"
             />
           </div>
         </div>

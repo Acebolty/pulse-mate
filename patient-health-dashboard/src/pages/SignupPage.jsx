@@ -6,6 +6,11 @@ import Step1PersonalInfo from '../components/registration/Step1PersonalInfo';
 import Step2ContactInfo from '../components/registration/Step2ContactInfo';
 import Step3MedicalInfo from '../components/registration/Step3MedicalInfo';
 import Step4Review from '../components/registration/Step4Review';
+import {
+  UserIcon,
+  ArrowLeftIcon,
+  ArrowRightIcon
+} from '@heroicons/react/24/outline';
 
 const SignupPage = () => {
   const [currentStep, setCurrentStep] = useState(1);
@@ -48,6 +53,13 @@ const SignupPage = () => {
   const [loading, setLoading] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
   const navigate = useNavigate();
+
+  const steps = [
+    { title: 'Personal Info', description: 'Basic information' },
+    { title: 'Contact & Emergency', description: 'Address & emergency contact' },
+    { title: 'Medical Info', description: 'Basic medical information' },
+    { title: 'Review', description: 'Review and complete' }
+  ];
 
   const handleChange = (field, value) => {
     if (typeof field === 'object' && field.target) {
@@ -217,21 +229,17 @@ const SignupPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 dark:bg-slate-900 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="flex justify-center mb-4">
-            <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
-              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-            </div>
+          <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+            <UserIcon className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-extrabold text-gray-900 dark:text-slate-100">
+          <h1 className="text-2xl font-bold text-gray-900">
             Patient Registration
           </h1>
-          <p className="mt-2 text-gray-600 dark:text-slate-400">
+          <p className="mt-2 text-gray-600">
             Join PulseMate to monitor your health journey
           </p>
         </div>
@@ -239,29 +247,101 @@ const SignupPage = () => {
         {/* Multi-Step Form */}
         <MultiStepForm
           currentStep={currentStep}
-          totalSteps={4}
-          onNext={handleNext}
-          onPrev={handlePrev}
-          onSubmit={handleSubmit}
-          canProceed={canProceed()}
-          isLastStep={currentStep === 4}
-          loading={loading}
+          totalSteps={steps.length}
+          steps={steps}
         >
-          {renderStepContent()}
+          {/* Success/Error Messages */}
+          {error && (
+            <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-red-800 text-sm">{error}</p>
+            </div>
+          )}
+          {success && (
+            <div className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4">
+              <p className="text-green-800 text-sm">{success}</p>
+            </div>
+          )}
+
+          {/* Step Content */}
+          <div>
+            {renderStepContent()}
+          </div>
+
+          {/* Navigation Buttons */}
+          <div className="flex justify-between mt-8 pt-6 border-t border-gray-200">
+            <button
+              type="button"
+              onClick={handlePrev}
+              disabled={currentStep === 1}
+              className={`
+                flex items-center px-4 py-2 rounded-lg font-medium transition-all duration-200
+                ${currentStep === 1
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }
+              `}
+            >
+              <ArrowLeftIcon className="w-4 h-4 mr-2" />
+              Previous
+            </button>
+
+            {currentStep === 4 ? (
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={!canProceed() || loading}
+                className={`
+                  flex items-center px-6 py-2 rounded-lg font-medium transition-all duration-200
+                  ${canProceed() && !loading
+                    ? 'bg-green-500 hover:bg-green-600 text-white'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }
+                `}
+              >
+                {loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Creating Account...
+                  </>
+                ) : (
+                  <>
+                    <UserIcon className="w-4 h-4 mr-2" />
+                    Create Account
+                  </>
+                )}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleNext}
+                disabled={!canProceed()}
+                className={`
+                  flex items-center px-4 py-2 rounded-lg font-medium transition-all duration-200
+                  ${canProceed()
+                    ? 'bg-green-500 hover:bg-green-600 text-white'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }
+                `}
+              >
+                Next
+                <ArrowRightIcon className="w-4 h-4 ml-2" />
+              </button>
+            )}
+          </div>
         </MultiStepForm>
 
         {/* Footer */}
         <div className="mt-8 text-center">
-          <p className="text-sm text-gray-600 dark:text-slate-400">
+          <p className="text-sm text-gray-600">
             Already have an account?{' '}
             <button
               onClick={() => navigate('/login')}
-              className="font-medium text-green-600 hover:text-green-500 dark:text-green-400 dark:hover:text-green-300 transition-colors"
+              className="font-medium text-green-600 hover:text-green-500 transition-colors"
             >
               Sign in here
             </button>
           </p>
-          <p className="mt-4 text-xs text-gray-500 dark:text-slate-500">
+          <p className="mt-4 text-xs text-gray-500">
             By registering, you agree to our Terms of Service and Privacy Policy.
             Your health information is protected and secure.
           </p>

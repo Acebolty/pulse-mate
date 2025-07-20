@@ -68,7 +68,7 @@ const LoginPage = () => {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="max-w-md w-full bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-8"
+        className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-8"
       >
         {/* Header */}
         <div className="text-center mb-8">
@@ -77,24 +77,24 @@ const LoginPage = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+          <h1 className="text-2xl font-bold text-gray-900">
             Doctor Portal
           </h1>
-          <p className="text-gray-600 dark:text-slate-400 mt-2">
+          <p className="text-gray-600 mt-2">
             Sign in to PulseMate Doctor Dashboard
           </p>
         </div>
 
         {/* Error Message */}
         {error && (
-          <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-            <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-sm text-red-600">{error}</p>
           </div>
         )}
         {/* Login Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Email Address
             </label>
             <input
@@ -102,13 +102,13 @@ const LoginPage = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full px-4 py-3 border border-gray-200 dark:border-slate-600 rounded-2xl bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+              className="w-full px-4 py-3 border border-gray-200 rounded-2xl bg-gray-50 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
               placeholder="Enter your email"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Password
             </label>
             <div className="relative">
@@ -117,13 +117,13 @@ const LoginPage = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full px-4 py-3 pr-12 border border-gray-200 dark:border-slate-600 rounded-2xl bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                className="w-full px-4 py-3 pr-12 border border-gray-200 rounded-2xl bg-gray-50 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                 placeholder="Enter your password"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:text-slate-400 dark:hover:text-slate-300"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
               >
                 {showPassword ? (
                   <EyeSlashIcon className="w-5 h-5" />
@@ -145,23 +145,23 @@ const LoginPage = () => {
 
         {/* Footer */}
         <div className="mt-6 text-center">
-          <p className="text-sm text-gray-600 dark:text-slate-400">
+          <p className="text-sm text-gray-600">
             Don't have an account?{' '}
             <button
               onClick={() => navigate('/signup')}
-              className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300 transition-colors duration-200"
+              className="font-medium text-blue-600 hover:text-blue-500 transition-colors duration-200"
             >
               Create doctor account
             </button>
           </p>
 
           {/* Patient Portal Link */}
-          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-slate-600">
-            <p className="text-sm text-gray-600 dark:text-slate-400">
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <p className="text-sm text-gray-600">
               Are you a patient?{' '}
               <button
                 onClick={() => window.location.href = 'http://localhost:3000/login'}
-                className="font-medium text-green-600 hover:text-green-500 dark:text-green-400 dark:hover:text-green-300 transition-colors"
+                className="font-medium text-green-600 hover:text-green-500 transition-colors"
               >
                 Patient Portal Login
               </button>

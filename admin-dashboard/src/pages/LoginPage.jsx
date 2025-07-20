@@ -32,41 +32,41 @@ const LoginPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center p-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="max-w-md w-full bg-white dark:bg-slate-800 rounded-3xl shadow-2xl p-8"
+        className="max-w-md w-full bg-white rounded-3xl shadow-2xl p-8"
       >
         {/* Header */}
         <div className="text-center mb-8">
           <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
             <ShieldCheckIcon className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+          <h1 className="text-2xl font-bold text-gray-900">
             Admin Portal
           </h1>
-          <p className="text-gray-600 dark:text-slate-400 mt-2">
+          <p className="text-gray-600 mt-2">
             Sign in to PulseMate Admin Dashboard
           </p>
         </div>
 
         {/* Error Message */}
         {error && (
-          <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-            <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-red-600 text-sm">{error}</p>
           </div>
         )}
 
         {/* Demo Credentials */}
-        <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-          <h3 className="text-sm font-medium text-blue-800 dark:text-blue-300 mb-2">
+        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <h3 className="text-sm font-medium text-blue-800 mb-2">
             Admin Account
           </h3>
-          <p className="text-xs text-blue-700 dark:text-blue-300 mb-2">
+          <p className="text-xs text-blue-700 mb-2">
             For the admin dashboard, use these credentials:
           </p>
-          <div className="text-xs text-blue-600 dark:text-blue-400 space-y-1">
+          <div className="text-xs text-blue-600 space-y-1">
             <p><strong>Email:</strong> admin@pulsemate.com</p>
             <p><strong>Password:</strong> admin123</p>
           </div>
@@ -76,7 +76,7 @@ const LoginPage = () => {
               setEmail('admin@pulsemate.com');
               setPassword('admin123');
             }}
-            className="mt-2 text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 font-medium"
+            className="mt-2 text-xs text-blue-600 hover:text-blue-800 font-medium"
           >
             Fill credentials
           </button>
@@ -85,7 +85,7 @@ const LoginPage = () => {
         {/* Login Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Email Address
             </label>
             <input
@@ -93,13 +93,13 @@ const LoginPage = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full px-4 py-3 border border-gray-200 dark:border-slate-600 rounded-2xl bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
+              className="w-full px-4 py-3 border border-gray-200 rounded-2xl bg-gray-50 text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
               placeholder="Enter your email"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Password
             </label>
             <div className="relative">
@@ -108,13 +108,13 @@ const LoginPage = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full px-4 py-3 pr-12 border border-gray-200 dark:border-slate-600 rounded-2xl bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
+                className="w-full px-4 py-3 pr-12 border border-gray-200 rounded-2xl bg-gray-50 text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
                 placeholder="Enter your password"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-slate-300"
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
               >
                 {showPassword ? (
                   <EyeSlashIcon className="w-5 h-5" />
