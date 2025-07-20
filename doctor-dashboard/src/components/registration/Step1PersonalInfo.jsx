@@ -79,7 +79,7 @@ const Step1PersonalInfo = ({ formData, handleChange, error }) => {
             onChange={handleChange}
             required
             className="w-full p-3 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            placeholder="+234 000 000 0000"
+            placeholder="+234-000-000-0000"
           />
         </div>
 

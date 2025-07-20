@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
@@ -64,7 +64,7 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-slate-900 dark:to-slate-800 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -154,6 +154,19 @@ const LoginPage = () => {
               Create doctor account
             </button>
           </p>
+
+          {/* Patient Portal Link */}
+          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-slate-600">
+            <p className="text-sm text-gray-600 dark:text-slate-400">
+              Are you a patient?{' '}
+              <button
+                onClick={() => window.location.href = 'http://localhost:3000/login'}
+                className="font-medium text-green-600 hover:text-green-500 dark:text-green-400 dark:hover:text-green-300 transition-colors"
+              >
+                Patient Portal Login
+              </button>
+            </p>
+          </div>
         </div>
       </motion.div>
     </div>

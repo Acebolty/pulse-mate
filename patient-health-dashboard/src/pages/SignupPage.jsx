@@ -217,18 +217,57 @@ const SignupPage = () => {
   }
 
   return (
-    <MultiStepForm
-      currentStep={currentStep}
-      totalSteps={4}
-      onNext={handleNext}
-      onPrev={handlePrev}
-      onSubmit={handleSubmit}
-      canProceed={canProceed()}
-      isLastStep={currentStep === 4}
-      loading={loading}
-    >
-      {renderStepContent()}
-    </MultiStepForm>
+    <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 dark:bg-slate-900 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="flex justify-center mb-4">
+            <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+            </div>
+          </div>
+          <h1 className="text-3xl font-extrabold text-gray-900 dark:text-slate-100">
+            Patient Registration
+          </h1>
+          <p className="mt-2 text-gray-600 dark:text-slate-400">
+            Join PulseMate to monitor your health journey
+          </p>
+        </div>
+
+        {/* Multi-Step Form */}
+        <MultiStepForm
+          currentStep={currentStep}
+          totalSteps={4}
+          onNext={handleNext}
+          onPrev={handlePrev}
+          onSubmit={handleSubmit}
+          canProceed={canProceed()}
+          isLastStep={currentStep === 4}
+          loading={loading}
+        >
+          {renderStepContent()}
+        </MultiStepForm>
+
+        {/* Footer */}
+        <div className="mt-8 text-center">
+          <p className="text-sm text-gray-600 dark:text-slate-400">
+            Already have an account?{' '}
+            <button
+              onClick={() => navigate('/login')}
+              className="font-medium text-green-600 hover:text-green-500 dark:text-green-400 dark:hover:text-green-300 transition-colors"
+            >
+              Sign in here
+            </button>
+          </p>
+          <p className="mt-4 text-xs text-gray-500 dark:text-slate-500">
+            By registering, you agree to our Terms of Service and Privacy Policy.
+            Your health information is protected and secure.
+          </p>
+        </div>
+      </div>
+    </div>
   );
 };
 
