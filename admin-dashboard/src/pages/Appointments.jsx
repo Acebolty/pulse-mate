@@ -55,9 +55,7 @@ const Appointments = () => {
 
   // Fetch past appointments when filters change
   useEffect(() => {
-    if (statusFilter !== 'all' || searchTerm) {
-      fetchPastAppointments(1) // Reset to page 1 when filtering
-    }
+    fetchPastAppointments(1) // Reset to page 1 when filtering
   }, [statusFilter, searchTerm])
 
   // Close dropdown when clicking outside
@@ -369,10 +367,10 @@ const Appointments = () => {
         </div>
 
         <div className="mt-6 flex items-center space-x-6 text-sm">
-          <div className="flex items-center space-x-2 bg-white/10 rounded-lg px-3 py-1.5">
+          {/* <div className="flex items-center space-x-2 bg-white/10 rounded-lg px-3 py-1.5">
             <ChatBubbleLeftRightIcon className="w-4 h-4" />
             <span>Chat Sessions Only</span>
-          </div>
+          </div> */}
         </div>
       </div>
 
@@ -511,7 +509,6 @@ const Appointments = () => {
               <option value="Open Chat">Open Chat</option>
               <option value="Completed">Completed</option>
               <option value="Cancelled">Cancelled</option>
-              <option value="Expired">Expired</option>
             </select>
           </div>
         </div>

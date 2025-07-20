@@ -5,7 +5,6 @@ import {
   BellIcon,
   SunIcon,
   MoonIcon,
-  UserCircleIcon,
   Cog6ToothIcon,
   ArrowRightOnRectangleIcon,
   ClockIcon,
@@ -219,7 +218,7 @@ const Header = ({ onMenuClick, isCollapsed, user }) => {
               {getTimeBasedGreeting()}
             </h1>
             <p className="text-sm text-gray-500 dark:text-slate-400">
-              Welcome back, {getDisplayName().split(' ')[0]}
+              Welcome back, Admin
             </p>
           </div>
         </div>
@@ -418,19 +417,6 @@ const Header = ({ onMenuClick, isCollapsed, user }) => {
                     {getUserEmail()}
                   </p>
                 </div>
-                
-                <button
-                  onClick={() => {
-                    navigate('/admin/profile')
-                    setShowProfileMenu(false)
-                  }}
-                  className="w-full flex items-center px-4 py-2 text-sm text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors duration-200"
-                >
-                  <UserCircleIcon className="w-4 h-4 mr-3" />
-                  View Profile
-                </button>
-                
-                <hr className="my-2 border-gray-200 dark:border-slate-700" />
                 
                 <button
                   onClick={handleSignOut}

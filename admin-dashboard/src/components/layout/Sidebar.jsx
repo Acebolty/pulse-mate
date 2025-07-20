@@ -18,7 +18,6 @@ const navigation = [
   { name: "Patients", href: "/admin/patients", icon: UserGroupIcon },
   { name: "Doctors", href: "/admin/doctors", icon: ShieldCheckIcon },
   { name: "Appointments", href: "/admin/appointments", icon: CalendarIcon },
-  { name: "Profile", href: "/admin/profile", icon: UserIcon },
 ]
 
 const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse, user }) => {
@@ -137,8 +136,8 @@ const Sidebar = ({ isOpen, onClose, isCollapsed, onToggleCollapse, user }) => {
         {!isCollapsed && (
           <div className="p-4 border-t border-gray-200 dark:border-slate-700">
             <div className="text-xs text-gray-500 dark:text-slate-400 text-center">
-              <p>PulseMate Admin v1.0</p>
-              <p className="mt-1">© 2024 All rights reserved</p>
+              <p>PulseMate Admin</p>
+              <p className="mt-1">© 2025 All rights reserved</p>
             </div>
           </div>
         )}
