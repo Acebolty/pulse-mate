@@ -149,9 +149,12 @@ router.get('/doctors/:doctorId', authMiddleware, adminMiddleware, getDoctorDetai
 router.put('/doctors/:doctorId/availability', authMiddleware, adminMiddleware, updateDoctorAvailability);
 
 // @route   DELETE /api/admin/doctors/:doctorId
-// @desc    Delete doctor account
+// @desc    Delete doctor account and all associated data
 // @access  Private (Admin only)
-router.delete('/doctors/:doctorId', authMiddleware, adminMiddleware, deleteDoctorAccount);
+router.delete('/doctors/:doctorId', (req, res, next) => {
+  console.log('🗑️ DELETE /api/admin/doctors/:doctorId route called with doctorId:', req.params.doctorId);
+  next();
+}, authMiddleware, adminMiddleware, deleteUser);
 
 // ==========================================
 // APPOINTMENT APPROVAL ROUTES

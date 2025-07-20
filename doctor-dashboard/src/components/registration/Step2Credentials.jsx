@@ -68,7 +68,7 @@ const Step2Credentials = ({ formData, handleChange, handleDirectFieldChange, err
             onChange={handleChange}
             required
             className="w-full p-3 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            placeholder="e.g., California, New York, Ontario"
+            placeholder="e.g., Lagos, Ibadan, FCT Abuja"
           />
         </div>
 

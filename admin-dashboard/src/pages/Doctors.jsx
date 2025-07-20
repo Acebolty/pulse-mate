@@ -40,6 +40,11 @@ const Doctors = () => {
   const [approvalAction, setApprovalAction] = useState({ action: '', doctorId: '' })
   const [approvalReason, setApprovalReason] = useState('')
 
+  // Delete modal states
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [doctorToDelete, setDoctorToDelete] = useState(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
+
   // Fetch doctors data
   const fetchDoctors = async () => {
     try {
@@ -306,6 +311,44 @@ const Doctors = () => {
     setOpenActionsDropdown(openActionsDropdown === doctorId ? null : doctorId)
   }
 
+  // Handle delete doctor
+  const handleDeleteDoctor = async (doctor) => {
+    setDoctorToDelete(doctor)
+    setShowDeleteModal(true)
+    setOpenActionsDropdown(null) // Close dropdown
+  }
+
+  const confirmDeleteDoctor = async () => {
+    if (!doctorToDelete) return
+
+    console.log('🗑️ Starting delete process for doctor:', doctorToDelete.id);
+    setDeleteLoading(true)
+    try {
+      console.log('🗑️ Making DELETE request to:', `/admin/doctors/${doctorToDelete.id}`);
+      const response = await deleteDoctorAccount(doctorToDelete.id)
+      console.log('🗑️ Delete response received:', response);
+
+      if (response.success) {
+        // Remove doctor from local state
+        setDoctors(doctors.filter(d => d.id !== doctorToDelete.id))
+        setShowDeleteModal(false)
+        setDoctorToDelete(null)
+
+        // Show success message
+        alert(`✅ ${response.message}`)
+        console.log('✅ Doctor deleted successfully:', response.deletedUser)
+      } else {
+        throw new Error(response.message || 'Failed to delete doctor')
+      }
+    } catch (error) {
+      console.error('❌ Error deleting doctor:', error)
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to delete doctor'
+      alert(`❌ Error: ${errorMessage}`)
+    } finally {
+      setDeleteLoading(false)
+    }
+  }
+
   // Since filtering is now done on the backend, we just need to sort the data
   const sortedDoctors = [...doctors].sort((a, b) => {
     switch (sortBy) {
@@ -335,10 +378,10 @@ const Doctors = () => {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-          Doctor Management
+          Provider Management
         </h1>
         <p className="text-gray-600 dark:text-slate-400 mt-1">
-          Monitor and manage all registered doctors ({pagination.total} total)
+          Monitor and manage all registered providers ({pagination.total} total)
         </p>
       </div>
 
@@ -350,7 +393,7 @@ const Doctors = () => {
             <MagnifyingGlassIcon className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
               type="text"
-              placeholder="Search doctors..."
+              placeholder="Search providers..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-12 pr-4 py-3 border border-gray-200 dark:border-slate-600 rounded-2xl bg-gray-50 dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200"
@@ -483,14 +526,22 @@ const Doctors = () => {
                   transition={{ delay: index * 0.05 }}
                   className="hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors duration-200"
                 >
-                  {/* Doctor Info */}
+                  {/* Provider Info */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg">
-                        <span className="text-white font-semibold text-sm">
-                          {doctor.firstName?.[0]}{doctor.lastName?.[0]}
-                        </span>
-                      </div>
+                      {doctor.profilePicture ? (
+                        <img
+                          src={doctor.profilePicture}
+                          alt={doctor.name}
+                          className="w-12 h-12 rounded-2xl object-cover shadow-lg ring-2 ring-blue-100 dark:ring-blue-700/50"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
+                          <span className="text-white font-semibold text-sm">
+                            {doctor.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
+                          </span>
+                        </div>
+                      )}
                       <div>
                         <div className="text-sm font-semibold text-gray-900 dark:text-white">
                           {doctor.name}
@@ -675,7 +726,7 @@ const Doctors = () => {
                             <div className="border-t border-gray-200 dark:border-slate-600 my-1"></div>
 
                             <button
-                              onClick={() => console.log('Delete doctor:', doctor.id)}
+                              onClick={() => handleDeleteDoctor(doctor)}
                               className="w-full text-left px-3 py-2 text-xs text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex items-center space-x-2"
                             >
                               <TrashIcon className="w-3 h-3" />
@@ -987,6 +1038,88 @@ const Doctors = () => {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && doctorToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl max-w-md w-full"
+          >
+            {/* Modal Header */}
+            <div className="p-6 border-b border-gray-200 dark:border-slate-700">
+              <div className="flex items-center space-x-3">
+                <div className="w-12 h-12 bg-red-100 dark:bg-red-900/20 rounded-2xl flex items-center justify-center">
+                  <ExclamationTriangleIcon className="w-6 h-6 text-red-600 dark:text-red-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Delete Doctor Account
+                  </h3>
+                  <p className="text-sm text-gray-500 dark:text-slate-400">
+                    This action cannot be undone
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6">
+              <p className="text-gray-700 dark:text-slate-300 mb-4">
+                Are you sure you want to delete <strong>{doctorToDelete.name}</strong>?
+                This will permanently remove all their data including:
+              </p>
+              <ul className="list-disc list-inside text-sm text-gray-600 dark:text-slate-400 space-y-1 mb-6">
+                <li>Doctor profile and personal information</li>
+                <li>Medical credentials and documents</li>
+                <li>Appointment history with patients</li>
+                <li>All associated medical records</li>
+              </ul>
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4">
+                <div className="flex items-center space-x-2">
+                  <ExclamationTriangleIcon className="w-5 h-5 text-red-600 dark:text-red-400" />
+                  <p className="text-sm text-red-600 dark:text-red-400 font-medium">
+                    This action is permanent and cannot be undone
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="p-6 border-t border-gray-200 dark:border-slate-700 flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false)
+                  setDoctorToDelete(null)
+                }}
+                disabled={deleteLoading}
+                className="px-6 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-2xl transition-all duration-200 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteDoctor}
+                disabled={deleteLoading}
+                className="px-6 py-2 bg-red-500 hover:bg-red-600 text-white rounded-2xl transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 flex items-center space-x-2"
+              >
+                {deleteLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <>
+                    <TrashIcon className="w-4 h-4" />
+                    <span>Delete Doctor</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </motion.div>
         </div>
       )}
     </div>

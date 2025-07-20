@@ -524,6 +524,7 @@ const getAllDoctors = async (req, res) => {
             phone: doctor.phone,
             dateOfBirth: doctor.dateOfBirth,
             gender: doctor.gender,
+            profilePicture: doctor.profilePicture, // Add profile picture
 
             // Doctor-specific info
             specialty: doctor.doctorInfo?.specialization || 'Not specified',
@@ -561,7 +562,10 @@ const getAllDoctors = async (req, res) => {
           return {
             id: doctor._id,
             name: `${doctor.doctorInfo?.title || 'Dr.'} ${doctor.firstName} ${doctor.lastName}`,
+            firstName: doctor.firstName,
+            lastName: doctor.lastName,
             email: doctor.email,
+            profilePicture: doctor.profilePicture, // Add profile picture
             specialty: doctor.doctorInfo?.specialization || 'Not specified',
             approvalStatus: doctor.doctorInfo?.approvalStatus || 'pending_review',
             patientCount: 0,
@@ -1387,15 +1391,16 @@ const getRecentActivities = async (req, res) => {
       role: 'doctor',
       createdAt: { $gte: sevenDaysAgo }
     })
-    .select('firstName lastName createdAt')
+    .select('firstName lastName createdAt doctorInfo.title')
     .sort({ createdAt: -1 })
     .limit(5);
 
     recentDoctors.forEach(doctor => {
+      const title = doctor.doctorInfo?.title || 'Dr.';
       activities.push({
         id: `doctor_${doctor._id}`,
         type: 'doctor_signup',
-        message: `New provider registration: Dr. ${doctor.firstName} ${doctor.lastName}`,
+        message: `New provider registration: ${title} ${doctor.firstName} ${doctor.lastName}`,
         timestamp: doctor.createdAt,
         color: 'green'
       });
@@ -1521,8 +1526,8 @@ const formatTimeAgo = (timestamp) => {
  */
 const deleteUser = async (req, res) => {
   try {
-    const { userId, patientId } = req.params;
-    const userIdToDelete = userId || patientId; // Support both parameter names
+    const { userId, patientId, doctorId } = req.params;
+    const userIdToDelete = userId || patientId || doctorId; // Support all parameter names
 
     console.log(`🗑️ Admin deleting user: ${userIdToDelete}`);
 

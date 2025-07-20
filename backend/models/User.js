@@ -19,6 +19,7 @@ const userSchema = new Schema({
   patientId: {
     type: String,
     unique: true,
+    sparse: true, // Only index documents that have this field (ignores null/undefined)
     required: false, // Make it optional for now, we'll handle it in pre-save
     trim: true
   },
