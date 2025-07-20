@@ -6,11 +6,84 @@ const HealthData = require('../models/HealthData');
 const Alert = require('../models/Alert');
 const auth = require('../middleware/authMiddleware');
 
+// Test endpoint
+router.get('/test', (req, res) => {
+  res.json({ message: 'Simulation routes are working!', timestamp: new Date() });
+});
+
+// Test database connection
+router.get('/test-db', async (req, res) => {
+  try {
+    const count = await HealthData.countDocuments();
+    res.json({ message: 'Database connection working!', healthDataCount: count });
+  } catch (error) {
+    res.status(500).json({ message: 'Database connection failed', error: error.message });
+  }
+});
+
+// Test simulator without auth
+router.get('/test-simulator', async (req, res) => {
+  try {
+    const User = require('../models/User');
+    const patient = await User.findOne({ role: 'patient' });
+    if (!patient) {
+      return res.status(404).json({ message: 'No patient found' });
+    }
+
+    const simulator = new HealthDataSimulator(patient._id);
+    const testDate = new Date();
+    const dayData = await simulator.generateDayData(testDate, 'normal');
+
+    res.json({
+      message: 'Simulator working!',
+      userId: patient._id,
+      generatedEntries: dayData.length,
+      sampleEntry: dayData[0]
+    });
+  } catch (error) {
+    console.error('Simulator test error:', error);
+    res.status(500).json({ message: 'Simulator test failed', error: error.message, stack: error.stack });
+  }
+});
+
+// Test full simulation with save
+router.get('/test-full-simulation', async (req, res) => {
+  try {
+    const User = require('../models/User');
+    const patient = await User.findOne({ role: 'patient' });
+    if (!patient) {
+      return res.status(404).json({ message: 'No patient found' });
+    }
+
+    const simulator = new HealthDataSimulator(patient._id);
+    const testDate = new Date();
+    const dayData = await simulator.generateDayData(testDate, 'normal');
+
+    // Try to save the data
+    const savedData = await simulator.saveToDatabase(dayData);
+
+    res.json({
+      message: 'Full simulation working!',
+      userId: patient._id,
+      generatedEntries: dayData.length,
+      savedEntries: savedData.length,
+      sampleSavedEntry: savedData[0]
+    });
+  } catch (error) {
+    console.error('Full simulation test error:', error);
+    res.status(500).json({ message: 'Full simulation test failed', error: error.message, stack: error.stack });
+  }
+});
+
 // @route   POST /api/simulation/generate-historical
 // @desc    Generate historical health data for the authenticated user
 // @access  Private
 router.post('/generate-historical', auth, async (req, res) => {
   try {
+    console.log('🔄 Historical data generation request received');
+    console.log('Request body:', req.body);
+    console.log('User ID:', req.user?.id);
+
     const { days = 30, scenarios = [] } = req.body;
     const userId = req.user.id;
 
@@ -60,22 +133,19 @@ router.post('/generate-historical', auth, async (req, res) => {
           heartRate: savedData.filter(item => item.dataType === 'heartRate').length,
           bloodPressure: savedData.filter(item => item.dataType === 'bloodPressure').length,
           glucoseLevel: savedData.filter(item => item.dataType === 'glucoseLevel').length,
-          weight: savedData.filter(item => item.dataType === 'weight').length,
-          bodyTemperature: savedData.filter(item => item.dataType === 'bodyTemperature').length,
-          stepsTaken: savedData.filter(item => item.dataType === 'stepsTaken').length,
-          caloriesBurned: savedData.filter(item => item.dataType === 'caloriesBurned').length,
-          sleepDuration: savedData.filter(item => item.dataType === 'sleepDuration').length
-        },
-        alertsGenerated: generatedAlerts.length
+          bodyTemperature: savedData.filter(item => item.dataType === 'bodyTemperature').length
+        }
       }
     });
 
   } catch (error) {
     console.error('Error generating historical data:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({
       success: false,
       message: 'Failed to generate historical health data',
-      error: error.message
+      error: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 });
@@ -140,7 +210,7 @@ router.post('/generate-day', auth, async (req, res) => {
 // @access  Private
 router.post('/generate-realtime', auth, async (req, res) => {
   try {
-    const { dataTypes = ['heartRate', 'bloodPressure', 'bodyTemperature'] } = req.body;
+    const { dataTypes = ['heartRate', 'bloodPressure', 'bodyTemperature', 'glucoseLevel'] } = req.body;
     const userId = req.user.id;
 
     // Create simulator instance

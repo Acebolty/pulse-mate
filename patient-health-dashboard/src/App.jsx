@@ -9,6 +9,7 @@ import Settings from "./pages/Settings"
 
 import Alerts from "./pages/Alerts"
 import Profile from "./pages/ProfileNew"
+import LandingPage from "./pages/LandingPage"
 import LoginPage from "./pages/LoginPage"
 import SignupPage from "./pages/SignupPage"
 import ProtectedRoute from "./components/auth/ProtectedRoute"
@@ -22,6 +23,9 @@ function App() {
   return (
     <Router>
       <Routes>
+        {/* Landing page as default route */}
+        <Route path="/" element={<LandingPage />} />
+
         {/* Public routes */}
         <Route
           path="/login"

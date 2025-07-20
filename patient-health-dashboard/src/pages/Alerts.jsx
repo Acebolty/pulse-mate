@@ -189,7 +189,7 @@ const Alerts = () => {
         className="flex flex-col sm:flex-row sm:items-center sm:justify-between"
       >
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-slate-100">Intelligent Health Alerts</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-slate-100">Health Alerts</h1>
           <p className="text-sm sm:text-base text-gray-600 dark:text-slate-300 mt-1">
             {loading ? 'Analyzing health data...' : `${unreadCount} unread alerts • ${criticalCount} critical alerts • ${alertsThisWeek} this week`}
           </p>

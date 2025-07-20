@@ -7,9 +7,7 @@ class HealthDataSimulator {
       heartRate: { min: 65, max: 85, resting: 72 },
       bloodPressure: { systolic: { min: 110, max: 130, normal: 120 }, diastolic: { min: 70, max: 85, normal: 80 } },
       glucoseLevel: { min: 80, max: 100, normal: 90 },
-      bodyTemperature: { min: 97.8, max: 99.2, normal: 98.6 },
-      stepsTaken: { min: 6000, max: 12000, target: 10000 },
-      sleepDuration: { min: 6.5, max: 9, optimal: 8 }
+      bodyTemperature: { min: 97.8, max: 99.2, normal: 98.6 }
     };
   }
 
@@ -126,53 +124,7 @@ class HealthDataSimulator {
     return Math.round(temperature * 10) / 10;
   }
 
-  generateSteps(dayType = 'weekday') {
-    const { min, max, target } = this.baselineData.stepsTaken;
-    
-    // Day type adjustments
-    const dayMultipliers = {
-      'weekday': 1.0,
-      'weekend': 0.8,
-      'active_day': 1.4,
-      'rest_day': 0.6
-    };
 
-    const baseSteps = target * (dayMultipliers[dayType] || 1.0);
-    const variation = (Math.random() - 0.3) * 3000; // Slight bias toward higher steps
-    
-    const steps = Math.round(Math.max(min, Math.min(max * 1.2, baseSteps + variation)));
-    return steps;
-  }
-
-
-
-  generateSleepDuration(dayType = 'weekday', stressLevel = 'normal') {
-    const { min, max, optimal } = this.baselineData.sleepDuration;
-
-    // Day type adjustments (more realistic patterns)
-    const sleepAdjustments = {
-      'weekday': -0.4,        // Less sleep on work days
-      'weekend': 0.8,         // More sleep on weekends
-      'stressful_day': -1.2,  // Poor sleep when stressed
-      'relaxed_day': 0.4,     // Good sleep when relaxed
-      'sick_day': 1.0,        // More sleep when sick
-      'active_day': -0.2      // Slightly less but better quality
-    };
-
-    // Stress level affects sleep quality
-    const stressAdjustments = {
-      'low': 0.3,
-      'normal': 0,
-      'moderate': -0.5,
-      'high': -1.0
-    };
-
-    const baseSleep = optimal + (sleepAdjustments[dayType] || 0) + (stressAdjustments[stressLevel] || 0);
-    const variation = (Math.random() - 0.5) * 1.2; // Reduced variation for more realistic patterns
-
-    const sleepHours = Math.max(min, Math.min(max, baseSleep + variation));
-    return Math.round(sleepHours * 10) / 10;
-  }
 
   // Generate a full day's worth of realistic health data
   async generateDayData(date, scenario = 'normal') {
@@ -190,11 +142,6 @@ class HealthDataSimulator {
     };
 
     const dayScenario = scenarios[scenario] || scenarios['normal'];
-    const dayOffset = Math.floor((date - new Date()) / (1000 * 60 * 60 * 24));
-
-    // Generate daily metrics
-    const dailySteps = this.generateSteps(dayScenario.activity);
-    const dailySleep = this.generateSleepDuration(dayScenario.activity, dayScenario.stress);
 
     // Morning readings (6-9 AM)
     const morningHour = 7 + Math.random() * 2;
@@ -244,36 +191,46 @@ class HealthDataSimulator {
       value: fastingGlucose,
       unit: 'mg/dL',
       timestamp: new Date(morningTime.getTime() + 20 * 60000), // 20 min later
-      source: 'Glucose Monitor',
-      notes: 'Fasting'
+      source: 'Glucose Monitor'
     });
 
-    // Evening readings (6-9 PM)
+    // Evening readings (6-9 PM) - Additional readings for more data
     const eveningHour = 19 + Math.random() * 2;
     const eveningTime = new Date(date);
     eveningTime.setHours(Math.floor(eveningHour), Math.floor((eveningHour % 1) * 60), 0, 0);
 
-    // Steps (end of day)
+    // Evening Heart Rate
+    const eveningHR = this.generateHeartRate(eveningHour, dayScenario.stress);
     dayData.push({
       userId: this.userId,
-      dataType: 'stepsTaken',
-      value: dailySteps,
-      unit: 'steps',
-      timestamp: eveningTime,
-      source: 'iPhone'
+      dataType: 'heartRate',
+      value: eveningHR,
+      unit: 'bpm',
+      timestamp: new Date(eveningTime),
+      source: 'Apple Watch'
     });
 
-    // Sleep (previous night - recorded in morning, only for past days)
-    if (date < new Date()) { // Only add sleep for past days
-      const sleepTime = new Date(morningTime.getTime() + 25 * 60000); // 25 min after morning routine
+    // Evening Blood Pressure
+    const eveningBP = this.generateBloodPressure(eveningHour, dayScenario.stress);
+    dayData.push({
+      userId: this.userId,
+      dataType: 'bloodPressure',
+      value: eveningBP,
+      unit: 'mmHg',
+      timestamp: new Date(eveningTime.getTime() + 10 * 60000), // 10 min later
+      source: 'BP Monitor'
+    });
+
+    // Post-meal glucose (if not sick day)
+    if (dayScenario.health !== 'slight_fever') {
+      const postMealGlucose = this.generateGlucoseLevel(eveningHour, 'post_meal_2hr');
       dayData.push({
         userId: this.userId,
-        dataType: 'sleepDuration',
-        value: dailySleep,
-        unit: 'hours',
-        timestamp: sleepTime,
-        source: 'Sleep Tracker',
-        notes: `Sleep quality: ${dailySleep >= 8 ? 'Excellent' : dailySleep >= 7 ? 'Good' : dailySleep >= 6 ? 'Fair' : 'Poor'}`
+        dataType: 'glucoseLevel',
+        value: postMealGlucose,
+        unit: 'mg/dL',
+        timestamp: new Date(eveningTime.getTime() + 30 * 60000), // 30 min later
+        source: 'Glucose Monitor'
       });
     }
 
@@ -301,14 +258,19 @@ class HealthDataSimulator {
   // Save generated data to database
   async saveToDatabase(healthDataArray) {
     try {
+      console.log(`Attempting to save ${healthDataArray.length} health data entries`);
+      console.log('Sample entry:', JSON.stringify(healthDataArray[0], null, 2));
+
       // Clear existing data for this user (optional)
       // await HealthData.deleteMany({ userId: this.userId });
-      
+
       // Insert new data
       const savedData = await HealthData.insertMany(healthDataArray);
+      console.log(`Successfully saved ${savedData.length} entries`);
       return savedData;
     } catch (error) {
       console.error('Error saving simulated health data:', error);
+      console.error('Failed entry sample:', JSON.stringify(healthDataArray[0], null, 2));
       throw error;
     }
   }

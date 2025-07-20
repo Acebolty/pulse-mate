@@ -19,6 +19,12 @@ app.use(cors());
 // Parse incoming JSON requests - allows us to read req.body
 app.use(express.json());
 
+// Add request logging
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  next();
+});
+
 // Define a port for the server to listen on
 const PORT = process.env.PORT || 5001;
 
@@ -50,6 +56,43 @@ mongoose.connect(MONGO_URI)
 // Basic route to test if the server is running
 app.get('/', (req, res) => {
   res.send('Remote Health Monitoring Backend Server is running!');
+});
+
+// Public route to get basic platform statistics for landing page
+app.get('/api/public/stats', async (req, res) => {
+  try {
+    const User = require('./models/User');
+
+    // Get counts for patients and doctors
+    const totalPatients = await User.countDocuments({
+      $or: [
+        { role: { $exists: false } }, // Users without role (default patients)
+        { role: 'patient' }
+      ]
+    });
+
+    const totalDoctors = await User.countDocuments({
+      role: 'doctor',
+      'doctorInfo.approvalStatus': 'approved' // Only count approved doctors
+    });
+
+    res.json({
+      success: true,
+      data: {
+        totalPatients,
+        totalDoctors,
+        uptime: '99.9%', // Static value for now
+        support: '24/7' // Static value
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching public stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch platform statistics',
+      error: error.message
+    });
+  }
 });
 
 // Import and use auth routes
