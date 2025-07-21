@@ -124,7 +124,7 @@ const simulationRoutes = require('./routes/simulation');
 app.use('/api/simulation', simulationRoutes); // All routes will be prefixed with /api/simulation
 
 // Import and use email test routes (for development/testing)
-const emailTestRoutes = require('./routes/emailTest');
+const emailTestRoutes = require('./routes/emailTestRoutes');
 app.use('/api/email-test', emailTestRoutes); // All routes will be prefixed with /api/email-test
 
 // Import and use notification routes

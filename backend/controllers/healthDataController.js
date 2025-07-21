@@ -119,11 +119,11 @@ const addHealthData = async (req, res) => {
               emailAlertTypes: user?.settings?.notifications?.emailAlertTypes
             });
 
-            // Temporarily force email sending for testing
-            if (user) {
+            // Check if user has email notifications enabled
+            if (user && user.settings?.notifications?.emailNotifications && user.settings?.notifications?.healthAlerts) {
               // Check if user wants emails for this specific alert type
               const emailAlertTypes = user.settings?.notifications?.emailAlertTypes || {
-                critical: true, warning: false, info: false, success: false
+                critical: true, warning: true, info: false, success: false
               };
 
               const shouldSendEmail = emailAlertTypes[alertToCreate.type];
@@ -151,8 +151,14 @@ const addHealthData = async (req, res) => {
                   console.error('Failed to send health alert email:', emailResult.error);
                 }
               } else {
-                console.log(`Skipping email for ${alertToCreate.type} alert (user preference):`, alertToCreate.title);
+                console.log(`Skipping email for ${alertToCreate.type} alert (alert type disabled):`, alertToCreate.title);
               }
+            } else {
+              console.log(`Skipping email for ${alertToCreate.type} alert (email notifications disabled):`, {
+                emailNotifications: user?.settings?.notifications?.emailNotifications,
+                healthAlerts: user?.settings?.notifications?.healthAlerts,
+                alertTitle: alertToCreate.title
+              });
             }
           } catch (emailError) {
             console.error('Error sending health alert email:', emailError);
