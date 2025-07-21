@@ -304,7 +304,7 @@ const SimulationPanel = ({ onClose, onDataGenerated }) => {
         </div>
 
         {/* Scenarios */}
-        <div className="mb-6">
+        {/* <div className="mb-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-4">
             Available Scenarios
           </h3>
@@ -332,7 +332,7 @@ const SimulationPanel = ({ onClose, onDataGenerated }) => {
               );
             })}
           </div>
-        </div>
+        </div> */}
 
         {/* Loading State */}
         {loading && (

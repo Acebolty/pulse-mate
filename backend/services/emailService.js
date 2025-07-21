@@ -19,9 +19,15 @@ class EmailService {
       // Production or development with real Gmail credentials
       this.transporter = nodemailer.createTransport({
         service: 'gmail',
+        host: 'smtp.gmail.com',
+        port: 587,
+        secure: false, // true for 465, false for other ports
         auth: {
           user: process.env.EMAIL_USER?.replace(/['"]/g, ''), // Remove quotes if present
           pass: process.env.EMAIL_PASSWORD?.replace(/['"]/g, '') // Remove quotes if present
+        },
+        tls: {
+          rejectUnauthorized: false
         }
       });
       console.log('Gmail email service configured');
@@ -349,6 +355,55 @@ This is an automated health alert from PulseMate Health Monitor.
     // This can be expanded later
   }
 
+  async sendOTPEmail(userEmail, otp) {
+    if (!this.transporter) {
+      console.log('📧 Email service not configured - OTP email skipped');
+      return { success: true, messageId: 'mock-otp-email' };
+    }
+
+    try {
+      const emailTemplate = this.generateOTPEmailTemplate(otp);
+
+      const mailOptions = {
+        from: `"PulseMate Health Monitor" <${process.env.EMAIL_USER}>`,
+        to: userEmail,
+        subject: 'Your PulseMate Email Verification Code',
+        html: emailTemplate,
+        text: this.generatePlainTextOTP(otp),
+        // Anti-spam headers
+        headers: {
+          'X-Priority': '1',
+          'X-MSMail-Priority': 'High',
+          'Importance': 'high',
+          'X-Mailer': 'PulseMate Health Monitor',
+          'Reply-To': process.env.EMAIL_USER
+        }
+      };
+
+      const info = await this.transporter.sendMail(mailOptions);
+
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('OTP email sent successfully!');
+        if (info.messageId && !info.messageId.startsWith('mock-')) {
+          console.log('Preview URL:', nodemailer.getTestMessageUrl(info));
+        }
+      }
+
+      return {
+        success: true,
+        messageId: info.messageId,
+        previewUrl: process.env.NODE_ENV !== 'production' && info.messageId && !info.messageId.startsWith('mock-')
+          ? nodemailer.getTestMessageUrl(info) : null
+      };
+    } catch (error) {
+      console.error('Failed to send OTP email:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
+
 
 
 
@@ -568,9 +623,141 @@ This is your automated weekly health summary from PulseMate.
 
 
 
+  generateOTPEmailTemplate(otp) {
+    return `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Email Verification - PulseMate</title>
+        <style>
+          body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+          }
+          .container {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          }
+          .header {
+            text-align: center;
+            margin-bottom: 30px;
+          }
+          .logo {
+            font-size: 28px;
+            font-weight: bold;
+            color: #10b981;
+            margin-bottom: 10px;
+          }
+          .otp-container {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            padding: 30px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 30px 0;
+          }
+          .otp-code {
+            font-size: 36px;
+            font-weight: bold;
+            letter-spacing: 8px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+          }
+          .warning {
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            color: #92400e;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+          }
+          .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+            color: #6b7280;
+            font-size: 14px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <div class="logo">PulseMate</div>
+            <h1 style="color: #1f2937; margin: 0;">Email Verification</h1>
+          </div>
 
+          <p>Dear User,</p>
 
+          <p>Thank you for creating an account with PulseMate Health Monitor. To complete your registration and secure your account, please verify your email address using the verification code provided below.</p>
 
+          <p>This verification step helps us ensure the security of your health information and account access.</p>
+
+          <div class="otp-container">
+            <h2 style="margin: 0 0 10px 0;">Your Verification Code</h2>
+            <div class="otp-code">${otp}</div>
+            <p style="margin: 10px 0 0 0; font-size: 14px; opacity: 0.9;">This code will expire in 5 minutes</p>
+          </div>
+
+          <div class="warning">
+            <strong>Security Notice:</strong> Never share this code with anyone. PulseMate will never ask for your verification code via phone or email.
+          </div>
+
+          <p>If you did not create an account with PulseMate, please ignore this email. No further action is required.</p>
+
+          <p>For support or questions, please contact our team at ${process.env.EMAIL_USER}</p>
+
+          <div class="footer">
+            <p>This is an automated message from PulseMate Health Monitor.</p>
+            <p>PulseMate Health Monitor - Secure Health Data Management</p>
+            <p>Copyright ${new Date().getFullYear()} PulseMate. All rights reserved.</p>
+            <p style="font-size: 12px; color: #9ca3af;">
+              This email was sent to verify your account registration. Please do not reply to this email.
+            </p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  }
+
+  generatePlainTextOTP(otp) {
+    return `
+PulseMate Health Monitor - Email Verification
+
+Dear User,
+
+Thank you for creating an account with PulseMate Health Monitor. To complete your registration and secure your account, please verify your email address using the verification code provided below.
+
+Your Verification Code: ${otp}
+
+This code will expire in 5 minutes.
+
+This verification step helps us ensure the security of your health information and account access.
+
+Security Notice: Never share this code with anyone. PulseMate will never ask for your verification code via phone or email.
+
+If you did not create an account with PulseMate, please ignore this email. No further action is required.
+
+For support or questions, please contact our team at ${process.env.EMAIL_USER}
+
+This is an automated message from PulseMate Health Monitor.
+PulseMate Health Monitor - Secure Health Data Management
+Copyright ${new Date().getFullYear()} PulseMate. All rights reserved.
+
+This email was sent to verify your account registration. Please do not reply to this email.
+    `.trim();
+  }
 
 }
 

@@ -18,197 +18,197 @@ import {
 } from "@heroicons/react/24/outline"
 
 // Dummy chat data
-const chatList = [
-  {
-    id: 1,
-    providerId: "dr-sarah-wilson",
-    providerName: "Dr. Sarah Wilson",
-    specialty: "Internal Medicine",
-    avatar:
-      "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80",
-    lastMessage: "Your blood test results look good. Let's schedule a follow-up.",
-    lastMessageTime: "2024-01-20T15:30:00Z",
-    unreadCount: 2,
-    isOnline: true,
-    lastSeen: "Active now",
-    isUrgent: false,
-  },
-  {
-    id: 2,
-    providerId: "dr-michael-chen",
-    providerName: "Dr. Michael Chen",
-    specialty: "Cardiology",
-    avatar:
-      "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80",
-    lastMessage: "Please monitor your blood pressure and update me daily.",
-    lastMessageTime: "2024-01-20T10:15:00Z",
-    unreadCount: 0,
-    isOnline: false,
-    lastSeen: "2 hours ago",
-    isUrgent: true,
-  },
-  {
-    id: 3,
-    providerId: "dr-emily-rodriguez",
-    providerName: "Dr. Emily Rodriguez",
-    specialty: "Endocrinology",
-    avatar:
-      "https://images.unsplash.com/photo-1594824475317-d0b8e8b5e8b5?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80",
-    lastMessage: "Great job on maintaining your glucose levels!",
-    lastMessageTime: "2024-01-19T16:45:00Z",
-    unreadCount: 0,
-    isOnline: true,
-    lastSeen: "Active now",
-    isUrgent: false,
-  },
-  {
-    id: 4,
-    providerId: "dr-amanda-foster",
-    providerName: "Dr. Amanda Foster",
-    specialty: "Psychology",
-    avatar:
-      "https://images.unsplash.com/photo-1582750433449-648ed127bb54?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1974&q=80",
-    lastMessage: "How are you feeling today? Remember to practice the breathing exercises.",
-    lastMessageTime: "2024-01-19T14:20:00Z",
-    unreadCount: 1,
-    isOnline: false,
-    lastSeen: "1 day ago",
-    isUrgent: false,
-  },
-  {
-    id: 5,
-    providerId: "nurse-jennifer",
-    providerName: "Nurse Jennifer",
-    specialty: "Care Coordinator",
-    avatar:
-      "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80",
-    lastMessage: "Reminder: Your appointment with Dr. Wilson is tomorrow at 10 AM.",
-    lastMessageTime: "2024-01-18T09:00:00Z",
-    unreadCount: 0,
-    isOnline: true,
-    lastSeen: "Active now",
-    isUrgent: false,
-  },
-]
+// const chatList = [
+//   {
+//     id: 1,
+//     providerId: "dr-sarah-wilson",
+//     providerName: "Dr. Sarah Wilson",
+//     specialty: "Internal Medicine",
+//     avatar:
+//       "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80",
+//     lastMessage: "Your blood test results look good. Let's schedule a follow-up.",
+//     lastMessageTime: "2024-01-20T15:30:00Z",
+//     unreadCount: 2,
+//     isOnline: true,
+//     lastSeen: "Active now",
+//     isUrgent: false,
+//   },
+//   {
+//     id: 2,
+//     providerId: "dr-michael-chen",
+//     providerName: "Dr. Michael Chen",
+//     specialty: "Cardiology",
+//     avatar:
+//       "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80",
+//     lastMessage: "Please monitor your blood pressure and update me daily.",
+//     lastMessageTime: "2024-01-20T10:15:00Z",
+//     unreadCount: 0,
+//     isOnline: false,
+//     lastSeen: "2 hours ago",
+//     isUrgent: true,
+//   },
+//   {
+//     id: 3,
+//     providerId: "dr-emily-rodriguez",
+//     providerName: "Dr. Emily Rodriguez",
+//     specialty: "Endocrinology",
+//     avatar:
+//       "https://images.unsplash.com/photo-1594824475317-d0b8e8b5e8b5?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80",
+//     lastMessage: "Great job on maintaining your glucose levels!",
+//     lastMessageTime: "2024-01-19T16:45:00Z",
+//     unreadCount: 0,
+//     isOnline: true,
+//     lastSeen: "Active now",
+//     isUrgent: false,
+//   },
+//   {
+//     id: 4,
+//     providerId: "dr-amanda-foster",
+//     providerName: "Dr. Amanda Foster",
+//     specialty: "Psychology",
+//     avatar:
+//       "https://images.unsplash.com/photo-1582750433449-648ed127bb54?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1974&q=80",
+//     lastMessage: "How are you feeling today? Remember to practice the breathing exercises.",
+//     lastMessageTime: "2024-01-19T14:20:00Z",
+//     unreadCount: 1,
+//     isOnline: false,
+//     lastSeen: "1 day ago",
+//     isUrgent: false,
+//   },
+//   {
+//     id: 5,
+//     providerId: "nurse-jennifer",
+//     providerName: "Nurse Jennifer",
+//     specialty: "Care Coordinator",
+//     avatar:
+//       "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80",
+//     lastMessage: "Reminder: Your appointment with Dr. Wilson is tomorrow at 10 AM.",
+//     lastMessageTime: "2024-01-18T09:00:00Z",
+//     unreadCount: 0,
+//     isOnline: true,
+//     lastSeen: "Active now",
+//     isUrgent: false,
+//   },
+// ]
 
-const messages = {
-  "dr-sarah-wilson": [
-    {
-      id: 1,
-      senderId: "dr-sarah-wilson",
-      senderName: "Dr. Sarah Wilson",
-      message: "Hello John! I've reviewed your recent blood work results.",
-      timestamp: "2024-01-20T14:00:00Z",
-      type: "text",
-      status: "read",
-    },
-    {
-      id: 2,
-      senderId: "patient",
-      senderName: "John Doe",
-      message: "Hi Dr. Wilson! How do they look?",
-      timestamp: "2024-01-20T14:05:00Z",
-      type: "text",
-      status: "read",
-    },
-    {
-      id: 3,
-      senderId: "dr-sarah-wilson",
-      senderName: "Dr. Sarah Wilson",
-      message:
-        "Overall, they look very good! Your cholesterol levels have improved significantly since our last check.",
-      timestamp: "2024-01-20T14:10:00Z",
-      type: "text",
-      status: "read",
-    },
-    {
-      id: 4,
-      senderId: "dr-sarah-wilson",
-      senderName: "Dr. Sarah Wilson",
-      message: "Here's a detailed breakdown of your results:",
-      timestamp: "2024-01-20T14:12:00Z",
-      type: "text",
-      status: "read",
-    },
-    {
-      id: 5,
-      senderId: "dr-sarah-wilson",
-      senderName: "Dr. Sarah Wilson",
-      message: "blood-test-results-jan-2024.pdf",
-      timestamp: "2024-01-20T14:13:00Z",
-      type: "file",
-      fileName: "blood-test-results-jan-2024.pdf",
-      fileSize: "245 KB",
-      status: "read",
-    },
-    {
-      id: 6,
-      senderId: "patient",
-      senderName: "John Doe",
-      message: "That's great news! Thank you for sharing the results. Should I continue with my current medication?",
-      timestamp: "2024-01-20T14:20:00Z",
-      type: "text",
-      status: "read",
-    },
-    {
-      id: 7,
-      senderId: "dr-sarah-wilson",
-      senderName: "Dr. Sarah Wilson",
-      message: "Yes, please continue with your current regimen. The improvements show it's working well.",
-      timestamp: "2024-01-20T15:25:00Z",
-      type: "text",
-      status: "read",
-    },
-    {
-      id: 8,
-      senderId: "dr-sarah-wilson",
-      senderName: "Dr. Sarah Wilson",
-      message: "Your blood test results look good. Let's schedule a follow-up.",
-      timestamp: "2024-01-20T15:30:00Z",
-      type: "text",
-      status: "delivered",
-    },
-  ],
-  "dr-michael-chen": [
-    {
-      id: 1,
-      senderId: "dr-michael-chen",
-      senderName: "Dr. Michael Chen",
-      message: "Good morning John. I wanted to follow up on your recent EKG results.",
-      timestamp: "2024-01-20T09:00:00Z",
-      type: "text",
-      status: "read",
-    },
-    {
-      id: 2,
-      senderId: "patient",
-      senderName: "John Doe",
-      message: "Good morning Dr. Chen. Is everything okay?",
-      timestamp: "2024-01-20T09:30:00Z",
-      type: "text",
-      status: "read",
-    },
-    {
-      id: 3,
-      senderId: "dr-michael-chen",
-      senderName: "Dr. Michael Chen",
-      message:
-        "The results show some minor irregularities, but nothing concerning. However, I'd like you to monitor your blood pressure more closely.",
-      timestamp: "2024-01-20T10:00:00Z",
-      type: "text",
-      status: "read",
-    },
-    {
-      id: 4,
-      senderId: "dr-michael-chen",
-      senderName: "Dr. Michael Chen",
-      message: "Please monitor your blood pressure and update me daily.",
-      timestamp: "2024-01-20T10:15:00Z",
-      type: "text",
-      status: "read",
-    },
-  ],
-}
+// const messages = {
+//   "dr-sarah-wilson": [
+//     {
+//       id: 1,
+//       senderId: "dr-sarah-wilson",
+//       senderName: "Dr. Sarah Wilson",
+//       message: "Hello John! I've reviewed your recent blood work results.",
+//       timestamp: "2024-01-20T14:00:00Z",
+//       type: "text",
+//       status: "read",
+//     },
+//     {
+//       id: 2,
+//       senderId: "patient",
+//       senderName: "John Doe",
+//       message: "Hi Dr. Wilson! How do they look?",
+//       timestamp: "2024-01-20T14:05:00Z",
+//       type: "text",
+//       status: "read",
+//     },
+//     {
+//       id: 3,
+//       senderId: "dr-sarah-wilson",
+//       senderName: "Dr. Sarah Wilson",
+//       message:
+//         "Overall, they look very good! Your cholesterol levels have improved significantly since our last check.",
+//       timestamp: "2024-01-20T14:10:00Z",
+//       type: "text",
+//       status: "read",
+//     },
+//     {
+//       id: 4,
+//       senderId: "dr-sarah-wilson",
+//       senderName: "Dr. Sarah Wilson",
+//       message: "Here's a detailed breakdown of your results:",
+//       timestamp: "2024-01-20T14:12:00Z",
+//       type: "text",
+//       status: "read",
+//     },
+//     {
+//       id: 5,
+//       senderId: "dr-sarah-wilson",
+//       senderName: "Dr. Sarah Wilson",
+//       message: "blood-test-results-jan-2024.pdf",
+//       timestamp: "2024-01-20T14:13:00Z",
+//       type: "file",
+//       fileName: "blood-test-results-jan-2024.pdf",
+//       fileSize: "245 KB",
+//       status: "read",
+//     },
+//     {
+//       id: 6,
+//       senderId: "patient",
+//       senderName: "John Doe",
+//       message: "That's great news! Thank you for sharing the results. Should I continue with my current medication?",
+//       timestamp: "2024-01-20T14:20:00Z",
+//       type: "text",
+//       status: "read",
+//     },
+//     {
+//       id: 7,
+//       senderId: "dr-sarah-wilson",
+//       senderName: "Dr. Sarah Wilson",
+//       message: "Yes, please continue with your current regimen. The improvements show it's working well.",
+//       timestamp: "2024-01-20T15:25:00Z",
+//       type: "text",
+//       status: "read",
+//     },
+//     {
+//       id: 8,
+//       senderId: "dr-sarah-wilson",
+//       senderName: "Dr. Sarah Wilson",
+//       message: "Your blood test results look good. Let's schedule a follow-up.",
+//       timestamp: "2024-01-20T15:30:00Z",
+//       type: "text",
+//       status: "delivered",
+//     },
+//   ],
+//   "dr-michael-chen": [
+//     {
+//       id: 1,
+//       senderId: "dr-michael-chen",
+//       senderName: "Dr. Michael Chen",
+//       message: "Good morning John. I wanted to follow up on your recent EKG results.",
+//       timestamp: "2024-01-20T09:00:00Z",
+//       type: "text",
+//       status: "read",
+//     },
+//     {
+//       id: 2,
+//       senderId: "patient",
+//       senderName: "John Doe",
+//       message: "Good morning Dr. Chen. Is everything okay?",
+//       timestamp: "2024-01-20T09:30:00Z",
+//       type: "text",
+//       status: "read",
+//     },
+//     {
+//       id: 3,
+//       senderId: "dr-michael-chen",
+//       senderName: "Dr. Michael Chen",
+//       message:
+//         "The results show some minor irregularities, but nothing concerning. However, I'd like you to monitor your blood pressure more closely.",
+//       timestamp: "2024-01-20T10:00:00Z",
+//       type: "text",
+//       status: "read",
+//     },
+//     {
+//       id: 4,
+//       senderId: "dr-michael-chen",
+//       senderName: "Dr. Michael Chen",
+//       message: "Please monitor your blood pressure and update me daily.",
+//       timestamp: "2024-01-20T10:15:00Z",
+//       type: "text",
+//       status: "read",
+//     },
+//   ],
+// }
 
 const formatTime = (timestamp) => {
   const date = new Date(timestamp)
@@ -512,12 +512,12 @@ const Messages = () => {
     // Active appointment session - allow messaging
     return (
       <div className="flex items-end space-x-1.5 sm:space-x-3">
-        <button
+        {/* <button
           onClick={handleFileUpload}
           className="p-1.5 sm:p-2 rounded-xl transition-colors text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700"
         >
           <PaperClipIcon className="w-4 h-4 sm:w-5 sm:h-5" />
-        </button>
+        </button> */}
 
         <div className="flex-1 relative">
           <textarea
@@ -531,11 +531,11 @@ const Messages = () => {
           />
         </div>
 
-        <button
+        {/* <button
           className="p-1.5 sm:p-2 rounded-xl transition-colors text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 hover:bg-gray-100 dark:hover:bg-slate-700"
         >
           <FaceSmileIcon className="w-4 h-4 sm:w-5 sm:h-5" />
-        </button>
+        </button> */}
 
         <button
           onClick={handleSendMessage}
@@ -724,9 +724,9 @@ const Messages = () => {
     }
   }
 
-  const handleFileUpload = () => {
-    fileInputRef.current?.click()
-  }
+  // const handleFileUpload = () => {
+  //   fileInputRef.current?.click()
+  // }
 
   const getMessageStatus = (status) => {
     switch (status) {

@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const cloudinary = require('../config/cloudinaryConfig');
-const { signupUser, loginUser, doctorSignup, logoutUser, changePassword } = require('../controllers/authController');
+const { signupUser, loginUser, doctorSignup, logoutUser, changePassword, sendOTP, verifyOTP } = require('../controllers/authController');
 const auth = require('../middleware/authMiddleware');
 
 // Configure multer for file uploads
@@ -41,6 +41,12 @@ router.post('/logout', auth, logoutUser);
 
 // POST /api/auth/change-password - Change User Password
 router.post('/change-password', auth, changePassword);
+
+// POST /api/auth/send-otp - Send OTP for email verification
+router.post('/send-otp', sendOTP);
+
+// POST /api/auth/verify-otp - Verify OTP
+router.post('/verify-otp', verifyOTP);
 
 // POST /api/auth/doctor-signup - Doctor Registration with Documents
 router.post('/doctor-signup', doctorSignup);

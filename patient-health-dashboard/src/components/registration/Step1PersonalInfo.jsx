@@ -1,6 +1,22 @@
-import React from 'react';
+import React, { useState } from 'react';
+import EmailVerification from '../ui/EmailVerification';
 
-const Step1PersonalInfo = ({ formData, handleChange, error }) => {
+const Step1PersonalInfo = ({ formData, handleChange, error, onEmailVerified, isEmailVerified }) => {
+  const [showEmailVerification, setShowEmailVerification] = useState(false);
+  const [verifiedEmail, setVerifiedEmail] = useState('');
+  const [isInitialSending, setIsInitialSending] = useState(false);
+
+  // Handle email change - reset verification if email changes
+  const handleEmailChange = (e) => {
+    const newEmail = e.target.value;
+    handleChange(e);
+
+    // If email changes and it was previously verified, reset verification
+    if (isEmailVerified && verifiedEmail && newEmail !== verifiedEmail) {
+      onEmailVerified && onEmailVerified(false); // Reset verification
+      setShowEmailVerification(false);
+    }
+  };
   return (
     <div className="space-y-6">
       <div>
@@ -55,15 +71,53 @@ const Step1PersonalInfo = ({ formData, handleChange, error }) => {
         <div className="md:col-span-2">
           <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
             Email Address <span className="text-red-500">*</span>
+            {isEmailVerified && (
+              <span className="ml-2 text-green-600 dark:text-green-400 text-sm">✓ Verified</span>
+            )}
           </label>
-          <input
-            type="email"
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
-            required
-            className="w-full p-3 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-green-500 focus:border-green-500"
-            placeholder="Enter your email address"
+          <div className="flex space-x-3">
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleEmailChange}
+              required
+              className="flex-1 p-3 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+              placeholder="Enter your email address"
+              disabled={isEmailVerified}
+            />
+            {!isEmailVerified && formData.email && (
+              <button
+                type="button"
+                onClick={() => {
+                  setShowEmailVerification(true);
+                  setIsInitialSending(true);
+                }}
+                disabled={isInitialSending}
+                className="px-4 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg text-sm font-medium transition-colors duration-200 disabled:cursor-not-allowed"
+              >
+                {isInitialSending ? 'Sending...' : 'Verify Email'}
+              </button>
+            )}
+          </div>
+
+          {/* Email Verification Component */}
+          <EmailVerification
+            email={formData.email}
+            isVisible={showEmailVerification && !isEmailVerified}
+            onVerificationSuccess={() => {
+              setShowEmailVerification(false);
+              setVerifiedEmail(formData.email);
+              setIsInitialSending(false);
+              onEmailVerified && onEmailVerified(true);
+            }}
+            onVerificationError={(error) => {
+              console.error('Email verification error:', error);
+              setIsInitialSending(false);
+            }}
+            onOTPSent={() => {
+              setIsInitialSending(false);
+            }}
           />
         </div>
 

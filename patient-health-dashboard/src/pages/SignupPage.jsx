@@ -14,6 +14,7 @@ import {
 
 const SignupPage = () => {
   const [currentStep, setCurrentStep] = useState(1);
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
   const [formData, setFormData] = useState({
     // Step 1: Personal Information
     firstName: '',
@@ -80,6 +81,10 @@ const SignupPage = () => {
       case 1:
         if (!formData.firstName || !formData.lastName || !formData.email || !formData.password || !formData.phone || !formData.dateOfBirth || !formData.gender) {
           setError('Please fill in all required fields');
+          return false;
+        }
+        if (!isEmailVerified) {
+          setError('Please verify your email address before proceeding');
           return false;
         }
         if (formData.password !== formData.confirmPassword) {
@@ -165,6 +170,8 @@ const SignupPage = () => {
             formData={formData}
             handleChange={handleChange}
             error={error}
+            isEmailVerified={isEmailVerified}
+            onEmailVerified={(verified) => setIsEmailVerified(verified !== false)}
           />
         );
       case 2:

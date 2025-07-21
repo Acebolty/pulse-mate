@@ -23,85 +23,85 @@ import { getCurrentUser } from "../services/authService"
 
 
 // Dummy chat data for Doctor's View
-const patientChatList = [
-  {
-    id: 1,
-    patientId: "patient-alice-wonderland",
-    patientName: "Alice Wonderland",
-    patientAvatar: "https://randomuser.me/api/portraits/women/44.jpg",
-    lastMessage: "Thank you, Doctor! I'll monitor my BP as advised.",
-    lastMessageTime: "2024-01-22T15:30:00Z",
-    unreadCount: 0, // Unread from patient's perspective for the doctor
-    isOnline: true,
-    lastSeen: "Active now",
-    isUrgent: false,
-    condition: "Hypertension", // Example additional info
-  },
-  {
-    id: 2,
-    patientId: "patient-robert-smith",
-    patientName: "Robert Smith",
-    patientAvatar: "https://randomuser.me/api/portraits/men/32.jpg",
-    lastMessage: "I've uploaded my latest ECG readings for your review.",
-    lastMessageTime: "2024-01-22T10:15:00Z",
-    unreadCount: 1,
-    isOnline: false,
-    lastSeen: "2 hours ago",
-    isUrgent: true, // Example: if patient marked as needing urgent attention
-    condition: "Arrhythmia",
-  },
-  {
-    id: 3,
-    patientId: "patient-maria-garcia",
-    patientName: "Maria Garcia",
-    patientAvatar: "https://randomuser.me/api/portraits/women/68.jpg",
-    lastMessage: "Feeling much better with the new treatment plan, thanks!",
-    lastMessageTime: "2024-01-21T16:45:00Z",
-    unreadCount: 0,
-    isOnline: true,
-    lastSeen: "Active now",
-    isUrgent: false,
-    condition: "Diabetes Type 2",
-  },
-   {
-    id: 4,
-    patientId: "patient-john-doe",
-    patientName: "John Doe",
-    patientAvatar: "https://randomuser.me/api/portraits/men/75.jpg",
-    lastMessage: "Can I get a refill for my anxiety medication?",
-    lastMessageTime: "2024-01-22T09:30:00Z",
-    unreadCount: 3,
-    isOnline: false,
-    lastSeen: "Online 5h ago",
-    isUrgent: false,
-    condition: "Anxiety Disorder",
-  },
-]
+// const patientChatList = [
+//   {
+//     id: 1,
+//     patientId: "patient-alice-wonderland",
+//     patientName: "Alice Wonderland",
+//     patientAvatar: "https://randomuser.me/api/portraits/women/44.jpg",
+//     lastMessage: "Thank you, Doctor! I'll monitor my BP as advised.",
+//     lastMessageTime: "2024-01-22T15:30:00Z",
+//     unreadCount: 0, // Unread from patient's perspective for the doctor
+//     isOnline: true,
+//     lastSeen: "Active now",
+//     isUrgent: false,
+//     condition: "Hypertension", // Example additional info
+//   },
+//   {
+//     id: 2,
+//     patientId: "patient-robert-smith",
+//     patientName: "Robert Smith",
+//     patientAvatar: "https://randomuser.me/api/portraits/men/32.jpg",
+//     lastMessage: "I've uploaded my latest ECG readings for your review.",
+//     lastMessageTime: "2024-01-22T10:15:00Z",
+//     unreadCount: 1,
+//     isOnline: false,
+//     lastSeen: "2 hours ago",
+//     isUrgent: true, // Example: if patient marked as needing urgent attention
+//     condition: "Arrhythmia",
+//   },
+//   {
+//     id: 3,
+//     patientId: "patient-maria-garcia",
+//     patientName: "Maria Garcia",
+//     patientAvatar: "https://randomuser.me/api/portraits/women/68.jpg",
+//     lastMessage: "Feeling much better with the new treatment plan, thanks!",
+//     lastMessageTime: "2024-01-21T16:45:00Z",
+//     unreadCount: 0,
+//     isOnline: true,
+//     lastSeen: "Active now",
+//     isUrgent: false,
+//     condition: "Diabetes Type 2",
+//   },
+//    {
+//     id: 4,
+//     patientId: "patient-john-doe",
+//     patientName: "John Doe",
+//     patientAvatar: "https://randomuser.me/api/portraits/men/75.jpg",
+//     lastMessage: "Can I get a refill for my anxiety medication?",
+//     lastMessageTime: "2024-01-22T09:30:00Z",
+//     unreadCount: 3,
+//     isOnline: false,
+//     lastSeen: "Online 5h ago",
+//     isUrgent: false,
+//     condition: "Anxiety Disorder",
+//   },
+// ]
 
-const doctorMessages = {
-  "patient-alice-wonderland": [
-    { id: 1, senderId: "doctor-current", senderName: "Dr. Eve", message: "Hi Alice, please ensure you're taking your BP readings twice a day.", timestamp: "2024-01-22T14:00:00Z", type: "text", status: "read" },
-    { id: 2, senderId: "patient-alice-wonderland", senderName: "Alice Wonderland", message: "Will do, Dr. Eve. Morning readings are usually around 135/85.", timestamp: "2024-01-22T14:05:00Z", type: "text", status: "read" },
-    { id: 3, senderId: "doctor-current", senderName: "Dr. Eve", message: "Okay, that's a bit high for the morning. Let's keep an eye on it. Any dizziness or headaches?", timestamp: "2024-01-22T14:10:00Z", type: "text", status: "read"},
-    { id: 4, senderId: "patient-alice-wonderland", senderName: "Alice Wonderland", message: "Thank you, Doctor! I'll monitor my BP as advised.", timestamp: "2024-01-22T15:30:00Z", type: "text", status: "read" },
-  ],
-  "patient-robert-smith": [
-    { id: 1, senderId: "patient-robert-smith", senderName: "Robert Smith", message: "Dr. Eve, I'm having some palpitations again. Should I be concerned?", timestamp: "2024-01-22T09:00:00Z", type: "text", status: "read" },
-    { id: 2, senderId: "doctor-current", senderName: "Dr. Eve", message: "Hi Robert. Please describe the palpitations. How long do they last? Any other symptoms?", timestamp: "2024-01-22T09:05:00Z", type: "text", status: "read" },
-    { id: 3, senderId: "patient-robert-smith", senderName: "Robert Smith", message: "They are like flutters, last a few seconds. Sometimes I feel a bit lightheaded.", timestamp: "2024-01-22T09:10:00Z", type: "text", status: "read" },
-    { id: 4, senderId: "patient-robert-smith", senderName: "Robert Smith", message: "I've uploaded my latest ECG readings for your review.", timestamp: "2024-01-22T10:15:00Z", type: "file", fileName: "ECG_Robert_Smith_Jan22.pdf", fileSize: "450 KB", status: "delivered" },
-  ],
-   "patient-maria-garcia": [
-    { id: 1, senderId: "patient-maria-garcia", senderName: "Maria Garcia", message: "Hi Dr. Eve, just wanted to update you. My glucose levels have been much more stable this week!", timestamp: "2024-01-21T16:40:00Z", type: "text", status: "read" },
-    { id: 2, senderId: "doctor-current", senderName: "Dr. Eve", message: "That's excellent news, Maria! Keep up the great work with your diet and medication.", timestamp: "2024-01-21T16:42:00Z", type: "text", status: "read" },
-    { id: 3, senderId: "patient-maria-garcia", senderName: "Maria Garcia", message: "Feeling much better with the new medication, thanks!", timestamp: "2024-01-21T16:45:00Z", type: "text", status: "read" },
-  ],
-  "patient-john-doe": [
-    { id: 1, senderId: "patient-john-doe", senderName: "John Doe", message: "Good morning Dr. Eve, I hope you're well.", timestamp: "2024-01-22T09:25:00Z", type: "text", status: "delivered" },
-    { id: 2, senderId: "patient-john-doe", senderName: "John Doe", message: "I'm running low on my anxiety medication.", timestamp: "2024-01-22T09:28:00Z", type: "text", status: "delivered" },
-    { id: 3, senderId: "patient-john-doe", senderName: "John Doe", message: "Can I get a refill for my anxiety medication?", timestamp: "2024-01-22T09:30:00Z", type: "text", status: "delivered" },
-  ]
-}
+// const doctorMessages = {
+//   "patient-alice-wonderland": [
+//     { id: 1, senderId: "doctor-current", senderName: "Dr. Eve", message: "Hi Alice, please ensure you're taking your BP readings twice a day.", timestamp: "2024-01-22T14:00:00Z", type: "text", status: "read" },
+//     { id: 2, senderId: "patient-alice-wonderland", senderName: "Alice Wonderland", message: "Will do, Dr. Eve. Morning readings are usually around 135/85.", timestamp: "2024-01-22T14:05:00Z", type: "text", status: "read" },
+//     { id: 3, senderId: "doctor-current", senderName: "Dr. Eve", message: "Okay, that's a bit high for the morning. Let's keep an eye on it. Any dizziness or headaches?", timestamp: "2024-01-22T14:10:00Z", type: "text", status: "read"},
+//     { id: 4, senderId: "patient-alice-wonderland", senderName: "Alice Wonderland", message: "Thank you, Doctor! I'll monitor my BP as advised.", timestamp: "2024-01-22T15:30:00Z", type: "text", status: "read" },
+//   ],
+//   "patient-robert-smith": [
+//     { id: 1, senderId: "patient-robert-smith", senderName: "Robert Smith", message: "Dr. Eve, I'm having some palpitations again. Should I be concerned?", timestamp: "2024-01-22T09:00:00Z", type: "text", status: "read" },
+//     { id: 2, senderId: "doctor-current", senderName: "Dr. Eve", message: "Hi Robert. Please describe the palpitations. How long do they last? Any other symptoms?", timestamp: "2024-01-22T09:05:00Z", type: "text", status: "read" },
+//     { id: 3, senderId: "patient-robert-smith", senderName: "Robert Smith", message: "They are like flutters, last a few seconds. Sometimes I feel a bit lightheaded.", timestamp: "2024-01-22T09:10:00Z", type: "text", status: "read" },
+//     { id: 4, senderId: "patient-robert-smith", senderName: "Robert Smith", message: "I've uploaded my latest ECG readings for your review.", timestamp: "2024-01-22T10:15:00Z", type: "file", fileName: "ECG_Robert_Smith_Jan22.pdf", fileSize: "450 KB", status: "delivered" },
+//   ],
+//    "patient-maria-garcia": [
+//     { id: 1, senderId: "patient-maria-garcia", senderName: "Maria Garcia", message: "Hi Dr. Eve, just wanted to update you. My glucose levels have been much more stable this week!", timestamp: "2024-01-21T16:40:00Z", type: "text", status: "read" },
+//     { id: 2, senderId: "doctor-current", senderName: "Dr. Eve", message: "That's excellent news, Maria! Keep up the great work with your diet and medication.", timestamp: "2024-01-21T16:42:00Z", type: "text", status: "read" },
+//     { id: 3, senderId: "patient-maria-garcia", senderName: "Maria Garcia", message: "Feeling much better with the new medication, thanks!", timestamp: "2024-01-21T16:45:00Z", type: "text", status: "read" },
+//   ],
+//   "patient-john-doe": [
+//     { id: 1, senderId: "patient-john-doe", senderName: "John Doe", message: "Good morning Dr. Eve, I hope you're well.", timestamp: "2024-01-22T09:25:00Z", type: "text", status: "delivered" },
+//     { id: 2, senderId: "patient-john-doe", senderName: "John Doe", message: "I'm running low on my anxiety medication.", timestamp: "2024-01-22T09:28:00Z", type: "text", status: "delivered" },
+//     { id: 3, senderId: "patient-john-doe", senderName: "John Doe", message: "Can I get a refill for my anxiety medication?", timestamp: "2024-01-22T09:30:00Z", type: "text", status: "delivered" },
+//   ]
+// }
 
 const formatTime = (timestamp) => {
   const date = new Date(timestamp);
@@ -546,7 +546,7 @@ const Messages = () => {
     }
   };
   
-  const totalUnreadFromPatients = patientChatList.reduce((sum, chat) => sum + chat.unreadCount, 0);
+  // const totalUnreadFromPatients = patientChatList.reduce((sum, chat) => sum + chat.unreadCount, 0);
 
   return (
     <div className="h-full flex flex-col md:flex-row bg-white dark:bg-slate-800 rounded-2xl shadow-lg border border-gray-100 dark:border-slate-700 overflow-hidden">
@@ -745,9 +745,9 @@ const Messages = () => {
                 // Active session - show message input
                 return (
                   <div className="flex items-end space-x-3">
-                    <button onClick={handleFileUpload} className="p-2.5 text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition-colors"><PaperClipIcon className="w-5 h-5" /></button>
+                    {/* <button onClick={handleFileUpload} className="p-2.5 text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition-colors"><PaperClipIcon className="w-5 h-5" /></button> */}
                     <div className="flex-1 relative"><textarea value={messageInput} onChange={(e) => setMessageInput(e.target.value)} onKeyPress={handleKeyPress} placeholder="Type your message to patient..." rows={1} className="w-full px-4 py-2.5 border border-gray-300 dark:border-slate-600 rounded-2xl resize-none text-sm dark:bg-slate-700 dark:text-slate-200 dark:placeholder-slate-400 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 focus:border-transparent" style={{ minHeight: "46px", maxHeight: "120px" }}/></div>
-                    <button className="p-2.5 text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition-colors"><FaceSmileIcon className="w-5 h-5" /></button>
+                    {/* <button className="p-2.5 text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-xl transition-colors"><FaceSmileIcon className="w-5 h-5" /></button> */}
                     <button onClick={handleSendMessage} disabled={!messageInput.trim()} className={`p-2.5 rounded-xl transition-colors ${messageInput.trim() ? "bg-blue-500 text-white hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700" : "bg-gray-200 text-gray-400 dark:bg-slate-600 dark:text-slate-500 cursor-not-allowed"}`}><PaperAirplaneIcon className="w-5 h-5" /></button>
                   </div>
                 );

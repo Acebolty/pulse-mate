@@ -149,7 +149,7 @@ const Step2ContactInfo = ({ formData, handleChange, error }) => {
               onChange={(e) => handleChange('emergencyContact', { ...formData.emergencyContact, name: e.target.value })}
               required
               className="w-full p-3 border border-gray-300 dark:border-slate-600 rounded-lg dark:bg-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-green-500 focus:border-green-500"
-              placeholder="John Doe"
+              placeholder="Michael Smith"
             />
           </div>
 

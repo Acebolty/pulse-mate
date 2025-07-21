@@ -1,6 +1,8 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const emailService = require('../services/emailService');
+const crypto = require('crypto');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
@@ -395,10 +397,119 @@ const changePassword = async (req, res) => {
   }
 };
 
+// Store OTPs temporarily (in production, use Redis or database)
+const otpStore = new Map();
+
+// @desc    Send OTP for email verification
+// @route   POST /api/auth/send-otp
+// @access  Public
+const sendOTP = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: 'Email is required' });
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    if (existingUser) {
+      return res.status(400).json({ message: 'User with this email already exists' });
+    }
+
+    // Generate 6-digit OTP
+    const otp = crypto.randomInt(100000, 999999).toString();
+
+    // Store OTP with expiration (5 minutes)
+    const otpData = {
+      otp,
+      email: email.toLowerCase(),
+      expiresAt: Date.now() + 5 * 60 * 1000, // 5 minutes
+      attempts: 0
+    };
+
+    otpStore.set(email.toLowerCase(), otpData);
+
+    // Send OTP via email
+    const emailResult = await emailService.sendOTPEmail(email, otp);
+
+    if (!emailResult.success) {
+      return res.status(500).json({ message: 'Failed to send OTP email' });
+    }
+
+    console.log(`📧 OTP sent to ${email}: ${otp}`); // Remove in production
+
+    res.json({
+      success: true,
+      message: 'OTP sent successfully to your email',
+      expiresIn: 300 // 5 minutes in seconds
+    });
+
+  } catch (error) {
+    console.error('Send OTP error:', error);
+    res.status(500).json({ message: 'Server error while sending OTP' });
+  }
+};
+
+// @desc    Verify OTP
+// @route   POST /api/auth/verify-otp
+// @access  Public
+const verifyOTP = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({ message: 'Email and OTP are required' });
+    }
+
+    const storedOtpData = otpStore.get(email.toLowerCase());
+
+    if (!storedOtpData) {
+      return res.status(400).json({ message: 'OTP not found or expired' });
+    }
+
+    // Check if OTP is expired
+    if (Date.now() > storedOtpData.expiresAt) {
+      otpStore.delete(email.toLowerCase());
+      return res.status(400).json({ message: 'OTP has expired' });
+    }
+
+    // Check attempts limit
+    if (storedOtpData.attempts >= 3) {
+      otpStore.delete(email.toLowerCase());
+      return res.status(400).json({ message: 'Too many failed attempts. Please request a new OTP' });
+    }
+
+    // Verify OTP
+    if (storedOtpData.otp !== otp) {
+      storedOtpData.attempts += 1;
+      otpStore.set(email.toLowerCase(), storedOtpData);
+      return res.status(400).json({
+        message: 'Invalid OTP',
+        attemptsLeft: 3 - storedOtpData.attempts
+      });
+    }
+
+    // OTP is valid - remove from store
+    otpStore.delete(email.toLowerCase());
+
+    res.json({
+      success: true,
+      message: 'Email verified successfully'
+    });
+
+  } catch (error) {
+    console.error('Verify OTP error:', error);
+    res.status(500).json({ message: 'Server error while verifying OTP' });
+  }
+};
+
 module.exports = {
   signupUser,
   loginUser,
   doctorSignup,
   logoutUser,
-  changePassword
+  changePassword,
+  sendOTP,
+  verifyOTP
 };
