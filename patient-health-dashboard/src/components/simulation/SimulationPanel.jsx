@@ -4,8 +4,6 @@ import {
   PlayIcon,
   StopIcon,
   ClockIcon,
-  ChartBarIcon,
-  ExclamationTriangleIcon,
   CheckCircleIcon,
   XMarkIcon,
   PencilSquareIcon
@@ -19,32 +17,7 @@ const SimulationPanel = ({ onClose, onDataGenerated }) => {
   const [error, setError] = useState(null);
   const [showManualEntry, setShowManualEntry] = useState(false);
 
-  const scenarios = {
-    'normal': {
-      name: 'Normal Day',
-      description: 'Regular daily activities with normal health readings',
-      icon: CheckCircleIcon,
-      color: 'text-green-600'
-    },
-    'active_day': {
-      name: 'Active Day',
-      description: 'High activity day with exercise and increased movement',
-      icon: ChartBarIcon,
-      color: 'text-blue-600'
-    },
-    'sick_day': {
-      name: 'Sick Day',
-      description: 'Day with mild illness symptoms',
-      icon: ExclamationTriangleIcon,
-      color: 'text-yellow-600'
-    },
-    'stressful_day': {
-      name: 'Stressful Day',
-      description: 'High stress day affecting health metrics',
-      icon: ExclamationTriangleIcon,
-      color: 'text-red-600'
-    }
-  };
+
 
   const generateHistoricalData = async (days, scenarioMix = []) => {
     try {
@@ -106,44 +79,7 @@ const SimulationPanel = ({ onClose, onDataGenerated }) => {
     }
   };
 
-  const generateAlerts = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      setResult(null);
 
-      const response = await api.post('/simulation/generate-alerts');
-
-      setResult(response.data);
-      if (onDataGenerated) onDataGenerated();
-
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to generate alerts');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const clearAlerts = async () => {
-    if (!window.confirm('Are you sure you want to clear all alerts?')) {
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-      setResult(null);
-
-      const response = await api.delete('/simulation/clear-alerts');
-      setResult(response.data);
-      if (onDataGenerated) onDataGenerated();
-
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to clear alerts');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const clearAllData = async () => {
     if (!window.confirm('Are you sure you want to clear all health data and alerts? This action cannot be undone.')) {
@@ -214,7 +150,7 @@ const SimulationPanel = ({ onClose, onDataGenerated }) => {
           </button>
         </div>
 
-        {/* Quick Actions */}
+        {/* Simulation Actions */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <motion.button
             whileHover={{ scale: 1.02 }}
@@ -238,33 +174,6 @@ const SimulationPanel = ({ onClose, onDataGenerated }) => {
             <PencilSquareIcon className="w-6 h-6 mx-auto mb-2" />
             <div className="text-sm font-medium">Manual Data Entry</div>
             <div className="text-xs opacity-90">Test critical readings</div>
-          </motion.button>
-
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={generateAlerts}
-            disabled={loading}
-            className="p-4 bg-gradient-to-r from-yellow-500 to-orange-600 text-white rounded-xl hover:from-yellow-600 hover:to-orange-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <ExclamationTriangleIcon className="w-6 h-6 mx-auto mb-2" />
-            <div className="text-sm font-medium">Analyze Health Data</div>
-            <div className="text-xs opacity-90">Check for health alerts</div>
-          </motion.button>
-        </div>
-
-        {/* Management Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={clearAlerts}
-            disabled={loading}
-            className="p-4 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-xl hover:from-purple-600 hover:to-purple-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <XMarkIcon className="w-6 h-6 mx-auto mb-2" />
-            <div className="text-sm font-medium">Clear Old Alerts</div>
-            <div className="text-xs opacity-90">Remove fake/old alerts</div>
           </motion.button>
 
           <motion.button
